@@ -10,6 +10,11 @@ import { splitEntryAction } from './write/splitEntry';
 import { addGoalAction } from './write/addGoal';
 import { updateGoalAction } from './write/updateGoal';
 import { deleteGoalAction } from './write/deleteGoal';
+import { findOverlapsAction } from './maintenance/findOverlaps';
+import { findGapsAction } from './maintenance/findGaps';
+import { findAnomaliesAction } from './maintenance/findAnomalies';
+import { autoCategorizeAction } from './maintenance/autoCategorize';
+import { batchUpdateAction } from './maintenance/batchUpdate';
 
 actionRegistry.register(queryTimeEntriesAction);
 actionRegistry.register(listCategoriesAction);
@@ -22,6 +27,11 @@ actionRegistry.register(splitEntryAction);
 actionRegistry.register(addGoalAction);
 actionRegistry.register(updateGoalAction);
 actionRegistry.register(deleteGoalAction);
+actionRegistry.register(findOverlapsAction);
+actionRegistry.register(findGapsAction);
+actionRegistry.register(findAnomaliesAction);
+actionRegistry.register(autoCategorizeAction);
+actionRegistry.register(batchUpdateAction);
 
 export { actionRegistry } from './registry';
 export type { ActionDefinition, ActionResult, ActionCategory, RiskLevel, ConfirmationCard, ConfirmationChange } from './types';
