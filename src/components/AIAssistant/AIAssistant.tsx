@@ -124,6 +124,7 @@ export const AIAssistant: React.FC = () => {
   const [pendingConfirmation, setPendingConfirmation] = useState<{
     card: ConfirmationCardType;
     resolve: (confirmed: boolean) => void;
+    resolved?: 'confirmed' | 'cancelled';
   } | null>(null);
   const confirmCountRef = useRef(0);
 
@@ -258,15 +259,17 @@ export const AIAssistant: React.FC = () => {
   };
 
   const handleConfirm = useCallback(() => {
-    if (!pendingConfirmation) return;
+    if (!pendingConfirmation || pendingConfirmation.resolved) return;
     pendingConfirmation.resolve(true);
-    setPendingConfirmation(null);
+    setPendingConfirmation(prev => prev ? { ...prev, resolved: 'confirmed' } : null);
+    setTimeout(() => setPendingConfirmation(null), 1500);
   }, [pendingConfirmation]);
 
   const handleCancelConfirm = useCallback(() => {
-    if (!pendingConfirmation) return;
+    if (!pendingConfirmation || pendingConfirmation.resolved) return;
     pendingConfirmation.resolve(false);
-    setPendingConfirmation(null);
+    setPendingConfirmation(prev => prev ? { ...prev, resolved: 'cancelled' } : null);
+    setTimeout(() => setPendingConfirmation(null), 1500);
   }, [pendingConfirmation]);
 
   // 键盘快捷键
@@ -536,6 +539,7 @@ export const AIAssistant: React.FC = () => {
                     card={pendingConfirmation.card}
                     onConfirm={handleConfirm}
                     onCancel={handleCancelConfirm}
+                    resolved={pendingConfirmation.resolved}
                   />
                 </div>
               </div>

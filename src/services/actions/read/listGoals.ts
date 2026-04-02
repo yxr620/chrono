@@ -31,7 +31,7 @@ export const listGoalsAction: ActionDefinition = {
     const endDate = params.end_date as string;
 
     if (!startDate || !endDate) {
-      return { success: true, message: '错误：需要提供 start_date 和 end_date 参数' };
+      return { success: false, message: '错误：需要提供 start_date 和 end_date 参数' };
     }
 
     const filtered = await dataService.goals.query({
