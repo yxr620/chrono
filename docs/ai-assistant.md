@@ -72,10 +72,18 @@ AI 通过 Function Calling 查询本地 IndexedDB 数据，不上传任何数据
 
 ### 添加新工具
 
-在 `src/services/ai/toolDefinitions.ts` 中：
+> **注意：** `feat/ai` 分支引入了 Action Registry 架构，取代了下面描述的手动方式。详见 [Action Registry 文档](action-registry.md)。
+
+**(旧方式 — main 分支)** 在 `src/services/ai/toolDefinitions.ts` 中：
 
 1. 在 `toolDefinitions` 数组中添加工具描述（JSON Schema 格式）
 2. 在 `executeToolCall(name, args)` 的 switch 中添加对应处理逻辑，调用 `dataService` 获取数据并格式化为字符串
+
+**(新方式 — feat/ai 分支)** 通过 Action Registry：
+
+1. 在 `src/services/actions/` 对应分类目录下创建 action 文件
+2. 在 `src/services/actions/index.ts` 中注册
+3. toolCallEngine 自动发现并生成 AI tool definition
 
 ## 消息格式（aiStore）
 
