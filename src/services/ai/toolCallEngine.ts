@@ -19,7 +19,8 @@
 import dayjs from 'dayjs';
 import { db } from '../db';
 import { chatWithTools, chatStream, type ChatMessage, type LLMConfig } from './llmClient';
-import { TOOL_DEFINITIONS, executeTool } from './toolDefinitions';
+import { actionRegistry } from '../actions';
+import type { ConfirmationCard } from '../actions';
 
 const MAX_TOOL_ROUNDS = 5;
 
@@ -34,6 +35,7 @@ export interface ToolCallEngineCallbacks {
     onChunk: (delta: string) => void;
     onThinking?: (delta: string) => void;
     onToolCall?: (info: ToolCallInfo) => void;
+    onConfirmRequired?: (card: ConfirmationCard) => Promise<boolean>;
 }
 
 /**
@@ -49,7 +51,7 @@ async function buildSystemPrompt(): Promise<string> {
         .map(c => c.name)
         .join(', ');
 
-    return `你是用户的个人时间管理助手。你可以通过工具函数查询用户的时间记录数据来回答问题。
+    let prompt = `你是用户的个人时间管理助手。你可以通过工具函数查询和管理用户的时间记录数据。
 
 ## 当前日期
 ${today}
@@ -73,6 +75,21 @@ ${categoryList || '（暂无类别）'}
    a) **时间分配摘要**：各类别时间占比、与往期对比
    b) **目标回顾**：投入最多的目标、连续坚持的目标
    c) **洞察与发现**：值得注意的行为模式、作息规律变化、改进建议`;
+
+    const writeToolsExist = actionRegistry.getByCategory('write').length > 0
+        || actionRegistry.getByCategory('maintenance').length > 0;
+
+    if (writeToolsExist) {
+        prompt += `\n\n## 操作工具使用指南
+1. 当用户明确要求新增/修改/删除记录时，使用对应的写入工具
+2. 在使用写入工具之前，先用查询工具确认操作对象（如 "删除那条记录" → 先查询找到具体记录）
+3. 合并记录时，先查询要合并的记录列表，确认后调用 merge_entries
+4. 数据维护操作应先诊断（find_overlaps/find_anomalies），再提出修复建议
+5. 不要在用户未请求时主动修改数据
+6. 写入操作会触发用户确认弹窗，用户可能会取消——如果取消了，尊重用户决定`;
+    }
+
+    return prompt;
 }
 
 /**
@@ -111,7 +128,8 @@ export async function runToolCallLoop(
 
         try {
             // 非流式调用（带 tools）
-            const response = await chatWithTools(config, messages, TOOL_DEFINITIONS, signal);
+            const toolDefs = actionRegistry.toToolDefinitions();
+            const response = await chatWithTools(config, messages, toolDefs, signal);
 
             // 没有 tool_calls → 本轮 thinking 的模型调用已经给出了最终回答
             if (!response.tool_calls || response.tool_calls.length === 0) {
@@ -146,26 +164,60 @@ export async function runToolCallLoop(
                     args = {};
                 }
 
+                const action = actionRegistry.get(tc.function.name);
+                if (!action) {
+                    messages.push({
+                        role: 'tool',
+                        content: `未知工具: ${tc.function.name}`,
+                        tool_call_id: tc.id,
+                    } as any);
+                    continue;
+                }
+
                 const toolLabel = formatToolLabel(tc.function.name, args);
                 callbacks.onPhase('toolCall', toolLabel);
 
-                const result = await executeTool(tc.function.name, args);
+                // 写入/维护操作需要用户确认
+                if (action.risk !== 'none' && callbacks.onConfirmRequired) {
+                    const card = action.confirm
+                        ? await action.confirm(args)
+                        : {
+                            title: action.description,
+                            description: JSON.stringify(args, null, 2),
+                            changes: [],
+                            risk: action.risk,
+                        };
+
+                    const confirmed = await callbacks.onConfirmRequired(card);
+                    if (!confirmed) {
+                        const toolDebug = JSON.stringify({ tool: tc.function.name, args, result: '用户取消' }, null, 2);
+                        callbacks.onPhase('toolCall', toolLabel + '（已取消）', toolDebug);
+                        messages.push({
+                            role: 'tool',
+                            content: '用户取消了此操作。',
+                            tool_call_id: tc.id,
+                        } as any);
+                        continue;
+                    }
+                }
+
+                const result = await action.handler(args);
 
                 // 构建工具调用的详细调试信息
-                const toolDebug = JSON.stringify({ tool: tc.function.name, args, result }, null, 2);
+                const toolDebug = JSON.stringify({ tool: tc.function.name, args, result: result.message }, null, 2);
                 callbacks.onPhase('toolCall', toolLabel, toolDebug);
 
                 // 通知 UI
                 callbacks.onToolCall?.({
                     name: tc.function.name,
                     args,
-                    result,
+                    result: result.message,
                 });
 
                 // 将工具结果以 role: 'tool' 追加
                 messages.push({
                     role: 'tool',
-                    content: result,
+                    content: result.message,
                     tool_call_id: tc.id,
                 } as any);
             }
@@ -219,8 +271,13 @@ function formatToolLabel(name: string, args: Record<string, unknown>): string {
             return '获取类别列表';
         case 'list_goals':
             return `获取目标 (${args.start_date} ~ ${args.end_date})`;
-        default:
+        default: {
+            const action = actionRegistry.get(name);
+            if (action) {
+                return action.description.slice(0, 30);
+            }
             return name;
+        }
     }
 }
 
