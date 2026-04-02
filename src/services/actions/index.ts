@@ -5,6 +5,8 @@ import { listGoalsAction } from './read/listGoals';
 import { addEntryAction } from './write/addEntry';
 import { updateEntryAction } from './write/updateEntry';
 import { deleteEntryAction } from './write/deleteEntry';
+import { mergeEntriesAction } from './write/mergeEntries';
+import { splitEntryAction } from './write/splitEntry';
 
 actionRegistry.register(queryTimeEntriesAction);
 actionRegistry.register(listCategoriesAction);
@@ -12,6 +14,8 @@ actionRegistry.register(listGoalsAction);
 actionRegistry.register(addEntryAction);
 actionRegistry.register(updateEntryAction);
 actionRegistry.register(deleteEntryAction);
+actionRegistry.register(mergeEntriesAction);
+actionRegistry.register(splitEntryAction);
 
 export { actionRegistry } from './registry';
 export type { ActionDefinition, ActionResult, ActionCategory, RiskLevel, ConfirmationCard, ConfirmationChange } from './types';
