@@ -79,16 +79,29 @@ html {
   position: relative;
 }
 
+.mobile-layout .app-body {
+  padding-bottom: calc(50px + env(safe-area-inset-bottom));
+}
+
 .app-footer {
   flex-shrink: 0;
-  border-top: 1px solid hsl(var(--border));
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
   padding-bottom: env(safe-area-inset-bottom);
-  background-color: hsl(var(--background));
+  background: linear-gradient(
+    to bottom,
+    hsl(var(--background) / 0.5),
+    hsl(var(--background) / 0.85)
+  );
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
   z-index: 100;
 }
 
 .mobile-layout .app-footer .mobile-tab-bar {
-  --background: hsl(var(--background));
+  --background: transparent;
   --border: 0;
 }
 
