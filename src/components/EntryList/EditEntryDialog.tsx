@@ -8,13 +8,13 @@ import {
   IonInput,
   IonModal,
   IonButton,
-  useIonToast
 } from '@ionic/react';
 import { Capacitor } from '@capacitor/core';
 import { chatbubbleOutline, pricetagOutline, flagOutline } from 'ionicons/icons';
 import { useGoalStore } from '../../stores/goalStore';
 import { useCategoryStore } from '../../stores/categoryStore';
 import { useEntryStore } from '../../stores/entryStore';
+import { useAppToast } from '../../hooks/useAppToast';
 import { useDarkMode } from '../../hooks/useDarkMode';
 import { WheelTimePicker } from '../common/WheelTimePicker';
 import { useIOSTimePicker } from '../../hooks/useIOSTimePicker';
@@ -51,7 +51,7 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
   const [endDraftValue, setEndDraftValue] = useState<Date>(() => new Date());
   const startPickerRef = useRef<WheelTimePickerHandle>(null);
   const endPickerRef = useRef<WheelTimePickerHandle>(null);
-  const [present] = useIonToast();
+  const [present] = useAppToast();
   const { isDark } = useDarkMode();
   const isIOS = Capacitor.getPlatform() === 'ios';
   const { openIOSTimePicker } = useIOSTimePicker();

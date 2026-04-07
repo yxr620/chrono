@@ -5,7 +5,6 @@ import {
   IonInput,
   IonItem,
   IonIcon,
-  useIonToast,
   IonCard,
   IonCardContent,
   IonModal
@@ -16,6 +15,7 @@ import { useEntryStore } from '../../stores/entryStore';
 import { useGoalStore } from '../../stores/goalStore';
 import { useCategoryStore } from '../../stores/categoryStore';
 import { useDateStore } from '../../stores/dateStore';
+import { useAppToast } from '../../hooks/useAppToast';
 import { useDarkMode } from '../../hooks/useDarkMode';
 import dayjs from 'dayjs';
 import { WheelTimePicker } from '../common/WheelTimePicker';
@@ -138,7 +138,7 @@ export const TimeEntryForm: React.FC = () => {
   const startPickerRef = useRef<WheelTimePickerHandle>(null);
   const endPickerRef = useRef<WheelTimePickerHandle>(null);
   const [elapsed, setElapsed] = useState('00:00:00');
-  const [present] = useIonToast();
+  const [present] = useAppToast();
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
 
   // 智能预选：追踪用户是否手动选过（手动选过就不再覆盖）

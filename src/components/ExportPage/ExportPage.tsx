@@ -2,7 +2,6 @@ import { useState, useRef } from 'react';
 import {
   IonButton,
   IonSpinner,
-  useIonToast,
   useIonAlert,
   IonToggle,
 } from '@ionic/react';
@@ -12,6 +11,7 @@ import { db } from '../../services/db';
 import { useEntryStore } from '../../stores/entryStore';
 import { useGoalStore } from '../../stores/goalStore';
 import { useCategoryStore } from '../../stores/categoryStore';
+import { useAppToast } from '../../hooks/useAppToast';
 import { useDarkMode } from '../../hooks/useDarkMode';
 import './ExportPage.css';
 
@@ -19,7 +19,7 @@ export const ExportPage: React.FC = () => {
   const { isDark, setDark } = useDarkMode();
   const [importStrategy, setImportStrategy] = useState<typeof ImportStrategy.MERGE | typeof ImportStrategy.REPLACE>(ImportStrategy.MERGE);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [presentToast, dismissToast] = useIonToast();
+  const [presentToast, dismissToast] = useAppToast();
   const [presentAlert] = useIonAlert();
   const [isLoading, setIsLoading] = useState(false);
 

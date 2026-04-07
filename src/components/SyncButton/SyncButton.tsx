@@ -4,14 +4,15 @@
  */
 
 import { useEffect } from 'react';
-import { IonButton, IonIcon, useIonToast } from '@ionic/react';
+import { IonButton, IonIcon } from '@ionic/react';
 import { useSyncStore } from '../../stores/syncStore';
+import { useAppToast } from '../../hooks/useAppToast';
 import { cloudUploadOutline, checkmarkCircleOutline, closeCircleOutline } from 'ionicons/icons';
 import { emitSyncStatus } from '../../services/syncToast';
 
 export const SyncButton: React.FC = () => {
   const { status, message, lastSyncTime, pushedCount, pulledCount, isConfigured, sync } = useSyncStore();
-  const [present] = useIonToast();
+  const [present] = useAppToast();
 
   useEffect(() => {
     if (status === 'success' && message) {

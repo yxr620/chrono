@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect } from 'react';
 import {
   IonApp,
   IonIcon,
@@ -51,8 +51,8 @@ const mobileTabConfigs = [
 
 const MobileLayout: React.FC<LayoutProps> = ({ activeTab, onTabChange, children }) => (
   <div className="app mobile-layout">
-    <div className="app-header">
-      <h1>Chrono</h1>
+    <div className="app-header" data-app-header>
+      <h1 data-app-brand>Chrono</h1>
       <SyncIndicator />
     </div>
     <div className="app-body">
@@ -83,8 +83,8 @@ const DesktopLayout: React.FC<LayoutProps> = ({ activeTab, onTabChange, children
   <div className="app desktop-layout">
     <DesktopSidebar activeTab={activeTab} onTabChange={onTabChange} />
     <div className="desktop-main">
-      <div className="desktop-header">
-        <h1>Chrono</h1>
+      <div className="desktop-header" data-app-header>
+        <h1 data-app-brand>Chrono</h1>
         <SyncIndicator />
       </div>
       <div className="desktop-content">
@@ -110,6 +110,116 @@ function App() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    let frameId = 0;
+    let observedIndicator: HTMLElement | null = null;
+
+    const clearToastVars = () => {
+      root.style.removeProperty('--app-top-toast-start');
+      root.style.removeProperty('--app-top-toast-min-width');
+      root.style.removeProperty('--app-top-toast-max-width');
+      root.style.removeProperty('--app-top-toast-y-offset');
+    };
+
+    const resizeObserver = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(() => {
+        syncToastAnchor();
+      })
+      : null;
+
+    const observeIndicator = () => {
+      const nextIndicator = document.querySelector<HTMLElement>('[data-app-sync-indicator]');
+
+      if (observedIndicator === nextIndicator) {
+        return;
+      }
+
+      if (observedIndicator) {
+        resizeObserver?.unobserve(observedIndicator);
+      }
+
+      observedIndicator = nextIndicator;
+      if (observedIndicator) {
+        resizeObserver?.observe(observedIndicator);
+      }
+    };
+
+    const syncToastAnchor = () => {
+      cancelAnimationFrame(frameId);
+      frameId = requestAnimationFrame(() => {
+        observeIndicator();
+
+        const header = document.querySelector<HTMLElement>('[data-app-header]');
+        const brand = document.querySelector<HTMLElement>('[data-app-brand]');
+
+        if (!header || !brand) {
+          clearToastVars();
+          return;
+        }
+
+        const indicator = document.querySelector<HTMLElement>('[data-app-sync-indicator]');
+        const headerRect = header.getBoundingClientRect();
+        const brandRect = brand.getBoundingClientRect();
+        const indicatorRect = indicator?.getBoundingClientRect();
+        const anchorGap = window.innerWidth >= 1024 ? 14 : 10;
+        const sidePadding = window.innerWidth >= 1024 ? 18 : 12;
+        const preferredStart = Math.round(brandRect.right + anchorGap);
+        const preferredEnd = Math.round((indicatorRect?.left ?? headerRect.right) - anchorGap);
+        const fallbackStart = Math.round(headerRect.left + sidePadding);
+        const fallbackEnd = Math.round(headerRect.right - sidePadding);
+        const preferredWidth = preferredEnd - preferredStart;
+        const fallbackWidth = fallbackEnd - fallbackStart;
+        const minimumInlineWidth = window.innerWidth >= 1024 ? 180 : 140;
+        const desiredMaxWidth = window.innerWidth >= 1024 ? 320 : 280;
+        const useInlinePlacement = preferredWidth >= minimumInlineWidth;
+        const resolvedStart = useInlinePlacement ? preferredStart : fallbackStart;
+        const resolvedWidth = Math.max(useInlinePlacement ? preferredWidth : fallbackWidth, 120);
+        const resolvedMaxWidth = Math.min(resolvedWidth, desiredMaxWidth);
+        const resolvedMinWidth = Math.min(resolvedMaxWidth, useInlinePlacement ? minimumInlineWidth : 120);
+        const resolvedYOffset = useInlinePlacement ? 0 : Math.round(headerRect.height + 6);
+
+        root.style.setProperty('--app-top-toast-start', `${resolvedStart}px`);
+        root.style.setProperty('--app-top-toast-min-width', `${resolvedMinWidth}px`);
+        root.style.setProperty('--app-top-toast-max-width', `${resolvedMaxWidth}px`);
+        root.style.setProperty('--app-top-toast-y-offset', `${resolvedYOffset}px`);
+      });
+    };
+
+    syncToastAnchor();
+
+    const mutationObserver = new MutationObserver(() => {
+      observeIndicator();
+      syncToastAnchor();
+    });
+    const header = document.querySelector<HTMLElement>('[data-app-header]');
+    if (header) {
+      mutationObserver.observe(header, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        attributes: true,
+      });
+    }
+
+    document
+      .querySelectorAll<HTMLElement>('[data-app-header], [data-app-brand]')
+      .forEach((element) => resizeObserver?.observe(element));
+    observeIndicator();
+
+    window.addEventListener('resize', syncToastAnchor);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      window.removeEventListener('resize', syncToastAnchor);
+      mutationObserver.disconnect();
+      if (observedIndicator) {
+        resizeObserver?.unobserve(observedIndicator);
+      }
+      resizeObserver?.disconnect();
+    };
+  }, [isDesktop]);
 
   // 检查 OSS 配置
   useEffect(() => {

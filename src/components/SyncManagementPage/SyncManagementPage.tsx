@@ -4,7 +4,6 @@ import {
   IonSpinner,
   IonToggle,
   useIonAlert,
-  useIonToast,
   IonAccordionGroup,
   IonAccordion,
   IonItem,
@@ -15,6 +14,7 @@ import { isOSSConfigured, getOSSConfig } from '../../services/oss';
 import { useSyncStore } from '../../stores/syncStore';
 import { emitSyncStatus } from '../../services/syncToast';
 import type { SyncDirection } from '../../services/syncToast';
+import { useAppToast } from '../../hooks/useAppToast';
 import {
   getSavedOSSConfig,
   saveOSSConfig as persistOSSConfig,
@@ -35,7 +35,7 @@ export const SyncManagementPage: React.FC = () => {
   });
   const [configSource, setConfigSource] = useState<'manual' | 'env' | 'none'>('none');
   const [presentAlert] = useIonAlert();
-  const [presentToast] = useIonToast();
+  const [presentToast] = useAppToast();
 
   useEffect(() => {
     loadStats();

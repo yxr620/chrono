@@ -1,9 +1,9 @@
-import { useIonToast } from '@ionic/react';
 import { IOSWheelDateTimePicker } from '../plugins/iosWheelDateTimePicker';
+import { useAppToast } from './useAppToast';
 import dayjs from 'dayjs';
 
 export const useIOSTimePicker = () => {
-  const [present] = useIonToast();
+  const [present] = useAppToast();
 
   const openIOSTimePicker = async (
     initialValue: Date,

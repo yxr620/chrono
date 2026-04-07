@@ -12,6 +12,27 @@ html {
   --ion-font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Roboto, Arial, sans-serif;
 }
 
+:root {
+  --app-top-toast-start: calc(env(safe-area-inset-left, 0px) + 88px);
+  --app-top-toast-min-width: 140px;
+  --app-top-toast-max-width: 280px;
+  --app-top-toast-radius: 22px;
+  --app-top-toast-height: 25px;
+  --app-top-toast-padding: 0px 4px;  /*padding: <垂直> <水平>;*/
+  --app-top-toast-y-offset: -2px; /* 向上微调，使其更贴近标题区 */
+  --app-top-toast-shadow: 0 16px 28px -20px rgba(15, 23, 42, 0.38);
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --app-top-toast-min-width: 180px;
+    --app-top-toast-max-width: 320px;
+    --app-top-toast-radius: 20px;
+    --app-top-toast-height: 38px;
+    --app-top-toast-padding: 3px 14px;
+  }
+}
+
 .app {
   display: flex;
   flex-direction: column;
@@ -250,12 +271,95 @@ html {
   }
 }
 
-/* Toast 弹窗样式 — 缩窄并居中 */
-ion-toast {
-  --max-width: 240px;
-  --min-width: 160px;
+/* Toast 弹窗样式 — 顶部贴近标题区、圆角更大、整体更紧凑 */
+.app-top-toast {
+  --min-width: var(--app-top-toast-min-width);
+  --max-width: var(--app-top-toast-max-width);
+  --height: var(--app-top-toast-height);
+  --max-height: var(--app-top-toast-height);
+  --border-radius: var(--app-top-toast-radius);
+  --start: var(--app-top-toast-start);
+  --end: auto;
+  --box-shadow: var(--app-top-toast-shadow);
+  --white-space: normal;
+  font-size: 0.875rem;
+  transform: translateY(var(--app-top-toast-y-offset));
 }
 
-ion-toast::part(container) {
-  margin: 0 auto;
+.app-top-toast::part(container) {
+  margin: 0;
+  padding: var(--app-top-toast-padding);
+}
+
+.app-top-toast::part(message) {
+  font-size: 0.9rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.app-top-toast::part(header) {
+  font-size: 0.82rem;
+  line-height: 0.95rem;
+  font-weight: 600;
+}
+
+@media (min-width: 1024px) {
+  .app-top-toast {
+    font-size: 0.9375rem;
+  }
+}
+
+/* Toast 柔和配色 — 淡色底 + 深色文字 + 同系边框 */
+
+/* 成功：淡绿 */
+.app-top-toast.ion-color-success {
+  --ion-color-base: hsl(145 60% 94%) !important;
+  --ion-color-contrast: hsl(145 55% 28%) !important;
+  --button-color: hsl(145 55% 28%);
+  --ion-color-shade: hsl(145 40% 86%);
+  border: 1px solid hsl(145 40% 84%);
+}
+
+/* 错误：淡红 */
+.app-top-toast.ion-color-danger {
+  --ion-color-base: hsl(0 70% 95%) !important;
+  --ion-color-contrast: hsl(0 60% 35%) !important;
+  --button-color: hsl(0 60% 35%);
+  --ion-color-shade: hsl(0 50% 88%);
+  border: 1px solid hsl(0 50% 86%);
+}
+
+/* 警告：淡黄 */
+.app-top-toast.ion-color-warning {
+  --ion-color-base: hsl(40 80% 93%) !important;
+  --ion-color-contrast: hsl(35 70% 30%) !important;
+  --button-color: hsl(35 70% 30%);
+  --ion-color-shade: hsl(38 55% 85%);
+  border: 1px solid hsl(38 55% 83%);
+}
+
+/* 深色模式 — 深底 + 浅文字 */
+.dark .app-top-toast.ion-color-success {
+  --ion-color-base: hsl(145 40% 16%) !important;
+  --ion-color-contrast: hsl(145 50% 72%) !important;
+  --button-color: hsl(145 50% 72%);
+  --ion-color-shade: hsl(145 30% 22%);
+  border-color: hsl(145 30% 24%);
+}
+
+.dark .app-top-toast.ion-color-danger {
+  --ion-color-base: hsl(0 45% 16%) !important;
+  --ion-color-contrast: hsl(0 55% 72%) !important;
+  --button-color: hsl(0 55% 72%);
+  --ion-color-shade: hsl(0 35% 22%);
+  border-color: hsl(0 35% 24%);
+}
+
+.dark .app-top-toast.ion-color-warning {
+  --ion-color-base: hsl(38 40% 16%) !important;
+  --ion-color-contrast: hsl(40 60% 72%) !important;
+  --button-color: hsl(40 60% 72%);
+  --ion-color-shade: hsl(38 30% 22%);
+  border-color: hsl(38 30% 24%);
 }
