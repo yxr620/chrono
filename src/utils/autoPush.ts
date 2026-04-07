@@ -42,7 +42,7 @@ export function autoPush(context: string): void {
           console.warn(`[AutoSync] ${context} Push 跳过: ${result.message}`);
           emitSyncStatus({ phase: 'error', direction: 'push' });
           emitSyncToast({
-            message: '自动 Push 失败，详情请查看设置页',
+            message: '自动推送失败',
             color: 'danger',
             duration: 2200
           });
@@ -56,7 +56,7 @@ export function autoPush(context: string): void {
       console.error(`[AutoSync] ${context} Push 失败:`, error);
       emitSyncStatus({ phase: 'error', direction: 'push' });
       emitSyncToast({
-        message: '自动 Push 失败，详情请查看设置页',
+        message: '自动推送失败',
         color: 'danger',
         duration: 2200
       });

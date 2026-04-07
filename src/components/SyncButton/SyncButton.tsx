@@ -26,7 +26,7 @@ export const SyncButton: React.FC = () => {
     } else if (status === 'error' && message) {
       emitSyncStatus({ phase: 'error', direction: 'both' });
       present({
-        message: '同步失败，详情请查看设置页',
+        message: '同步失败',
         duration: 3000,
         position: 'top',
         color: 'danger',

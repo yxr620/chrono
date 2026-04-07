@@ -43,13 +43,13 @@ export const ExportPage: React.FC = () => {
   const handleExportFullJSON = async () => {
     try {
       setIsLoading(true);
-      await showLoadingToast('正在导出全量数据...');
+      await showLoadingToast('导出全量中…');
       await exportFullJSON();
       await hideLoadingToast();
       showToast('全量导出成功', 'success');
     } catch (error) {
       await hideLoadingToast();
-      showToast('导出失败，请重试', 'danger');
+      showToast('导出失败', 'danger');
       console.error('Export Full JSON failed:', error);
     } finally {
       await hideLoadingToast();
@@ -60,13 +60,13 @@ export const ExportPage: React.FC = () => {
   const handleExportIncrementalJSON = async () => {
     try {
       setIsLoading(true);
-      await showLoadingToast('正在导出增量数据...');
+      await showLoadingToast('导出增量中…');
       await exportIncrementalJSON();
       await hideLoadingToast();
       showToast('增量导出成功', 'success');
     } catch (error) {
       await hideLoadingToast();
-      showToast('导出失败，请重试', 'danger');
+      showToast('导出失败', 'danger');
       console.error('Export Incremental JSON failed:', error);
     } finally {
       await hideLoadingToast();
@@ -79,7 +79,7 @@ export const ExportPage: React.FC = () => {
       const entries = await db.entries.toArray();
       const dataStr = JSON.stringify(entries, null, 2);
       await navigator.clipboard.writeText(dataStr);
-      showToast('JSON数据已复制到剪贴板', 'success');
+      showToast('已复制到剪贴板', 'success');
     } catch (error) {
       showToast('复制失败', 'danger');
       console.error('Copy JSON failed:', error);
@@ -139,7 +139,7 @@ export const ExportPage: React.FC = () => {
 
     try {
       setIsLoading(true);
-      await showLoadingToast('正在导入数据...');
+      await showLoadingToast('导入中…');
 
       const result = await importFromJSON(file, importStrategy);
 
@@ -186,7 +186,7 @@ ${result.details.errors.length > 0 ? `\n⚠️ ${result.details.errors.length} �
       }
     } catch (error) {
       await hideLoadingToast();
-      showToast('导入失败，请重试', 'danger');
+      showToast('导入失败', 'danger');
       console.error('Import failed:', error);
     } finally {
       await hideLoadingToast();

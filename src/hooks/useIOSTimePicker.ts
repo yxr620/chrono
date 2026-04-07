@@ -20,7 +20,7 @@ export const useIOSTimePicker = () => {
       if (parsed.isValid()) onConfirm(parsed.toDate());
     } catch (error) {
       console.error('Failed to open iOS native wheel picker:', error);
-      present({ message: '打开原生时间选择器失败', duration: 1500, position: 'top', color: 'warning' });
+      present({ message: '时间选择器打开失败', duration: 1500, position: 'top', color: 'warning' });
     }
   };
 

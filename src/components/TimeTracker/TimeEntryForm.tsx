@@ -304,7 +304,7 @@ export const TimeEntryForm: React.FC = () => {
       return;
     }
     if (startTime > new Date()) {
-      showToast('开始时间不能晚于当前时间', 'danger');
+      showToast('开始时间不能晚于当前', 'danger');
       return;
     }
 
@@ -331,15 +331,15 @@ export const TimeEntryForm: React.FC = () => {
       return;
     }
     if (startTime > new Date()) {
-      showToast('开始时间不能晚于当前时间', 'danger');
+      showToast('开始时间不能晚于当前', 'danger');
       return;
     }
     if (!endTime) {
-      showToast('请设置结束时间或使用"开始计时"', 'warning');
+      showToast('请设置结束时间', 'warning');
       return;
     }
     if (endTime <= startTime) {
-      showToast('结束时间必须晚于开始时间', 'danger');
+      showToast('结束时间须晚于开始', 'danger');
       return;
     }
 
@@ -605,7 +605,7 @@ export const TimeEntryForm: React.FC = () => {
                       if (isIOS) {
                         void openIOSTimePicker(startTime, (pickedDate) => {
                           if (pickedDate > new Date()) {
-                            showToast('开始时间不能晚于当前时间', 'danger');
+                            showToast('开始时间不能晚于当前', 'danger');
                             return;
                           }
                           setStartTime(pickedDate);
@@ -747,7 +747,7 @@ export const TimeEntryForm: React.FC = () => {
                 onClick={() => {
                   const liveValue = startPickerRef.current?.getCurrentValue() ?? startDraftValue;
                   if (liveValue > new Date()) {
-                    showToast('开始时间不能晚于当前时间', 'danger');
+                    showToast('开始时间不能晚于当前', 'danger');
                     return;
                   }
                   setStartTime(liveValue);

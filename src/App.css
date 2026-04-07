@@ -331,7 +331,6 @@ html {
   --ion-color-contrast: hsl(145 55% 28%) !important;
   --button-color: hsl(145 55% 28%);
   --ion-color-shade: hsl(145 40% 86%);
-  border: 1px solid hsl(145 40% 84%);
 }
 
 /* 错误：淡红 */
@@ -340,7 +339,6 @@ html {
   --ion-color-contrast: hsl(0 60% 35%) !important;
   --button-color: hsl(0 60% 35%);
   --ion-color-shade: hsl(0 50% 88%);
-  border: 1px solid hsl(0 50% 86%);
 }
 
 /* 警告：淡黄 */
@@ -349,7 +347,6 @@ html {
   --ion-color-contrast: hsl(35 70% 30%) !important;
   --button-color: hsl(35 70% 30%);
   --ion-color-shade: hsl(38 55% 85%);
-  border: 1px solid hsl(38 55% 83%);
 }
 
 /* 深色模式 — 深底 + 浅文字 */
@@ -358,7 +355,6 @@ html {
   --ion-color-contrast: hsl(145 50% 72%) !important;
   --button-color: hsl(145 50% 72%);
   --ion-color-shade: hsl(145 30% 22%);
-  border-color: hsl(145 30% 24%);
 }
 
 .dark .app-top-toast.ion-color-danger {
@@ -366,7 +362,6 @@ html {
   --ion-color-contrast: hsl(0 55% 72%) !important;
   --button-color: hsl(0 55% 72%);
   --ion-color-shade: hsl(0 35% 22%);
-  border-color: hsl(0 35% 24%);
 }
 
 .dark .app-top-toast.ion-color-warning {

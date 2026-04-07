@@ -429,7 +429,7 @@ export const GoalManager: React.FC = () => {
                             try {
                               const result = await suggestGoals(todayGoals.map(g => g.name));
                               if (result.length === 0) {
-                                present({ message: '暂无历史目标可推荐', duration: 1500, position: 'top', color: 'warning' });
+                                present({ message: '暂无可推荐目标', duration: 1500, position: 'top', color: 'warning' });
                               } else {
                                 setSuggestions(result);
                                 setSelectedSuggestions(new Set(result));

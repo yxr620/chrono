@@ -554,7 +554,7 @@ function handleAutoSyncResult(result: SyncResult): void {
   } else {
     emitSyncStatus({ phase: 'error', direction: 'both' });
     emitSyncToast({
-      message: '自动同步失败，详情请查看设置页',
+      message: '自动同步失败',
       color: 'danger',
       duration: 2200,
     });

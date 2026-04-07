@@ -245,12 +245,12 @@ function App() {
         });
       } else if (result.message !== '正在同步中，请稍候') {
         emitSyncStatus({ phase: 'error', direction: 'pull' });
-        emitSyncToast({ message: '自动 Pull 失败，详情请查看设置页', color: 'danger', duration: 2200 });
+        emitSyncToast({ message: '自动拉取失败', color: 'danger', duration: 2200 });
       }
     }).catch(err => {
       console.error('[AutoSync] 启动时 Pull 失败:', err);
       emitSyncStatus({ phase: 'error', direction: 'pull' });
-      emitSyncToast({ message: '自动 Pull 失败，详情请查看设置页', color: 'danger', duration: 2200 });
+      emitSyncToast({ message: '自动拉取失败', color: 'danger', duration: 2200 });
     });
   }, []);
 
