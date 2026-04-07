@@ -5,7 +5,7 @@
 
 import { dataService } from '../../dataService';
 import { useGoalStore } from '../../../stores/goalStore';
-import { autoPush } from '../../../utils/autoPush';
+import { autoPush } from '../../autoPush';
 import type { ActionDefinition } from '../types';
 
 export const addGoalAction: ActionDefinition = {

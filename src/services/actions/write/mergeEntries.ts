@@ -7,7 +7,7 @@ import dayjs from 'dayjs';
 import { db } from '../../db';
 import { dataService } from '../../dataService';
 import { useEntryStore } from '../../../stores/entryStore';
-import { autoPush } from '../../../utils/autoPush';
+import { autoPush } from '../../autoPush';
 import type { ActionDefinition, ConfirmationChange } from '../types';
 
 export const mergeEntriesAction: ActionDefinition = {
