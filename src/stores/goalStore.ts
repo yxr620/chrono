@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { db, type Goal } from '../services/db';
 import { dataService } from '../services/dataService';
-import { autoPush } from '../utils/autoPush';
+import { autoPush } from '../services/autoPush';
 
 interface GoalStore {
   goals: Goal[];

@@ -60,7 +60,7 @@ All records have `version`, `deviceId`, `syncStatus`, and `deleted` (soft delete
 There is no separate pages directory — all page-level components live under `src/components/` alongside smaller shared components.
 
 ### Routing & Layout (`src/App.tsx`)
-Responsive: switches between mobile layout (bottom tabs) and desktop layout (sidebar split-pane) at the **1024px** breakpoint. Analytics pages (Dashboard, Trends, GoalAnalysis, AIAssistant) are **desktop-only**. Records, Goals, Export, and Maintenance are available on both layouts.
+Responsive: switches between mobile layout (bottom tabs) and desktop layout (sidebar split-pane) at the **1024px** breakpoint. Mobile tabs: Records, Goals, Export. Desktop-only pages: Dashboard, Trends, GoalAnalysis, AIAssistant, Maintenance.
 
 ### Categories
 Six preset categories + user-defined custom categories. Colors are stored in the DB (`Category.color` field, added in schema v5). Preset defaults live in `src/config/categoryColors.ts`. Users manage categories via Maintenance → 类别管理 tab.

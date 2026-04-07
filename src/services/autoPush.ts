@@ -7,10 +7,9 @@
  * 避免与手动 sync() 并发冲突。
  */
 
-import { syncEngine } from '../services/syncEngine';
-import { isSyncReady } from '../services/syncConfig';
-import { emitSyncToast } from '../services/syncToast';
-import { emitSyncStatus } from '../services/syncToast';
+import { syncEngine } from './syncEngine';
+import { isSyncReady } from './syncConfig';
+import { emitSyncToast, emitSyncStatus } from './syncToast';
 
 /**
  * 异步执行自动 Push，不阻塞调用方。

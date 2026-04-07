@@ -98,6 +98,7 @@ src/
 │   ├── export.ts              # JSON 导入导出
 │   ├── goalSuggester.ts       # 晨间目标智能建议（未完成 + 高频目标，Top 5）
 │   ├── metadataPredictor.ts   # 录入时自动预测类别和目标（精确/子串匹配，纯本地）
+│   ├── autoPush.ts            # 数据变更后自动触发增量 Push（封装 sync 协调逻辑）
 │   ├── ai/                    # AI 助手（见 ai-assistant.md）
 │   └── analysis/              # 数据分析处理器
 │       ├── processor.ts       # 数据加载 + 转换管道
@@ -118,13 +119,19 @@ src/
 │   ├── ExportPage/            # 导出 / 设置
 │   ├── SyncManagementPage/    # 同步管理界面
 │   ├── Desktop/               # DesktopSidebar
-│   └── common/                # SyncToastListener、WheelTimePicker
+│   ├── SyncButton/            # SyncButton（手动同步按钮，桌面/导出页）
+│   └── common/                # SyncIndicator、SyncToastListener、WheelTimePicker
 │
 ├── config/
 │   └── categoryColors.ts      # 预设类别默认值 + 自定义类别调色板
 │
+├── hooks/
+│   ├── useAppToast.ts         # 封装 useIonToast，自动注入 top-toast 定位 CSS
+│   ├── useDarkMode.ts         # 暗色模式检测
+│   └── useIOSTimePicker.ts    # iOS 原生滚轮时间选择器 Hook
+│
 └── utils/
-    └── autoPush.ts            # 数据变更后自动触发增量 Push
+    └── appToast.ts            # Ionic toast 选项装饰工具（注入 app-top-toast CSS 类）
 ```
 
 ## 环境变量
