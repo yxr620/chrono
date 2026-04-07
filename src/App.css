@@ -80,7 +80,7 @@ html {
 }
 
 .mobile-layout .app-body {
-  padding-bottom: calc(50px + env(safe-area-inset-bottom));
+  padding-bottom: calc(70px + env(safe-area-inset-bottom));
 }
 
 .app-footer {
@@ -90,6 +90,16 @@ html {
   left: 0;
   right: 0;
   padding-bottom: env(safe-area-inset-bottom);
+  /* Transparent style:
+  background: linear-gradient(
+    to bottom,
+    hsl(var(--background) / 0)   0%,
+    hsl(var(--background) / 0.3) 20%,
+    hsl(var(--background) / 1)   40%,
+    hsl(var(--background) / 1)   100%
+  ); */
+
+  /* Glass style: */
   background: linear-gradient(
     to bottom,
     hsl(var(--background) / 0.5),
