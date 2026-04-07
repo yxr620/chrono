@@ -4,7 +4,6 @@ import {
   IonContent,
   IonButton,
   IonInput,
-  useIonToast,
   useIonAlert,
   IonCard,
   IonCardContent,
@@ -26,6 +25,7 @@ import { Capacitor } from '@capacitor/core';
 import { useGoalStore } from '../../stores/goalStore';
 import { useEntryStore } from '../../stores/entryStore';
 import { useDateStore } from '../../stores/dateStore';
+import { useAppToast } from '../../hooks/useAppToast';
 import { useDarkMode } from '../../hooks/useDarkMode';
 import dayjs from 'dayjs';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
@@ -55,7 +55,7 @@ export const GoalManager: React.FC = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-  const [present] = useIonToast();
+  const [present] = useAppToast();
   const [presentAlert] = useIonAlert();
 
   // 目标建议相关状态
@@ -429,7 +429,7 @@ export const GoalManager: React.FC = () => {
                             try {
                               const result = await suggestGoals(todayGoals.map(g => g.name));
                               if (result.length === 0) {
-                                present({ message: '暂无历史目标可推荐', duration: 1500, position: 'top', color: 'warning' });
+                                present({ message: '暂无可推荐目标', duration: 1500, position: 'top', color: 'warning' });
                               } else {
                                 setSuggestions(result);
                                 setSelectedSuggestions(new Set(result));

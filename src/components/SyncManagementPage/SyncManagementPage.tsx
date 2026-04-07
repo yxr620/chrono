@@ -4,7 +4,6 @@ import {
   IonSpinner,
   IonToggle,
   useIonAlert,
-  useIonToast,
   IonAccordionGroup,
   IonAccordion,
   IonItem,
@@ -15,6 +14,7 @@ import { isOSSConfigured, getOSSConfig } from '../../services/oss';
 import { useSyncStore } from '../../stores/syncStore';
 import { emitSyncStatus } from '../../services/syncToast';
 import type { SyncDirection } from '../../services/syncToast';
+import { useAppToast } from '../../hooks/useAppToast';
 import {
   getSavedOSSConfig,
   saveOSSConfig as persistOSSConfig,
@@ -35,7 +35,7 @@ export const SyncManagementPage: React.FC = () => {
   });
   const [configSource, setConfigSource] = useState<'manual' | 'env' | 'none'>('none');
   const [presentAlert] = useIonAlert();
-  const [presentToast] = useIonToast();
+  const [presentToast] = useAppToast();
 
   useEffect(() => {
     loadStats();
@@ -100,12 +100,12 @@ export const SyncManagementPage: React.FC = () => {
         showToast(result.message, 'success');
       } else {
         emitSyncStatus({ phase: 'error', direction });
-        showToast(`${actionName} 失败，详情请查看设置页`, 'danger');
+        showToast(`${actionName}失败`, 'danger');
       }
     } catch (error) {
       console.error(`${actionName} 失败:`, error);
       emitSyncStatus({ phase: 'error', direction });
-      showToast(`${actionName} 失败`, 'danger');
+      showToast(`${actionName}失败`, 'danger');
     } finally {
       setLoading(false);
     }
@@ -352,7 +352,7 @@ export const SyncManagementPage: React.FC = () => {
                 expand="block"
                 onClick={() => {
                   if (!ossForm.bucket || !ossForm.accessKeyId || !ossForm.accessKeySecret) {
-                    showToast('请填写 Bucket、AccessKey ID 和 AccessKey Secret', 'danger');
+                    showToast('请填写必要的 OSS 配置', 'danger');
                     return;
                   }
                   const config: OSSConfig = {
@@ -417,7 +417,7 @@ export const SyncManagementPage: React.FC = () => {
                           setIsConfigured(nowConfigured);
                           if (!nowConfigured) setShowOSSForm(true);
                           checkConfig();
-                          showToast('OSS 配置已清除，已回退到 .env 配置', 'success');
+                          showToast('OSS 配置已清除', 'success');
                         }
                       }
                     ]

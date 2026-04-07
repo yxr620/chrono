@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import dayjs from 'dayjs';
 import { db, type TimeEntry } from '../services/db';
 import { dataService } from '../services/dataService';
-import { autoPush } from '../utils/autoPush';
+import { autoPush } from '../services/autoPush';
 
 interface EntryStore {
   entries: TimeEntry[];

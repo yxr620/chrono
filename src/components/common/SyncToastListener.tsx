@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
-import { useIonToast } from '@ionic/react';
 import { addSyncToastListener } from '../../services/syncToast';
+import { useAppToast } from '../../hooks/useAppToast';
 
 export const SyncToastListener: React.FC = () => {
-  const [present] = useIonToast();
+  const [present] = useAppToast();
 
   useEffect(() => {
     const cleanup = addSyncToastListener((payload) => {

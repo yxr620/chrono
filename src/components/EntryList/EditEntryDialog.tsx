@@ -8,13 +8,13 @@ import {
   IonInput,
   IonModal,
   IonButton,
-  useIonToast
 } from '@ionic/react';
 import { Capacitor } from '@capacitor/core';
 import { chatbubbleOutline, pricetagOutline, flagOutline } from 'ionicons/icons';
 import { useGoalStore } from '../../stores/goalStore';
 import { useCategoryStore } from '../../stores/categoryStore';
 import { useEntryStore } from '../../stores/entryStore';
+import { useAppToast } from '../../hooks/useAppToast';
 import { useDarkMode } from '../../hooks/useDarkMode';
 import { WheelTimePicker } from '../common/WheelTimePicker';
 import { useIOSTimePicker } from '../../hooks/useIOSTimePicker';
@@ -51,7 +51,7 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
   const [endDraftValue, setEndDraftValue] = useState<Date>(() => new Date());
   const startPickerRef = useRef<WheelTimePickerHandle>(null);
   const endPickerRef = useRef<WheelTimePickerHandle>(null);
-  const [present] = useIonToast();
+  const [present] = useAppToast();
   const { isDark } = useDarkMode();
   const isIOS = Capacitor.getPlatform() === 'ios';
   const { openIOSTimePicker } = useIOSTimePicker();
@@ -107,12 +107,12 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
     }
 
     if (startTime > new Date()) {
-      showToast('开始时间不能晚于当前时间', 'danger');
+      showToast('开始时间不能晚于当前', 'danger');
       return;
     }
 
     if (endTime && endTime <= startTime) {
-      showToast('结束时间必须晚于开始时间', 'danger');
+      showToast('结束时间须晚于开始', 'danger');
       return;
     }
 
@@ -142,9 +142,9 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
     if (lastEndTime) {
       // 确保是 Date 对象
       setStartTime(lastEndTime instanceof Date ? lastEndTime : new Date(lastEndTime));
-      showToast('已设置为上次结束时间', 'success');
+      showToast('已设为上次结束时间', 'success');
     } else {
-      showToast('没有找到上次记录', 'danger');
+      showToast('无上次结束记录', 'danger');
     }
   };
 
@@ -161,7 +161,7 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
   // 设置结束时间为"正在进行"
   const setEndTimeToOngoing = () => {
     setEndTime(null);
-    showToast('已设置为正在进行', 'success');
+    showToast('已设为正在进行', 'success');
   };
 
   if (!entry) return null;
@@ -268,7 +268,7 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
                 <div className="edit-dialog-time-label">开始时间</div>
                 <IonButton expand="block" fill="outline" size="small" onClick={() => {
                   if (isIOS) { void openIOSTimePicker(startTime, (pickedDate) => {
-                    if (pickedDate > new Date()) { showToast('开始时间不能晚于当前时间', 'danger'); return; }
+                    if (pickedDate > new Date()) { showToast('开始时间不能晚于当前', 'danger'); return; }
                     setStartTime(pickedDate);
                   }); return; }
                   setStartPickerVisible(true);
@@ -323,7 +323,7 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
           <div className="edit-dialog-picker" style={{ background: isDark ? 'hsl(222.2, 84%, 4.9%)' : '#fff' }}>
             <div className="edit-dialog-picker-header">
               <IonButton fill="clear" onClick={() => setStartPickerVisible(false)}>取消</IonButton>
-              <IonButton fill="clear" onClick={() => { const liveValue = startPickerRef.current?.getCurrentValue() ?? startDraftValue; if (liveValue > new Date()) { showToast('开始时间不能晚于当前时间', 'danger'); return; } setStartTime(liveValue); setStartPickerVisible(false); }}>确定</IonButton>
+              <IonButton fill="clear" onClick={() => { const liveValue = startPickerRef.current?.getCurrentValue() ?? startDraftValue; if (liveValue > new Date()) { showToast('开始时间不能晚于当前', 'danger'); return; } setStartTime(liveValue); setStartPickerVisible(false); }}>确定</IonButton>
             </div>
             <WheelTimePicker ref={startPickerRef} value={startDraftValue} onChange={setStartDraftValue} isDark={isDark} />
           </div>

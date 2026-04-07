@@ -5,7 +5,6 @@ import {
   IonInput,
   IonItem,
   IonIcon,
-  useIonToast,
   IonCard,
   IonCardContent,
   IonModal
@@ -16,6 +15,7 @@ import { useEntryStore } from '../../stores/entryStore';
 import { useGoalStore } from '../../stores/goalStore';
 import { useCategoryStore } from '../../stores/categoryStore';
 import { useDateStore } from '../../stores/dateStore';
+import { useAppToast } from '../../hooks/useAppToast';
 import { useDarkMode } from '../../hooks/useDarkMode';
 import dayjs from 'dayjs';
 import { WheelTimePicker } from '../common/WheelTimePicker';
@@ -138,7 +138,7 @@ export const TimeEntryForm: React.FC = () => {
   const startPickerRef = useRef<WheelTimePickerHandle>(null);
   const endPickerRef = useRef<WheelTimePickerHandle>(null);
   const [elapsed, setElapsed] = useState('00:00:00');
-  const [present] = useIonToast();
+  const [present] = useAppToast();
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
 
   // 智能预选：追踪用户是否手动选过（手动选过就不再覆盖）
@@ -304,7 +304,7 @@ export const TimeEntryForm: React.FC = () => {
       return;
     }
     if (startTime > new Date()) {
-      showToast('开始时间不能晚于当前时间', 'danger');
+      showToast('开始时间不能晚于当前', 'danger');
       return;
     }
 
@@ -331,15 +331,15 @@ export const TimeEntryForm: React.FC = () => {
       return;
     }
     if (startTime > new Date()) {
-      showToast('开始时间不能晚于当前时间', 'danger');
+      showToast('开始时间不能晚于当前', 'danger');
       return;
     }
     if (!endTime) {
-      showToast('请设置结束时间或使用"开始计时"', 'warning');
+      showToast('请设置结束时间', 'warning');
       return;
     }
     if (endTime <= startTime) {
-      showToast('结束时间必须晚于开始时间', 'danger');
+      showToast('结束时间须晚于开始', 'danger');
       return;
     }
 
@@ -605,7 +605,7 @@ export const TimeEntryForm: React.FC = () => {
                       if (isIOS) {
                         void openIOSTimePicker(startTime, (pickedDate) => {
                           if (pickedDate > new Date()) {
-                            showToast('开始时间不能晚于当前时间', 'danger');
+                            showToast('开始时间不能晚于当前', 'danger');
                             return;
                           }
                           setStartTime(pickedDate);
@@ -747,7 +747,7 @@ export const TimeEntryForm: React.FC = () => {
                 onClick={() => {
                   const liveValue = startPickerRef.current?.getCurrentValue() ?? startDraftValue;
                   if (liveValue > new Date()) {
-                    showToast('开始时间不能晚于当前时间', 'danger');
+                    showToast('开始时间不能晚于当前', 'danger');
                     return;
                   }
                   setStartTime(liveValue);

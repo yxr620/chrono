@@ -87,7 +87,7 @@ export const SyncIndicator: React.FC = () => {
 
   if (state.phase === 'syncing') {
     return (
-      <span className="sync-indicator sync-indicator-syncing">
+      <span className="sync-indicator sync-indicator-syncing" data-app-sync-indicator>
         {(state.direction === 'push' || state.direction === 'both') && (
           <span className="sync-indicator-arrow push">↑</span>
         )}
@@ -108,7 +108,7 @@ export const SyncIndicator: React.FC = () => {
     }
 
     return (
-      <span className="sync-indicator sync-indicator-done">
+      <span className="sync-indicator sync-indicator-done" data-app-sync-indicator>
         <span className="sync-exit-arrows">
           {(state.direction === 'push' || state.direction === 'both') && (
             <span className="sync-indicator-arrow push">↑</span>
@@ -124,7 +124,7 @@ export const SyncIndicator: React.FC = () => {
 
   if (state.phase === 'error') {
     return (
-      <span className="sync-indicator sync-indicator-error" title="同步失败">
+      <span className="sync-indicator sync-indicator-error" title="同步失败" data-app-sync-indicator>
         ⚠
       </span>
     );

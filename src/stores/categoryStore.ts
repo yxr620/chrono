@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { db, type Category, ensurePresetCategories } from '../services/db';
 import { syncDb } from '../services/syncDb';
 import { v4 as uuidv4 } from 'uuid';
-import { autoPush } from '../utils/autoPush';
+import { autoPush } from '../services/autoPush';
 
 interface CategoryStore {
   categories: Category[];

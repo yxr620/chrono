@@ -7,10 +7,9 @@
  * 避免与手动 sync() 并发冲突。
  */
 
-import { syncEngine } from '../services/syncEngine';
-import { isSyncReady } from '../services/syncConfig';
-import { emitSyncToast } from '../services/syncToast';
-import { emitSyncStatus } from '../services/syncToast';
+import { syncEngine } from './syncEngine';
+import { isSyncReady } from './syncConfig';
+import { emitSyncToast, emitSyncStatus } from './syncToast';
 
 /**
  * 异步执行自动 Push，不阻塞调用方。
@@ -42,7 +41,7 @@ export function autoPush(context: string): void {
           console.warn(`[AutoSync] ${context} Push 跳过: ${result.message}`);
           emitSyncStatus({ phase: 'error', direction: 'push' });
           emitSyncToast({
-            message: '自动 Push 失败，详情请查看设置页',
+            message: '自动推送失败',
             color: 'danger',
             duration: 2200
           });
@@ -56,7 +55,7 @@ export function autoPush(context: string): void {
       console.error(`[AutoSync] ${context} Push 失败:`, error);
       emitSyncStatus({ phase: 'error', direction: 'push' });
       emitSyncToast({
-        message: '自动 Push 失败，详情请查看设置页',
+        message: '自动推送失败',
         color: 'danger',
         duration: 2200
       });
