@@ -128,7 +128,7 @@ export const TimeEntryForm: React.FC = () => {
   // Local state
   const [activity, setActivity] = useState('');
   const [startTime, setStartTime] = useState(new Date());
-  const [endTime, setEndTime] = useState<Date | null>(null);
+  const [endTime, setEndTime] = useState<Date | null>(new Date());
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [startPickerVisible, setStartPickerVisible] = useState(false);
@@ -285,7 +285,7 @@ export const TimeEntryForm: React.FC = () => {
     setActivity('');
     setSelectedCategoryId('');
     setSelectedGoalId(null);
-    setEndTime(null);
+    setEndTime(new Date());
     userPickedCategoryRef.current = false;
     userPickedGoalRef.current = false;
     invalidatePredictionCache();
