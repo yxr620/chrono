@@ -1,126 +1,212 @@
-/* 趋势分析页面容器 */
-.trend-page-container {
-  padding: 24px;
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+.desktop-content > .trend-editorial-page {
+  max-width: none;
+}
+
+.trend-editorial-page {
+  width: 100%;
+  padding: 24px 28px 40px;
+  background:
+    radial-gradient(circle at top left, rgba(132, 96, 55, 0.06), transparent 24%),
+    linear-gradient(180deg, #efe7dc 0%, #f4ede4 100%);
+  border-radius: 28px;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  color: #1d1712;
+}
+
+.trend-editorial-shell {
   max-width: 1600px;
   margin: 0 auto;
-  min-height: 100vh;
-  background: hsl(var(--background));
 }
 
-.trend-page-header {
+.trend-page-header-editorial {
   display: flex;
+  align-items: flex-end;
   justify-content: space-between;
-  align-items: center;
+  gap: 18px;
   margin-bottom: 24px;
-  flex-wrap: wrap;
-  gap: 16px;
 }
 
-.trend-page-header h1 {
-  font-size: 24px;
-  font-weight: 600;
-  color: hsl(var(--foreground));
+.trend-heading-group {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  min-width: 0;
+}
+
+.trend-kicker {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #95897c;
+  font-weight: 700;
+}
+
+.trend-page-header-editorial h1 {
   margin: 0;
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: 2.8rem;
+  line-height: 0.96;
+  font-weight: 400;
+  letter-spacing: -0.04em;
+}
+
+.trend-header-meta {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #6d6155;
+  line-height: 1.7;
 }
 
 .trend-back-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: none;
-  background: hsl(var(--card));
-  border-radius: 8px;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(67, 51, 35, 0.08);
+  background: rgba(255, 255, 255, 0.36);
+  border-radius: 12px;
   cursor: pointer;
-  margin-right: 12px;
-  transition: all 0.2s;
+  transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
 }
 
-.trend-back-btn:hover {
-  background: hsl(var(--accent));
+.trend-back-btn:hover,
+.trend-back-btn:focus-visible {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.52);
+  border-color: rgba(67, 51, 35, 0.14);
+  outline: none;
 }
 
 .trend-back-btn ion-icon {
   font-size: 20px;
-  color: hsl(var(--muted-foreground));
+  color: #6f6256;
 }
 
-/* 筛选器 */
 .trend-filters {
   display: flex;
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(67, 51, 35, 0.08);
+  border-radius: 16px;
+}
+
+.trend-filter-icon {
+  font-size: 18px;
+  color: #908173;
 }
 
 .trend-range-btn {
-  padding: 6px 12px;
-  border-radius: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
   border: none;
-  background: hsl(var(--card));
-  color: hsl(var(--muted-foreground));
+  background: transparent;
+  color: #7e7164;
   cursor: pointer;
   font-size: 13px;
-  font-weight: 400;
-  transition: all 0.2s;
+  font-weight: 600;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-.trend-range-btn:hover {
-  background: hsl(var(--accent));
+.trend-range-btn:hover,
+.trend-range-btn:focus-visible {
+  background: rgba(67, 51, 35, 0.08);
+  color: #1d1712;
+  outline: none;
 }
 
 .trend-range-btn.active {
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-  font-weight: 500;
+  background: #1d1712;
+  color: #f8f3eb;
 }
 
 .trend-custom-range {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-left: 8px;
+  flex-wrap: wrap;
+  margin-left: 2px;
+  color: #7e7164;
+  font-size: 13px;
 }
 
 .trend-custom-range input {
-  padding: 4px 8px;
-  border-radius: 4px;
-  border: 1px solid hsl(var(--border));
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(67, 51, 35, 0.12);
   font-size: 13px;
-  background: hsl(var(--card));
-  color: hsl(var(--foreground));
-  color-scheme: dark light;
+  background: rgba(255, 255, 255, 0.66);
+  color: #1d1712;
+  color-scheme: light;
 }
 
-.trend-custom-range span {
-  color: hsl(var(--muted-foreground));
+.trend-chapter-card {
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(67, 51, 35, 0.08);
+  border-radius: 28px;
+  box-shadow: 0 30px 80px -52px rgba(63, 43, 21, 0.34);
 }
 
-/* 图表网格 - 桌面两列、移动一列 */
-.trend-charts-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+.trend-section-header {
+  margin-bottom: 16px;
 }
 
-@media (max-width: 900px) {
-  .trend-charts-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* 单个图表卡片 */
-.trend-chart-card {
-  background: hsl(var(--card));
-  border-radius: 12px;
-  padding: 16px;
+.trend-section-title-row {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.trend-section-title-row h2 {
+  margin: 0;
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: 1.72rem;
+  font-weight: 400;
+}
+
+.trend-section-title-row span {
+  flex: 1;
+  height: 1px;
+  background: rgba(67, 51, 35, 0.1);
+}
+
+.trend-section-subtitle {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #95897c;
+  line-height: 1.7;
+}
+
+.trend-chart-card {
+  background: rgba(255, 255, 255, 0.26);
+  border: 1px solid rgba(67, 51, 35, 0.08);
+  border-radius: 18px;
+  padding: 18px;
 }
 
 .trend-area-overview {
-  margin-bottom: 16px;
+  margin-bottom: 22px;
+}
+
+.trend-editorial-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+  gap: 22px;
+  margin-top: 20px;
+}
+
+.trend-editorial-small-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 22px;
 }
 
 .trend-chart-header {
@@ -137,7 +223,7 @@
   align-items: center;
   font-size: 15px;
   font-weight: 600;
-  color: hsl(var(--foreground));
+  color: #1d1712;
 }
 
 .trend-chart-color-dot {
@@ -151,11 +237,11 @@
   display: flex;
   gap: 16px;
   font-size: 12px;
-  color: hsl(var(--muted-foreground));
+  color: #7e7164;
 }
 
 .trend-stat strong {
-  color: hsl(var(--foreground));
+  color: #1d1712;
   font-weight: 600;
 }
 
@@ -164,74 +250,16 @@
   width: 100%;
 }
 
-/* 加载和空状态 */
-.trend-page-loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 400px;
-  font-size: 16px;
-  color: hsl(var(--muted-foreground));
-}
-
-.trend-page-empty {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  min-height: 400px;
-  text-align: center;
-}
-
-.trend-page-empty-icon {
-  font-size: 64px;
-  color: hsl(var(--muted-foreground));
-  margin-bottom: 16px;
-}
-
-.trend-page-empty-text {
-  font-size: 16px;
-  color: hsl(var(--muted-foreground));
-  line-height: 1.6;
-}
-
-/* 周度对比区域 */
-.trend-weekly-section {
-  margin-top: 16px;
-  margin-bottom: 16px;
-}
-
-/* 对比行布局 - 图表与摘要并排 */
-.trend-comparison-row {
-  display: flex;
-  gap: 16px;
-  margin-top: 16px;
-  flex-wrap: wrap;
-  align-items: stretch;
-}
-
-.trend-comparison-chart-col {
-  flex: 2 1 400px;
-  min-width: 0;
-}
-
-.trend-comparison-summary-col {
-  flex: 1 1 280px;
-  min-width: 0;
-}
-
-/* 摘要卡片固定高度 */
 .trend-summary-card {
   height: 100%;
   display: flex;
   flex-direction: column;
 }
 
-/* 摘要滚动容器 */
 .trend-summary-scroll {
   flex: 1;
   overflow-y: auto;
-  max-height: 252px; /* 与周度对比图表高度一致: 300px - header高度 */
+  max-height: 300px;
   padding-right: 4px;
 }
 
@@ -240,20 +268,15 @@
 }
 
 .trend-summary-scroll::-webkit-scrollbar-track {
-  background: hsl(var(--muted));
-  border-radius: 2px;
+  background: rgba(67, 51, 35, 0.08);
+  border-radius: 999px;
 }
 
 .trend-summary-scroll::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.4);
-  border-radius: 2px;
+  background: rgba(67, 51, 35, 0.2);
+  border-radius: 999px;
 }
 
-.trend-summary-scroll::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.6);
-}
-
-/* 摘要列表样式 */
 .trend-summary-list {
   display: flex;
   flex-direction: column;
@@ -265,13 +288,9 @@
   display: flex;
   align-items: center;
   padding: 12px;
-  border-radius: 8px;
-  background-color: hsl(var(--secondary));
-  transition: background-color 0.2s;
-}
-
-.trend-summary-item:hover {
-  background-color: hsl(var(--accent));
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(67, 51, 35, 0.08);
 }
 
 .trend-summary-bar {
@@ -289,19 +308,19 @@
 
 .trend-summary-name {
   font-weight: 600;
-  color: hsl(var(--foreground));
+  color: #1d1712;
   font-size: 14px;
   margin-bottom: 2px;
 }
 
 .trend-summary-details {
   font-size: 12px;
-  color: hsl(var(--muted-foreground));
+  color: #7e7164;
 }
 
 .trend-summary-divider {
   margin: 0 6px;
-  color: hsl(var(--border));
+  color: rgba(67, 51, 35, 0.18);
 }
 
 .trend-summary-diff {
@@ -311,29 +330,70 @@
 }
 
 .trend-summary-diff.positive {
-  color: #ef4444;
+  color: #b85f47;
 }
 
 .trend-summary-diff.negative {
-  color: #10b981;
+  color: #5c7fa3;
 }
 
 .trend-summary-diff.neutral {
-  color: hsl(var(--muted-foreground));
+  color: #7e7164;
 }
 
-/* 响应式调整 */
-@media (max-width: 768px) {
-  .trend-page-container {
-    padding: 16px;
+.trend-status-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 360px;
+  padding: 48px 36px;
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(67, 51, 35, 0.08);
+  border-radius: 28px;
+  box-shadow: 0 30px 80px -52px rgba(63, 43, 21, 0.24);
+  text-align: center;
+}
+
+.trend-status-card h2 {
+  margin: 0;
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: 2rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.trend-status-card p {
+  max-width: 420px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.75;
+  color: #64584d;
+}
+
+.trend-status-icon {
+  font-size: 46px;
+  color: #95897c;
+}
+
+@media (max-width: 1240px) {
+  .trend-editorial-grid,
+  .trend-editorial-small-grid {
+    grid-template-columns: 1fr;
   }
-  
-  .trend-comparison-row {
-    gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .trend-editorial-page {
+    padding: 16px 16px 28px;
   }
-  
-  .trend-comparison-chart-col,
-  .trend-comparison-summary-col {
-    flex: 1 1 100%;
+
+  .trend-page-header-editorial {
+    align-items: flex-start;
+  }
+
+  .trend-heading-group {
+    align-items: flex-start;
   }
 }
