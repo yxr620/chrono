@@ -6,10 +6,10 @@
 import dayjs from 'dayjs';
 import { db } from '../db';
 import type { TimeEntry, Goal } from '../db';
+import { getAnalysisClusterColor } from './displayColors';
 import {
   clusterGoals,
   matchEventToCluster,
-  getClusterColor,
   DEFAULT_CLUSTER_SETTINGS,
 } from './goalCluster';
 import type {
@@ -54,8 +54,7 @@ export async function loadGoalAnalysisData(dateRange: DateRange): Promise<{
  */
 export function calculateClusterStats(
   cluster: GoalCluster,
-  entries: TimeEntry[],
-  _dateRange: DateRange
+  entries: TimeEntry[]
 ): ClusterStats {
   // 筛选属于该聚类的记录
   const goalIdSet = new Set(cluster.goalIds);
@@ -240,7 +239,7 @@ export async function analyzeGoals(
   const clusters = clusterGoals(goals, settings);
 
   // 3. 计算每个聚类的统计指标
-  const stats = clusters.map(cluster => calculateClusterStats(cluster, entries, dateRange));
+  const stats = clusters.map(cluster => calculateClusterStats(cluster, entries));
 
   // 4. 按总时长排序 stats 和 clusters（保持对应关系）
   const sortedIndices = stats
@@ -324,12 +323,14 @@ function calculateGoalDistribution(
     .filter(s => s.totalDuration > 0)
     .map((s, index) => {
       const cluster = clusters.find(c => c.id === s.clusterId);
+      const clusterName = cluster?.name || s.clusterName;
+
       return {
         clusterId: s.clusterId,
-        clusterName: cluster?.name || s.clusterName,
+        clusterName,
         totalDuration: s.totalDuration,
         percentage: totalDuration > 0 ? s.totalDuration / totalDuration : 0,
-        color: getClusterColor(s.clusterId, index),
+        color: getAnalysisClusterColor(clusterName, index),
       };
     });
 }

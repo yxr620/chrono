@@ -31,9 +31,9 @@ import {
 } from '../../services/analysis/goalAnalysisProcessor';
 import { DEFAULT_CLUSTER_SETTINGS } from '../../services/analysis/goalCluster';
 import {
-  ANALYSIS_CLUSTER_PALETTE,
   ANALYSIS_NEUTRAL_COLOR,
-  softenAnalysisColor,
+  getAnalysisClusterColor,
+  getAnalysisClusterSurfaceTint,
   withAlpha,
 } from '../../services/analysis/displayColors';
 import { db } from '../../services/db';
@@ -158,9 +158,7 @@ const buildClusterToneMap = (distribution: GoalDistributionItem[]): Map<string, 
   const clusterToneMap = new Map<string, ClusterTone>();
 
   distribution.forEach((item, index) => {
-    const fallbackColor = ANALYSIS_CLUSTER_PALETTE[index % ANALYSIS_CLUSTER_PALETTE.length];
-    const softenedColor = item.color ? softenAnalysisColor(item.color, 0.22) : fallbackColor;
-    const color = softenedColor === ANALYSIS_NEUTRAL_COLOR ? fallbackColor : softenedColor;
+    const color = item.color || getAnalysisClusterColor(item.clusterName, index);
 
     clusterToneMap.set(item.clusterId, {
       color,
@@ -332,8 +330,7 @@ const buildRhythmModel = (
       id: cluster.id,
       name: cluster.name,
       color: clusterToneMap.get(cluster.id)?.color
-        ?? ANALYSIS_CLUSTER_PALETTE[index % ANALYSIS_CLUSTER_PALETTE.length]
-        ?? ANALYSIS_NEUTRAL_COLOR,
+        ?? getAnalysisClusterColor(cluster.name, index),
     })),
   };
 };
@@ -377,6 +374,7 @@ export const GoalAnalysisPage: React.FC<GoalAnalysisPageProps> = ({
       setFilteredEntries(filterEntriesForDateRange(allEntries, dateRange));
       setExpandedClusterId(null);
       setSubGoalDetails([]);
+      setShowAllClusters(false);
     } catch (error) {
       console.error('加载目标分析数据失败:', error);
     } finally {
@@ -534,10 +532,10 @@ export const GoalAnalysisPage: React.FC<GoalAnalysisPageProps> = ({
                     return null;
                   }
 
-                  const fallbackColor = ANALYSIS_CLUSTER_PALETTE[index % ANALYSIS_CLUSTER_PALETTE.length] ?? ANALYSIS_NEUTRAL_COLOR;
+                  const fallbackColor = getAnalysisClusterColor(cluster.name, index);
                   const tone = clusterToneMap.get(cluster.id) ?? {
                     color: fallbackColor,
-                    tint: withAlpha(fallbackColor, 0.14),
+                    tint: getAnalysisClusterSurfaceTint(cluster.name, index, 0.14),
                   };
 
                   return (
@@ -810,6 +808,10 @@ const UnlinkedEventSection: React.FC<{
   onRefresh: () => void;
 }> = ({ suggestions, clusters, clusterToneMap, onRefresh }) => {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    setDismissed(new Set());
+  }, [suggestions]);
 
   const getBestCandidate = (suggestion: UnlinkedEventSuggestion) => {
     const cluster = clusters.find((item) => item.id === suggestion.suggestedClusterId);

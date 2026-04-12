@@ -15,18 +15,19 @@ import {
   loadRawData,
   processEntries,
   calculateMetrics,
-  groupByGoal,
   groupByCategory,
   groupByHour,
   formatDuration,
   getDefaultDateRange,
 } from '../../services/analysis/processor';
+import { analyzeGoals } from '../../services/analysis/goalAnalysisProcessor';
+import { DEFAULT_CLUSTER_SETTINGS } from '../../services/analysis/goalCluster';
 import {
-  ANALYSIS_CLUSTER_PALETTE,
   ANALYSIS_NEUTRAL_COLOR,
   getAnalysisDisplayColor,
   getAnalysisSurfaceTint,
 } from '../../services/analysis/displayColors';
+import type { GoalDistributionItem } from '../../types/goalAnalysis';
 import type {
   ProcessedEntry,
   AnalysisMetrics,
@@ -88,7 +89,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [selectedRange, setSelectedRange] = useState(selectedRangeProp ?? 30);
   const [entries, setEntries] = useState<ProcessedEntry[]>([]);
   const [metrics, setMetrics] = useState<AnalysisMetrics | null>(null);
-  const [goalData, setGoalData] = useState<ChartDataPoint[]>([]);
+  const [goalSummaryData, setGoalSummaryData] = useState<GoalDistributionItem[]>([]);
   const [categoryData, setCategoryData] = useState<ChartDataPoint[]>([]);
   const [hourData, setHourData] = useState<ChartDataPoint[]>([]);
 
@@ -107,12 +108,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const { entries: rawEntries, goals, categories } = await loadRawData({ dateRange });
+      const [{ entries: rawEntries, goals, categories }, goalAnalysis] = await Promise.all([
+        loadRawData({ dateRange }),
+        analyzeGoals(dateRange, DEFAULT_CLUSTER_SETTINGS),
+      ]);
       const processed = processEntries(rawEntries, goals, categories);
 
       setEntries(processed);
       setMetrics(calculateMetrics(processed));
-      setGoalData(groupByGoal(processed).slice(0, 10));
+      setGoalSummaryData(goalAnalysis.distribution);
       setCategoryData(groupByCategory(processed, categories));
       setHourData(groupByHour(processed));
     } catch (error) {
@@ -149,11 +153,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
     onDateRangeChange?.(normalizedRange, selectedRange);
   };
 
-  const noGoalStat = goalData.find(item => item.name === '无目标');
-  const goalsForChart = goalData.filter(item => item.name !== '无目标');
-  const displayTopGoal = goalsForChart[0]?.name || metrics?.topGoal || '-';
+  const goalLinkedDuration = entries.reduce((sum, entry) => sum + (entry.goalId ? entry.duration : 0), 0);
+  const displayTopGoal = goalSummaryData[0]?.clusterName || metrics?.topGoal || '-';
   const goalCoverage = metrics && metrics.totalTime > 0
-    ? Math.max(0, Math.round((1 - ((noGoalStat?.value ?? 0) / metrics.totalTime)) * 100))
+    ? Math.max(0, Math.round((goalLinkedDuration / metrics.totalTime) * 100))
     : 0;
 
   const categoryDisplayData: DisplayChartDataPoint[] = categoryData.map(item => ({
@@ -163,9 +166,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   }));
 
   const dashboardCategoryHighlights = categoryDisplayData.slice(0, 3);
-  const goalDisplayData: DisplayChartDataPoint[] = goalsForChart.slice(0, 4).map((item, index) => ({
-    ...item,
-    displayColor: ANALYSIS_CLUSTER_PALETTE[index % ANALYSIS_CLUSTER_PALETTE.length] ?? ANALYSIS_NEUTRAL_COLOR,
+  const goalDisplayData: DisplayChartDataPoint[] = goalSummaryData.slice(0, 4).map((item) => ({
+    name: item.clusterName,
+    value: item.totalDuration,
+    displayColor: item.color,
   }));
 
   if (loading) {

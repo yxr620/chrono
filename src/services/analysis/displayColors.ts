@@ -22,6 +22,16 @@ export const ANALYSIS_CLUSTER_PALETTE = [
   '#B5A896',
 ];
 
+const hashColorKey = (key: string): number => {
+  let hash = 17;
+
+  for (const character of key.trim().toLowerCase()) {
+    hash = ((hash * 33) ^ character.charCodeAt(0)) >>> 0;
+  }
+
+  return hash;
+};
+
 type Rgb = { r: number; g: number; b: number };
 
 const clampChannel = (value: number): number => Math.max(0, Math.min(255, Math.round(value)));
@@ -75,6 +85,22 @@ export const getAnalysisDisplayColor = (categoryId?: string | null, rawColor?: s
   return ANALYSIS_NEUTRAL_COLOR;
 };
 
+export const getAnalysisClusterColor = (clusterKey?: string | null, fallbackIndex = 0): string => {
+  if (ANALYSIS_CLUSTER_PALETTE.length === 0) {
+    return ANALYSIS_NEUTRAL_COLOR;
+  }
+
+  if (!clusterKey) {
+    return ANALYSIS_CLUSTER_PALETTE[Math.abs(fallbackIndex) % ANALYSIS_CLUSTER_PALETTE.length] ?? ANALYSIS_NEUTRAL_COLOR;
+  }
+
+  return ANALYSIS_CLUSTER_PALETTE[hashColorKey(clusterKey) % ANALYSIS_CLUSTER_PALETTE.length] ?? ANALYSIS_NEUTRAL_COLOR;
+};
+
 export const getAnalysisSurfaceTint = (categoryId?: string | null, rawColor?: string | null, alpha = 0.14): string => {
   return withAlpha(getAnalysisDisplayColor(categoryId, rawColor), alpha);
+};
+
+export const getAnalysisClusterSurfaceTint = (clusterKey?: string | null, fallbackIndex = 0, alpha = 0.14): string => {
+  return withAlpha(getAnalysisClusterColor(clusterKey, fallbackIndex), alpha);
 };

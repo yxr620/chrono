@@ -17,7 +17,7 @@ interface DesktopSidebarProps {
 
 interface NavItem {
   key: string;
-  icon: any;
+  icon: string;
   label: string;
   isImage?: boolean;
 }
@@ -38,7 +38,11 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTab
         {navItems.map((item) => (
           <button
             key={item.key}
-            className={`sidebar-nav-item ${activeTab === item.key ? 'active' : ''}`}
+            className={`sidebar-nav-item ${
+              item.key === 'dashboard'
+                ? (activeTab === 'dashboard' || activeTab === 'trend' || activeTab === 'goalAnalysis' ? 'active' : '')
+                : (activeTab === item.key ? 'active' : '')
+            }`}
             onClick={() => onTabChange(item.key)}
           >
             {item.isImage ? (

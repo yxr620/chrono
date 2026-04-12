@@ -6,20 +6,22 @@
 
 .dashboard-page {
   width: 100%;
-  padding: 24px 28px 40px;
+  min-height: 100%;
+  padding: 32px 36px 44px;
   background:
     radial-gradient(circle at top left, rgba(132, 96, 55, 0.06), transparent 24%),
     linear-gradient(180deg, #efe7dc 0%, #f4ede4 100%);
-  border-radius: 28px;
+  border-radius: 0;
   font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
   color: #1d1712;
 }
 
 .dashboard-page.is-loading {
-  min-height: calc(100vh - 160px);
+  min-height: 100%;
 }
 
 .dashboard-shell {
+  width: 100%;
   max-width: 1560px;
   margin: 0 auto;
 }

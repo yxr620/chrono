@@ -32,6 +32,7 @@ interface LayoutProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   children: React.ReactNode;
+  immersive?: boolean;
 }
 
 const mobileTabConfigs = [
@@ -79,15 +80,17 @@ const MobileLayout: React.FC<LayoutProps> = ({ activeTab, onTabChange, children 
   </div>
 );
 
-const DesktopLayout: React.FC<LayoutProps> = ({ activeTab, onTabChange, children }) => (
+const DesktopLayout: React.FC<LayoutProps> = ({ activeTab, onTabChange, children, immersive = false }) => (
   <div className="app desktop-layout">
     <DesktopSidebar activeTab={activeTab} onTabChange={onTabChange} />
     <div className="desktop-main">
-      <div className="desktop-header" data-app-header>
-        <h1 data-app-brand>Chrono</h1>
-        <SyncIndicator />
-      </div>
-      <div className="desktop-content">
+      {!immersive && (
+        <div className="desktop-header" data-app-header>
+          <h1 data-app-brand>Chrono</h1>
+          <SyncIndicator />
+        </div>
+      )}
+      <div className={`desktop-content${immersive ? ' desktop-content-immersive' : ''}`}>
         {children}
       </div>
     </div>
@@ -101,6 +104,7 @@ function App() {
   const { checkConfig } = useSyncStore();
   const [analysisDateRange, setAnalysisDateRange] = useState<DateRange>(getDefaultDateRange());
   const [analysisSelectedRange, setAnalysisSelectedRange] = useState(30);
+  const isAnalysisTab = activeTab === 'dashboard' || activeTab === 'trend' || activeTab === 'goalAnalysis';
 
   // 屏幕宽度检测
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
@@ -311,7 +315,7 @@ function App() {
   return (
     <IonApp>
       <SyncToastListener />
-      <Layout activeTab={activeTab} onTabChange={setActiveTab}>
+      <Layout activeTab={activeTab} onTabChange={setActiveTab} immersive={isDesktop && isAnalysisTab}>
         {renderPageContent()}
       </Layout>
     </IonApp>

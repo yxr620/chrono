@@ -195,6 +195,16 @@ html {
     max-width: 800px;
   }
 
+  .desktop-content.desktop-content-immersive {
+    padding: 0;
+    display: block;
+  }
+
+  .desktop-content.desktop-content-immersive>* {
+    max-width: none;
+    min-height: 100%;
+  }
+
   /* 桌面端页面内容样式 */
   .desktop-layout .page-content-wrapper {
     background: hsl(var(--card));
