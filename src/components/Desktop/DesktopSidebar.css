@@ -1,71 +1,33 @@
-.desktop-sidebar {
-  width: 220px;
-  min-width: 220px;
+.desktop-shell-nav {
+  position: relative;
+  flex: 0 0 var(--desktop-rail-width);
+  width: var(--desktop-rail-width);
+  min-width: var(--desktop-rail-width);
   height: 100%;
-  background-color: hsl(var(--card));
-  border-right: 1px solid hsl(var(--border));
   display: flex;
-  flex-direction: column;
-  user-select: none;
+  align-items: stretch;
+  overflow: visible;
+  z-index: 20;
 }
 
-.sidebar-nav {
-  flex: 1;
-  padding: calc(8px + env(safe-area-inset-top, 0px)) 8px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.desktop-shell-nav.is-pinned {
+  flex-basis: calc(var(--desktop-rail-width) + var(--desktop-drawer-width));
+  width: calc(var(--desktop-rail-width) + var(--desktop-drawer-width));
+  min-width: calc(var(--desktop-rail-width) + var(--desktop-drawer-width));
 }
 
-.sidebar-nav-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border: none;
-  background: transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  text-align: left;
-  width: 100%;
-  color: hsl(var(--muted-foreground));
-  font-size: 14px;
-  -webkit-app-region: no-drag;
+.desktop-shell-nav::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--desktop-shell-border);
+  opacity: 0;
+  transition: opacity 0.18s ease;
 }
 
-.sidebar-nav-item:hover {
-  background-color: hsl(var(--accent));
-  color: hsl(var(--foreground));
-}
-
-.sidebar-nav-item.active {
-  background-color: hsl(var(--primary) / 0.1);
-  color: hsl(var(--primary));
-}
-
-.sidebar-nav-item.active .sidebar-nav-icon {
-  color: hsl(var(--primary));
-}
-
-.sidebar-nav-icon {
-  font-size: 20px;
-  color: inherit;
-}
-
-.sidebar-nav-label {
-  font-weight: 500;
-}
-
-.sidebar-footer {
-  padding: 12px 8px;
-  border-top: 1px solid hsl(var(--border));
-}
-
-.settings-btn {
-  color: hsl(var(--muted-foreground));
-}
-
-.settings-btn:hover {
-  color: hsl(var(--foreground));
+.desktop-shell-nav.is-pinned::after {
+  opacity: 1;
 }

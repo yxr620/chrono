@@ -20,19 +20,22 @@ import { isSyncReady } from './services/syncConfig';
 import { syncEngine } from './services/syncEngine';
 import { emitSyncToast, emitSyncStatus } from './services/syncToast';
 import { DesktopSidebar } from './components/Desktop/DesktopSidebar';
+import { getDesktopShellTheme } from './components/Desktop/desktopNavigation';
 import { SyncToastListener } from './components/common/SyncToastListener';
 import { SyncIndicator } from './components/common/SyncIndicator';
 import { getDefaultDateRange } from './services/analysis/processor';
+import type { DesktopShellTheme, DesktopTab } from './components/Desktop/desktopNavigation';
 import type { DateRange } from './types/analysis';
 import './App.css';
 
 // ─── Layout Components ─────────────────────────────────────────────
 
 interface LayoutProps {
-  activeTab: string;
-  onTabChange: (tab: string) => void;
+  activeTab: DesktopTab;
+  onTabChange: (tab: DesktopTab) => void;
   children: React.ReactNode;
   immersive?: boolean;
+  themeKey?: DesktopShellTheme;
 }
 
 const mobileTabConfigs = [
@@ -63,7 +66,7 @@ const MobileLayout: React.FC<LayoutProps> = ({ activeTab, onTabChange, children 
       <IonTabBar
         className="mobile-tab-bar"
         selectedTab={activeTab}
-        onIonTabsDidChange={(e) => onTabChange(e.detail.tab)}
+        onIonTabsDidChange={(e) => onTabChange(e.detail.tab as DesktopTab)}
       >
         {mobileTabConfigs.map(({ tab, icon }) => (
           <IonTabButton
@@ -80,17 +83,14 @@ const MobileLayout: React.FC<LayoutProps> = ({ activeTab, onTabChange, children 
   </div>
 );
 
-const DesktopLayout: React.FC<LayoutProps> = ({ activeTab, onTabChange, children, immersive = false }) => (
-  <div className="app desktop-layout">
+const DesktopLayout: React.FC<LayoutProps> = ({ activeTab, onTabChange, children, immersive = false, themeKey = 'utility' }) => (
+  <div className="app desktop-layout" data-desktop-theme={themeKey}>
     <DesktopSidebar activeTab={activeTab} onTabChange={onTabChange} />
     <div className="desktop-main">
-      {!immersive && (
-        <div className="desktop-header" data-app-header>
-          <h1 data-app-brand>Chrono</h1>
-          <SyncIndicator />
-        </div>
-      )}
-      <div className={`desktop-content${immersive ? ' desktop-content-immersive' : ''}`}>
+      <div
+        className={`desktop-content${immersive ? ' desktop-content-immersive' : ''}`}
+        data-app-shell-content
+      >
         {children}
       </div>
     </div>
@@ -100,11 +100,12 @@ const DesktopLayout: React.FC<LayoutProps> = ({ activeTab, onTabChange, children
 // ─── App Component ──────────────────────────────────────────────────
 
 function App() {
-  const [activeTab, setActiveTab] = useState('records');
+  const [activeTab, setActiveTab] = useState<DesktopTab>('records');
   const { checkConfig } = useSyncStore();
   const [analysisDateRange, setAnalysisDateRange] = useState<DateRange>(getDefaultDateRange());
   const [analysisSelectedRange, setAnalysisSelectedRange] = useState(30);
   const isAnalysisTab = activeTab === 'dashboard' || activeTab === 'trend' || activeTab === 'goalAnalysis';
+  const desktopTheme = getDesktopShellTheme(activeTab);
 
   // 屏幕宽度检测
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
@@ -153,6 +154,23 @@ function App() {
     const syncToastAnchor = () => {
       cancelAnimationFrame(frameId);
       frameId = requestAnimationFrame(() => {
+        if (window.innerWidth >= 1024) {
+          const shellContent = document.querySelector<HTMLElement>('[data-app-shell-content]');
+
+          if (!shellContent) {
+            clearToastVars();
+            return;
+          }
+
+          const contentRect = shellContent.getBoundingClientRect();
+
+          root.style.setProperty('--app-top-toast-start', `${Math.round(contentRect.left + 24)}px`);
+          root.style.setProperty('--app-top-toast-min-width', '180px');
+          root.style.setProperty('--app-top-toast-max-width', '280px');
+          root.style.setProperty('--app-top-toast-y-offset', '12px');
+          return;
+        }
+
         observeIndicator();
 
         const header = document.querySelector<HTMLElement>('[data-app-header]');
@@ -167,16 +185,16 @@ function App() {
         const headerRect = header.getBoundingClientRect();
         const brandRect = brand.getBoundingClientRect();
         const indicatorRect = indicator?.getBoundingClientRect();
-        const anchorGap = window.innerWidth >= 1024 ? 14 : 10;
-        const sidePadding = window.innerWidth >= 1024 ? 18 : 12;
+        const anchorGap = 10;
+        const sidePadding = 12;
         const preferredStart = Math.round(brandRect.right + anchorGap);
         const preferredEnd = Math.round((indicatorRect?.left ?? headerRect.right) - anchorGap);
         const fallbackStart = Math.round(headerRect.left + sidePadding);
         const fallbackEnd = Math.round(headerRect.right - sidePadding);
         const preferredWidth = preferredEnd - preferredStart;
         const fallbackWidth = fallbackEnd - fallbackStart;
-        const minimumInlineWidth = window.innerWidth >= 1024 ? 180 : 140;
-        const desiredMaxWidth = window.innerWidth >= 1024 ? 320 : 280;
+        const minimumInlineWidth = 140;
+        const desiredMaxWidth = 280;
         const useInlinePlacement = preferredWidth >= minimumInlineWidth;
         const resolvedStart = useInlinePlacement ? preferredStart : fallbackStart;
         const resolvedWidth = Math.max(useInlinePlacement ? preferredWidth : fallbackWidth, 120);
@@ -208,7 +226,7 @@ function App() {
     }
 
     document
-      .querySelectorAll<HTMLElement>('[data-app-header], [data-app-brand]')
+      .querySelectorAll<HTMLElement>('[data-app-header], [data-app-brand], [data-app-shell-content]')
       .forEach((element) => resizeObserver?.observe(element));
     observeIndicator();
 
@@ -315,7 +333,12 @@ function App() {
   return (
     <IonApp>
       <SyncToastListener />
-      <Layout activeTab={activeTab} onTabChange={setActiveTab} immersive={isDesktop && isAnalysisTab}>
+      <Layout
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        immersive={isDesktop && isAnalysisTab}
+        themeKey={desktopTheme}
+      >
         {renderPageContent()}
       </Layout>
     </IonApp>
