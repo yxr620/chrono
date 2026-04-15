@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:local": "tsc -b && vite build --mode localdev",
     "lint": "eslint .",
     "preview": "vite preview",
     "ai:debug": "tsx scripts/ai-debug-cli.ts"
