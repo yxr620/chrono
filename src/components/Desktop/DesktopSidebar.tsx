@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import { DesktopNavDrawer } from './DesktopNavDrawer';
-import { DesktopNavRail } from './DesktopNavRail';
-import { getDesktopShellTheme } from './desktopNavigation';
+import { IonIcon } from '@ionic/react';
+import { chevronBackOutline, chevronForwardOutline } from 'ionicons/icons';
+import { SyncIndicator } from '../common/SyncIndicator';
+import {
+  DESKTOP_NAV_ITEMS,
+  getActiveDesktopNavItem,
+  getDesktopShellTheme,
+  isDesktopNavItemActive,
+} from './desktopNavigation';
 import type { DesktopPrimaryTab, DesktopTab } from './desktopNavigation';
 import './DesktopSidebar.css';
 
-const PINNED_STORAGE_KEY = 'chrono.desktop-nav-pinned';
-const PINNED_MIN_WIDTH = 1280;
+const COLLAPSED_STORAGE_KEY = 'chrono.desktop-sidebar-collapsed';
 
 interface DesktopSidebarProps {
   activeTab: DesktopTab;
@@ -14,113 +19,106 @@ interface DesktopSidebarProps {
 }
 
 export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ activeTab, onTabChange }) => {
-  const [canPin, setCanPin] = useState(() => window.innerWidth >= PINNED_MIN_WIDTH);
-  const [isPinned, setIsPinned] = useState(
-    () => window.innerWidth >= PINNED_MIN_WIDTH && window.localStorage.getItem(PINNED_STORAGE_KEY) === 'true',
-  );
-  const [isDrawerOpen, setIsDrawerOpen] = useState(
-    () => window.innerWidth >= PINNED_MIN_WIDTH && window.localStorage.getItem(PINNED_STORAGE_KEY) === 'true',
-  );
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem(COLLAPSED_STORAGE_KEY) === 'true';
+  });
+
+  useEffect(() => {
+    window.localStorage.setItem(COLLAPSED_STORAGE_KEY, String(collapsed));
+  }, [collapsed]);
+
   const themeKey = useMemo(() => getDesktopShellTheme(activeTab), [activeTab]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      const nextCanPin = window.innerWidth >= PINNED_MIN_WIDTH;
-      setCanPin(nextCanPin);
-
-      if (!nextCanPin) {
-        setIsPinned(false);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  useEffect(() => {
-    if (!canPin) {
-      window.localStorage.removeItem(PINNED_STORAGE_KEY);
-      return;
-    }
-
-    window.localStorage.setItem(PINNED_STORAGE_KEY, String(isPinned));
-  }, [canPin, isPinned]);
-
-  useEffect(() => {
-    if (!isPinned) {
-      setIsDrawerOpen(false);
-    }
-  }, [activeTab, isPinned]);
-
-  useEffect(() => {
-    if (!isDrawerOpen || isPinned) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsDrawerOpen(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isDrawerOpen, isPinned]);
+  const activeItem = useMemo(() => getActiveDesktopNavItem(activeTab), [activeTab]);
 
   const handleNavigate = (tab: DesktopPrimaryTab) => {
     onTabChange(tab);
-
-    if (!isPinned) {
-      setIsDrawerOpen(false);
-    }
   };
 
-  const handleToggleDrawer = () => {
-    if (isPinned) {
-      setIsPinned(false);
-      setIsDrawerOpen(false);
-      return;
-    }
-
-    setIsDrawerOpen((prev) => !prev);
-  };
-
-  const handleTogglePinned = () => {
-    if (!canPin) {
-      return;
-    }
-
-    setIsPinned((prev) => {
-      const next = !prev;
-      setIsDrawerOpen(next);
-      return next;
-    });
-  };
-
-  const open = isPinned || isDrawerOpen;
+  const toggleLabel = collapsed ? '展开侧边栏' : '收起侧边栏';
 
   return (
-    <div
-      className={`desktop-shell-nav${open ? ' is-open' : ''}${isPinned ? ' is-pinned' : ''}`}
+    <aside
+      className={`desktop-sidebar${collapsed ? ' is-collapsed' : ' is-expanded'}`}
       data-desktop-theme={themeKey}
-      data-desktop-nav-state={isPinned ? 'pinned' : open ? 'drawer' : 'rail'}
+      data-collapsed={collapsed ? 'true' : 'false'}
+      aria-label="桌面导航"
     >
-      <DesktopNavRail
-        activeTab={activeTab}
-        drawerOpen={open}
-        pinned={isPinned}
-        onNavigate={handleNavigate}
-        onToggleDrawer={handleToggleDrawer}
-      />
-      <DesktopNavDrawer
-        activeTab={activeTab}
-        open={open}
-        pinned={isPinned}
-        canPin={canPin}
-        onNavigate={handleNavigate}
-        onClose={() => setIsDrawerOpen(false)}
-        onTogglePinned={handleTogglePinned}
-      />
-    </div>
+      <div className="desktop-sidebar-header">
+        <button
+          type="button"
+          className="desktop-sidebar-brand-button"
+          title={toggleLabel}
+          aria-label={toggleLabel}
+          aria-expanded={!collapsed}
+          onClick={() => setCollapsed((prev) => !prev)}
+        >
+          {collapsed ? (
+            <span className="desktop-sidebar-brand-mark" aria-hidden="true">Ch</span>
+          ) : (
+            <span className="desktop-sidebar-brand-copy">
+              <span className="desktop-sidebar-brand-name">Chrono</span>
+              <span className="desktop-sidebar-brand-context">当前 · {activeItem.label}</span>
+            </span>
+          )}
+          {!collapsed && (
+            <span className="desktop-sidebar-brand-chevron" aria-hidden="true">
+              <IonIcon icon={chevronBackOutline} />
+            </span>
+          )}
+          {collapsed && (
+            <span className="desktop-sidebar-brand-chevron is-collapsed" aria-hidden="true">
+              <IonIcon icon={chevronForwardOutline} />
+            </span>
+          )}
+        </button>
+      </div>
+
+      <nav className="desktop-sidebar-nav" aria-label="主导航">
+        {DESKTOP_NAV_ITEMS.map((item) => {
+          const isActive = isDesktopNavItemActive(item, activeTab);
+          const tooltip = isActive ? `${item.label}（当前）` : item.label;
+
+          return (
+            <button
+              key={item.key}
+              type="button"
+              className={`desktop-sidebar-item${isActive ? ' is-active' : ''}`}
+              title={collapsed ? tooltip : undefined}
+              aria-current={isActive ? 'page' : undefined}
+              aria-label={collapsed ? tooltip : undefined}
+              onClick={() => handleNavigate(item.key)}
+            >
+              <span className="desktop-sidebar-item-icon" aria-hidden="true">
+                {item.isImage ? (
+                  <img src={item.icon} alt="" />
+                ) : (
+                  <IonIcon icon={item.icon} />
+                )}
+              </span>
+              {!collapsed && (
+                <span className="desktop-sidebar-item-label">{item.label}</span>
+              )}
+              {collapsed && (
+                <span className="desktop-sidebar-tooltip" role="tooltip">{tooltip}</span>
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      <div className="desktop-sidebar-footer">
+        {collapsed ? (
+          <div className="desktop-sidebar-footer-collapsed" title="同步状态">
+            <SyncIndicator />
+          </div>
+        ) : (
+          <div className="desktop-sidebar-footer-expanded">
+            <span className="desktop-sidebar-kicker">同步状态</span>
+            <SyncIndicator />
+          </div>
+        )}
+      </div>
+    </aside>
   );
 };
