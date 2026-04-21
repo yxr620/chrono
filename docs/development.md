@@ -29,30 +29,45 @@ npm run dev                   # http://localhost:5173
 | 命令 | 说明 |
 |---|---|
 | `npm run dev` | 启动 Vite 开发服务器（HMR） |
-| `npm run build` | TypeScript 编译 + Vite 生产构建 → `dist/` |
+| `npm run build` | **发布构建** — TypeScript 编译 + Vite 生产构建 → `dist/`（不含密钥） |
+| `npm run build:local` | **本地构建** — 同上，但保留 `.env.local` 中的密钥（用于本地 Android 测试） |
 | `npm run lint` | ESLint 检查 |
 | `npm run preview` | 预览生产构建 |
 | `npm run ai:debug` | AI 助手 CLI 调试 |
 
 ## 环境变量
 
-复制 `.env.example` → `.env.local`。所有变量均可选，不配置时对应功能不可用，但应用正常运行。
+复制 `.env.example` → `.env.local`，填入你的密钥。所有变量均可选，不配置时对应功能不可用，但应用正常运行。
+
+### 文件结构
+
+| 文件 | 用途 | Git 跟踪 |
+|------|------|----------|
+| `.env.example` | 模板，列出所有可配置变量 | ✅ 提交 |
+| `.env.local` | **你的密钥**（OSS、AI 等） | ❌ gitignored |
+| `.env.production` | 发布构建用，所有密钥留空 | ✅ 提交 |
 
 ```dotenv
-# 同步（可选）
+# .env.local 示例
 VITE_OSS_REGION=oss-cn-hangzhou
 VITE_OSS_BUCKET=your-bucket-name
 VITE_OSS_ACCESS_KEY_ID=your-access-key-id
 VITE_OSS_ACCESS_KEY_SECRET=your-access-key-secret
-
-# AI 助手（可选）
 VITE_AI_PROVIDER_ID=qwen
 VITE_AI_MODEL=qwen3.5-plus
 VITE_AI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 VITE_AI_API_KEY=your-api-key
 ```
 
-> **优先级**：应用内设置（localStorage）> `.env` 环境变量。
+### Vite 加载优先级（高 → 低）
+
+- `npm run dev`（development mode）：`.env.local` > `.env`
+- `npm run build`（production mode）：`.env.production` > `.env.local` > `.env`
+- `npm run build:local`（localdev mode）：`.env.local` > `.env`
+
+**关键原理**：`npm run build` 默认使用 production mode，Vite 会加载 `.env.production` 并覆盖 `.env.local`。由于 `.env.production` 中密钥为空，发布构建自动不含密钥。`npm run build:local` 使用自定义 mode，不触发 `.env.production` 覆盖，保留 `.env.local` 中的密钥。
+
+> **应用内优先级**：localStorage 设置 > 环境变量。用户在应用内修改的配置会覆盖 env 默认值。
 
 ## AI CLI 调试
 
@@ -91,11 +106,11 @@ npx cap open android
 ### 日常开发流程
 
 ```bash
-npm run build && npx cap copy
+npm run build:local && npx cap copy
 # 在 Android Studio 中点击 Run
 ```
 
-- `npm run build` — TypeScript 检查 + 构建 `dist/`
+- `npm run build:local` — TypeScript 检查 + 构建 `dist/`（包含 `.env.local` 中的密钥，用于本地调试）
 - `npx cap copy` — 复制 `dist/` 到 `android/app/src/main/assets/public/`
 
 ### 真机调试
@@ -123,13 +138,11 @@ npm run build && npx cap copy
 VERSION=0.0.2
 cd /Users/lumosk/Workspace/time_tracker
 
-# 安全构建（移除 .env 防止密钥泄露到 JS）
-mv .env .env.backup 2>/dev/null; mv .env.local .env.local.backup 2>/dev/null
+# 发布构建（自动不含密钥，无需手动移除 .env）
 npm run build
-mv .env.backup .env 2>/dev/null; mv .env.local.backup .env.local 2>/dev/null
 
 # 验证构建产物无密钥
-grep -r "LTAI\|sk-\|pUVf" dist/assets/*.js && echo "⚠️ 停止！" && exit 1
+grep -r "LTAI\|sk-" dist/assets/*.js && echo "⚠️ 密钥泄露！停止发布！" && exit 1
 
 # 打包签名
 npx cap sync android
@@ -148,11 +161,21 @@ gh release create v${VERSION} \
 
 > `build-tools` 版本号按实际安装调整：`ls ~/Library/Android/sdk/build-tools/`
 
+#### 安全原理
+
+`npm run build` 使用 Vite production mode，自动加载 `.env.production`（密钥为空）覆盖 `.env.local`（含密钥）。无需手动移除任何文件。
+
+```
+npm run build          → production mode → .env.production (空密钥) → 发布安全 ✅
+npm run build:local    → localdev mode   → .env.local (有密钥)     → 本地调试 ✅
+```
+
 #### 安全注意事项
 
-1. **永远不要在 `.env` 存在时构建发布 APK** — Vite 会把 `VITE_*` 变量编译进 JS
-2. **Keystore 不要提交到 Git**
-3. **密钥泄露处理**：删除 Release → 禁用旧 AccessKey → 重新生成 API Key
+1. **密钥只存放在 `.env.local`** — 该文件被 `.gitignore` 忽略，不会提交到 Git
+2. **`.env.production` 中密钥必须为空** — 这是发布构建的安全保障
+3. **Keystore (`*.jks`) 不要提交到 Git**
+4. **密钥泄露处理**：删除 Release → 禁用旧 AccessKey → 重新生成 API Key
 
 #### 版本号规范
 

@@ -80,7 +80,7 @@ html {
 }
 
 .mobile-layout .app-body {
-  padding-bottom: calc(50px + env(safe-area-inset-bottom));
+  padding-bottom: calc(70px + env(safe-area-inset-bottom));
 }
 
 .app-footer {
@@ -90,6 +90,16 @@ html {
   left: 0;
   right: 0;
   padding-bottom: env(safe-area-inset-bottom);
+  /* Transparent style:
+  background: linear-gradient(
+    to bottom,
+    hsl(var(--background) / 0)   0%,
+    hsl(var(--background) / 0.3) 20%,
+    hsl(var(--background) / 1)   40%,
+    hsl(var(--background) / 1)   100%
+  ); */
+
+  /* Glass style: */
   background: linear-gradient(
     to bottom,
     hsl(var(--background) / 0.5),
@@ -141,65 +151,134 @@ html {
 /* 桌面端布局 */
 @media (min-width: 1024px) {
   .desktop-layout {
+    --desktop-rail-width: 60px;
+    --desktop-sidebar-expanded-width: 240px;
+    --desktop-shell-surface: rgba(255, 255, 255, 0.72);
+    --desktop-shell-panel: rgba(255, 255, 255, 0.94);
+    --desktop-shell-border: rgba(15, 23, 42, 0.08);
+    --desktop-shell-shadow: 0 22px 54px -36px rgba(15, 23, 42, 0.24);
+    --desktop-shell-accent: hsl(var(--primary));
+    --desktop-shell-accent-soft: hsl(var(--primary) / 0.12);
+    --desktop-shell-ink: hsl(var(--foreground));
+    --desktop-shell-muted: hsl(var(--muted-foreground));
+    --desktop-page-max-width: 1120px;
     flex-direction: row;
     background-color: hsl(var(--background));
   }
 
+  .desktop-layout[data-desktop-theme='analysis'] {
+    --desktop-shell-surface: rgba(255, 250, 244, 0.78);
+    --desktop-shell-panel: rgba(252, 247, 240, 0.96);
+    --desktop-shell-border: rgba(67, 51, 35, 0.12);
+    --desktop-shell-shadow: 0 24px 60px -38px rgba(63, 43, 21, 0.34);
+    --desktop-shell-accent: #1d1712;
+    --desktop-shell-accent-soft: rgba(67, 51, 35, 0.1);
+    --desktop-shell-ink: #1d1712;
+    --desktop-shell-muted: #6a5f54;
+  }
+
+  .desktop-layout[data-desktop-theme='records'] {
+    --desktop-shell-surface: rgba(255, 255, 255, 0.78);
+    --desktop-shell-panel: rgba(255, 255, 255, 0.96);
+    --desktop-shell-border: hsl(var(--border));
+    --desktop-shell-shadow: 0 18px 44px -36px rgba(15, 23, 42, 0.22);
+    --desktop-shell-accent: hsl(var(--primary));
+    --desktop-shell-accent-soft: hsl(var(--primary) / 0.12);
+  }
+
+  .desktop-layout[data-desktop-theme='goals'],
+  .desktop-layout[data-desktop-theme='utility'] {
+    --desktop-shell-surface: rgba(255, 255, 255, 0.74);
+    --desktop-shell-panel: rgba(255, 255, 255, 0.94);
+    --desktop-shell-border: hsl(var(--border));
+    --desktop-shell-shadow: 0 18px 44px -36px rgba(15, 23, 42, 0.2);
+    --desktop-shell-accent: hsl(var(--primary));
+    --desktop-shell-accent-soft: hsl(var(--primary) / 0.1);
+  }
+
+  .dark .desktop-layout {
+    --desktop-shell-surface: rgba(8, 12, 23, 0.92);
+    --desktop-shell-panel: rgba(15, 23, 42, 0.82);
+    --desktop-shell-border: rgba(148, 163, 184, 0.16);
+    --desktop-shell-shadow: 0 30px 72px -48px rgba(2, 6, 23, 0.96);
+    --desktop-shell-accent: hsl(var(--primary));
+    --desktop-shell-accent-soft: hsl(var(--primary) / 0.18);
+    --desktop-shell-ink: hsl(var(--foreground));
+    --desktop-shell-muted: hsl(var(--muted-foreground));
+  }
+
+  .dark .desktop-layout[data-desktop-theme='analysis'] {
+    --desktop-shell-surface: rgba(24, 18, 13, 0.94);
+    --desktop-shell-panel: rgba(37, 29, 22, 0.86);
+    --desktop-shell-border: rgba(237, 211, 182, 0.15);
+    --desktop-shell-shadow: 0 30px 72px -48px rgba(0, 0, 0, 0.96);
+    --desktop-shell-accent: #f3c897;
+    --desktop-shell-accent-soft: rgba(243, 200, 151, 0.16);
+    --desktop-shell-ink: #f7efe6;
+    --desktop-shell-muted: #c9b6a1;
+  }
+
+  .dark .desktop-layout[data-desktop-theme='records'] {
+    --desktop-shell-surface: rgba(8, 16, 31, 0.94);
+    --desktop-shell-panel: rgba(14, 24, 43, 0.86);
+    --desktop-shell-border: rgba(96, 165, 250, 0.14);
+    --desktop-shell-shadow: 0 30px 72px -48px rgba(2, 6, 23, 0.96);
+    --desktop-shell-accent-soft: hsl(var(--primary) / 0.2);
+  }
+
+  .dark .desktop-layout[data-desktop-theme='goals'],
+  .dark .desktop-layout[data-desktop-theme='utility'] {
+    --desktop-shell-surface: rgba(7, 12, 24, 0.92);
+    --desktop-shell-panel: rgba(14, 21, 39, 0.84);
+    --desktop-shell-border: rgba(148, 163, 184, 0.16);
+    --desktop-shell-shadow: 0 30px 72px -48px rgba(2, 6, 23, 0.96);
+    --desktop-shell-accent-soft: hsl(var(--primary) / 0.18);
+  }
+
   .desktop-main {
     flex: 1;
+    min-width: 0;
     height: 100%;
     overflow: hidden;
     display: flex;
     flex-direction: column;
   }
 
-  .desktop-header {
-    flex-shrink: 0;
-    padding: 16px 24px;
-    border-bottom: 1px solid hsl(var(--border));
-    background-color: hsl(var(--background));
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .desktop-header h1 {
-    margin: 0;
-    font-size: 24px;
-    font-weight: 600;
-    color: hsl(var(--foreground));
-  }
-
   .desktop-content {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 24px;
-    display: flex;
-    justify-content: center;
+    padding: 24px 28px 28px;
+    display: block;
   }
 
-  /* 桌面端内容区域限制最大宽度 */
-  .desktop-content>* {
+  .desktop-content > * {
     width: 100%;
-    max-width: 800px;
+    max-width: var(--desktop-page-max-width, 1120px);
+    margin: 0 auto;
   }
 
-  /* 桌面端页面内容样式 */
+  .desktop-content.desktop-content-immersive {
+    padding: 0;
+  }
+
+  .desktop-content.desktop-content-immersive > * {
+    max-width: none;
+    min-height: 100%;
+  }
+
   .desktop-layout .page-content-wrapper {
     background: hsl(var(--card));
     border-radius: 12px;
     padding: 24px;
   }
 
-  /* 桌面端 RecordsPage 样式 */
   .desktop-layout .timeline-view,
   .desktop-layout .entry-list-container {
     background: transparent;
     border-radius: inherit;
     box-shadow: none;
     margin-bottom: 0;
-    /* 卡片样式统一由外层 .records-section 提供，避免双层阴影/边框重影 */
   }
 
   .desktop-layout .timeline-view {

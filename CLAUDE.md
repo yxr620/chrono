@@ -7,13 +7,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 # Development
 npm run dev          # Start Vite dev server (http://localhost:5173)
-npm run build        # TypeScript compile + Vite production build
+npm run build        # Release build — no secrets (production mode, uses .env.production)
+npm run build:local  # Local build — keeps .env.local secrets (for Android/device testing)
 npm run lint         # ESLint checks
 npm run preview      # Preview production build
 npm run ai:debug     # CLI debugging for AI assistant
 
 # Mobile (Android)
-npm run build && npx cap copy           # Sync web build to Android
+npm run build:local && npx cap copy     # Local testing (with secrets)
+npm run build && npx cap copy           # Release build (no secrets)
 npx cap open android                    # Open in Android Studio
 
 # Desktop (Electron via Capacitor)
