@@ -128,7 +128,7 @@ export const TimeEntryForm: React.FC = () => {
   // Local state
   const [activity, setActivity] = useState('');
   const [startTime, setStartTime] = useState(new Date());
-  const [endTime, setEndTime] = useState<Date | null>(null);
+  const [endTime, setEndTime] = useState<Date | null>(new Date());
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [startPickerVisible, setStartPickerVisible] = useState(false);
@@ -277,6 +277,10 @@ export const TimeEntryForm: React.FC = () => {
       setStartTime(now);
       setSelectedDate(dayjs(now).format('YYYY-MM-DD'));
     } else {
+      if (now <= startTime) {
+        showToast('结束时间须晚于开始', 'danger');
+        return;
+      }
       setEndTime(now);
     }
   };
@@ -285,7 +289,7 @@ export const TimeEntryForm: React.FC = () => {
     setActivity('');
     setSelectedCategoryId('');
     setSelectedGoalId(null);
-    setEndTime(null);
+    setEndTime(new Date());
     userPickedCategoryRef.current = false;
     userPickedGoalRef.current = false;
     invalidatePredictionCache();
@@ -630,6 +634,10 @@ export const TimeEntryForm: React.FC = () => {
                     onClick={() => {
                       if (isIOS) {
                         void openIOSTimePicker(endTime ?? new Date(), (pickedDate) => {
+                          if (pickedDate <= startTime) {
+                            showToast('结束时间须晚于开始', 'danger');
+                            return;
+                          }
                           setEndTime(pickedDate);
                         });
                         return;
@@ -648,7 +656,7 @@ export const TimeEntryForm: React.FC = () => {
                 </div>
 
                 {/* 快捷按钮行 */}
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   {startIsLastEnd ? (
                     <span
                       onClick={(e) => { e.stopPropagation(); setToNow(true); }}
@@ -683,6 +691,25 @@ export const TimeEntryForm: React.FC = () => {
                       )}
                     </span>
                   )}
+                  {/* 时长显示 */}
+                  {(() => {
+                    if (!endTime) return null;
+                    const diffMinutes = dayjs(endTime).diff(dayjs(startTime), 'minute');
+                    if (diffMinutes <= 0) return null;
+                    const h = Math.floor(diffMinutes / 60);
+                    const m = diffMinutes % 60;
+                    const label = h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
+                    return (
+                      <span style={{
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        color: isDark ? '#64748b' : '#94a3b8',
+                        letterSpacing: '0.2px'
+                      }}>
+                        {label}
+                      </span>
+                    );
+                  })()}
                   {endTime === null ? (
                     <span
                       onClick={(e) => { e.stopPropagation(); setToNow(false); }}
@@ -784,6 +811,10 @@ export const TimeEntryForm: React.FC = () => {
                 fill="clear"
                 onClick={() => {
                   const liveValue = endPickerRef.current?.getCurrentValue() ?? endDraftValue;
+                  if (liveValue <= startTime) {
+                    showToast('结束时间须晚于开始', 'danger');
+                    return;
+                  }
                   setEndTime(liveValue);
                   setEndPickerVisible(false);
                 }}

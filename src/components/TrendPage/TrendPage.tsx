@@ -24,44 +24,42 @@ import {
   groupByWeekAndCategory,
   getDefaultDateRange,
 } from '../../services/analysis/processor';
+import { getAnalysisDisplayColor } from '../../services/analysis/displayColors';
 import type { ProcessedEntry, CategoryTrendDataPoint, DateRange } from '../../types/analysis';
 import './TrendPage.css';
 
-// 图表样式常量
 const CHART_STYLES = {
   tooltip: {
     contentStyle: {
-      backgroundColor: 'hsl(var(--card))',
-      border: '1px solid hsl(var(--border))',
-      borderRadius: 6,
-      boxShadow: 'none',
+      backgroundColor: '#f8f3eb',
+      border: '1px solid rgba(67, 51, 35, 0.1)',
+      borderRadius: 14,
+      boxShadow: '0 18px 38px -28px rgba(63, 43, 21, 0.36)',
       fontSize: 12,
       padding: 10,
-      color: 'hsl(var(--foreground))',
-    }
+      color: '#1d1712',
+    },
   },
   axis: {
-    tick: { fill: 'hsl(var(--muted-foreground))' },
-    stroke: 'hsl(var(--border))'
+    tick: { fill: '#7f7264' },
+    stroke: 'rgba(67, 51, 35, 0.16)',
   },
   grid: {
-    stroke: 'hsl(var(--border))',
+    stroke: 'rgba(67, 51, 35, 0.08)',
     strokeDasharray: '3 3',
-    vertical: false as const
+    vertical: false as const,
   },
   cursor: {
-    fill: 'hsl(var(--muted) / 0.3)'
-  }
+    fill: 'rgba(67, 51, 35, 0.08)',
+  },
 } as const;
 
-// 预设时间范围选项
 const DATE_RANGES = [
   { label: '最近7天', days: 7 },
   { label: '最近30天', days: 30 },
   { label: '自定义', days: -1 },
 ];
 
-// 类别趋势数据类型
 interface CategoryTrendData {
   data: CategoryTrendDataPoint[];
   categoryKeys: { id: string; name: string; color: string }[];
@@ -80,10 +78,18 @@ interface TrendPageProps {
   onDateRangeChange?: (range: DateRange, selected: number) => void;
 }
 
-export const TrendPage: React.FC<TrendPageProps> = ({ onBack, dateRange: dateRangeProp, selectedRange: selectedRangeProp, onDateRangeChange }) => {
+export const TrendPage: React.FC<TrendPageProps> = ({
+  onBack,
+  dateRange: dateRangeProp,
+  selectedRange: selectedRangeProp,
+  onDateRangeChange,
+}) => {
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<DateRange>(dateRangeProp ?? getDefaultDateRange());
   const [selectedRange, setSelectedRange] = useState(selectedRangeProp ?? 30);
+  const [entries, setEntries] = useState<ProcessedEntry[]>([]);
+  const [categoryTrendData, setCategoryTrendData] = useState<CategoryTrendData>({ data: [], categoryKeys: [] });
+  const [weeklyComparisonData, setWeeklyComparisonData] = useState<CategoryTrendData>({ data: [], categoryKeys: [] });
 
   useEffect(() => {
     if (dateRangeProp) {
@@ -96,58 +102,42 @@ export const TrendPage: React.FC<TrendPageProps> = ({ onBack, dateRange: dateRan
       setSelectedRange(selectedRangeProp);
     }
   }, [selectedRangeProp]);
-  
-  // 数据状态
-  const [entries, setEntries] = useState<ProcessedEntry[]>([]);
-  const [categoryTrendData, setCategoryTrendData] = useState<CategoryTrendData>({ data: [], categoryKeys: [] });
-  const [weeklyComparisonData, setWeeklyComparisonData] = useState<CategoryTrendData>({ data: [], categoryKeys: [] });
 
-  // 加载数据
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // 1. 加载主趋势数据
-      const { entries: rawEntries, goals, categories } = await loadRawData({
-        dateRange,
-      });
-      
+      const { entries: rawEntries, goals, categories } = await loadRawData({ dateRange });
       const processed = processEntries(rawEntries, goals, categories);
       setEntries(processed);
       setCategoryTrendData(groupByDayAndCategory(processed, dateRange, categories));
 
-      // 2. 加载周度对比数据 (最近3个完整周)
-      // 基于今天计算，找到上一个完整周（不包含今天所在的不完整周）
       const today = new Date();
-      const todayWeekStart = dayjs(today).day(0).startOf('day'); // 今天所在周的周日
-      // 如果今天是周六，则今天所在周是完整的；否则取上一周作为最近完整周
-      const todayDayOfWeek = today.getDay(); // 0=周日, 6=周六
-      const lastCompleteWeekStart = todayDayOfWeek === 6 
-        ? todayWeekStart // 今天是周六，本周完整
-        : todayWeekStart.subtract(1, 'week'); // 否则取上一周
-      
-      // 计算前3周的时间段（从最近完整周往前推）
+      const todayWeekStart = dayjs(today).day(0).startOf('day');
+      const todayDayOfWeek = today.getDay();
+      // Keep comparisons on complete Sunday-Saturday windows so the latest column never mixes a partial week.
+      const lastCompleteWeekStart = todayDayOfWeek === 6
+        ? todayWeekStart
+        : todayWeekStart.subtract(1, 'week');
+
       const weeks = [2, 1, 0].map(weeksAgo => {
         const start = lastCompleteWeekStart.subtract(weeksAgo, 'week');
         const end = start.day(6).endOf('day');
         return {
           start: start.toDate(),
           end: end.toDate(),
-          label: `${start.format('MM/DD')}-${end.format('MM/DD')}`
+          label: `${start.format('MM/DD')}-${end.format('MM/DD')}`,
         };
       });
 
-      // 加载这3周的数据
-      const comparisonStart = weeks[0].start;
-      const comparisonEnd = weeks[2].end;
-      
       const { entries: compEntries } = await loadRawData({
-        dateRange: { start: comparisonStart, end: comparisonEnd }
+        dateRange: {
+          start: weeks[0].start,
+          end: weeks[2].end,
+        },
       });
-      
-      const compProcessed = processEntries(compEntries, goals, categories);
-      const weeklyData = groupByWeekAndCategory(compProcessed, weeks, categories);
-      setWeeklyComparisonData(weeklyData);
 
+      const compProcessed = processEntries(compEntries, goals, categories);
+      setWeeklyComparisonData(groupByWeekAndCategory(compProcessed, weeks, categories));
     } catch (error) {
       console.error('加载趋势数据失败:', error);
     } finally {
@@ -159,13 +149,12 @@ export const TrendPage: React.FC<TrendPageProps> = ({ onBack, dateRange: dateRan
     fetchData();
   }, [fetchData]);
 
-  // 处理时间范围变更（不含今天）
   const handleRangeChange = (days: number) => {
     setSelectedRange(days);
     if (days > 0) {
       const today = new Date();
-      const end = dayjs(today).subtract(1, 'day').toDate(); // 昨天
-      const start = dayjs(today).subtract(days, 'day').toDate(); // N天前
+      const end = dayjs(today).subtract(1, 'day').endOf('day').toDate();
+      const start = dayjs(today).subtract(days, 'day').startOf('day').toDate();
       const range = { start, end };
       setDateRange(range);
       onDateRangeChange?.(range, days);
@@ -174,121 +163,148 @@ export const TrendPage: React.FC<TrendPageProps> = ({ onBack, dateRange: dateRan
     }
   };
 
-  // 处理自定义日期范围变更
   const handleCustomRangeChange = (range: DateRange) => {
-    setDateRange(range);
-    onDateRangeChange?.(range, selectedRange);
+    const normalizedRange = {
+      start: dayjs(range.start).startOf('day').toDate(),
+      end: dayjs(range.end).endOf('day').toDate(),
+    };
+    setDateRange(normalizedRange);
+    onDateRangeChange?.(normalizedRange, selectedRange);
   };
 
-  // 加载中状态
+  const displayCategories = categoryTrendData.categoryKeys.map(category => ({
+    ...category,
+    displayColor: getAnalysisDisplayColor(category.id, category.color),
+  }));
+
+  const displayWeeklyCategories = weeklyComparisonData.categoryKeys.map(category => ({
+    ...category,
+    displayColor: getAnalysisDisplayColor(category.id, category.color),
+  }));
+
   if (loading) {
     return (
-      <div className="trend-page-loading">
-        <IonSpinner name="crescent" />
-        <span style={{ marginLeft: 12 }}>加载趋势数据...</span>
+      <div className="trend-editorial-page is-loading">
+        <div className="trend-editorial-shell">
+          <div className="trend-status-card">
+            <IonSpinner name="crescent" />
+            <h2>正在整理趋势章节</h2>
+            <p>读取分类记录后，这里会展开更适合桌面阅读的类别趋势视图。</p>
+          </div>
+        </div>
       </div>
     );
   }
 
-  // 空数据状态
   if (entries.length === 0) {
     return (
-      <div className="trend-page-container">
-        <div className="trend-page-header">
-          {onBack && (
-            <button className="trend-back-btn" onClick={onBack}>
-              <IonIcon icon={arrowBackOutline} />
-            </button>
-          )}
-          <h1>类别趋势分析</h1>
-          <DateRangeSelector 
-            selected={selectedRange} 
-            onChange={handleRangeChange} 
-            customRange={dateRange}
-            onCustomRangeChange={handleCustomRangeChange}
-          />
-        </div>
-        <div className="trend-page-empty">
-          <IonIcon icon={analyticsOutline} className="trend-page-empty-icon" />
-          <p className="trend-page-empty-text">
-            选定时间范围内暂无数据<br />
-            开始记录时间后，这里将显示趋势图表
-          </p>
+      <div className="trend-editorial-page">
+        <div className="trend-editorial-shell">
+          <div className="trend-page-header trend-page-header-editorial">
+            <div className="trend-heading-group">
+              {onBack && (
+                <button className="trend-back-btn trend-back-btn-editorial" onClick={onBack} type="button">
+                  <IonIcon icon={arrowBackOutline} />
+                </button>
+              )}
+              <div>
+                <p className="trend-kicker">Chapter 01</p>
+                <h1>类别趋势分析</h1>
+                <p className="trend-header-meta">观察不同类别在时间中的流动方式。</p>
+              </div>
+            </div>
+            <DateRangeSelector
+              selected={selectedRange}
+              onChange={handleRangeChange}
+              customRange={dateRange}
+              onCustomRangeChange={handleCustomRangeChange}
+            />
+          </div>
+
+          <div className="trend-status-card">
+            <IonIcon icon={analyticsOutline} className="trend-status-icon" />
+            <h2>这段时间还没有类别趋势</h2>
+            <p>开始记录后，这一章会优先展示总体叠加趋势，再拆开看周度变化和单类别小图。</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="trend-page-container">
-      {/* 头部 */}
-      <div className="trend-page-header">
-        {onBack && (
-          <button className="trend-back-btn" onClick={onBack}>
-            <IonIcon icon={arrowBackOutline} />
-          </button>
-        )}
-        <h1>类别趋势分析</h1>
-        <DateRangeSelector 
-          selected={selectedRange} 
-          onChange={handleRangeChange} 
-          customRange={dateRange}
-          onCustomRangeChange={handleCustomRangeChange}
-        />
-      </div>
+    <div className="trend-editorial-page">
+      <div className="trend-editorial-shell">
+        <div className="trend-page-header trend-page-header-editorial">
+          <div className="trend-heading-group">
+            {onBack && (
+              <button className="trend-back-btn trend-back-btn-editorial" onClick={onBack} type="button">
+                <IonIcon icon={arrowBackOutline} />
+              </button>
+            )}
+            <div>
+              <p className="trend-kicker">Chapter 01</p>
+              <h1>类别趋势分析</h1>
+              <p className="trend-header-meta">观察不同类别在时间中的流动方式。</p>
+            </div>
+          </div>
+          <DateRangeSelector
+            selected={selectedRange}
+            onChange={handleRangeChange}
+            customRange={dateRange}
+            onCustomRangeChange={handleCustomRangeChange}
+          />
+        </div>
 
-        {/* 叠加面积图总览 */}
-        <StackedAreaOverview
-          data={categoryTrendData.data}
-          categories={categoryTrendData.categoryKeys}
-          className="trend-area-overview"
-        />
+        <section className="trend-chapter-card">
+          <SectionHeader
+            title="总体叠加"
+            subtitle="趋势页进入更冷静的阅读模式，视觉权重让给图表本身。"
+          />
+          <StackedAreaOverview
+            data={categoryTrendData.data}
+            categories={displayCategories.map(category => ({ ...category, color: category.displayColor }))}
+            className="trend-area-overview"
+          />
 
-        {/* 周度对比 */}
-        {weeklyComparisonData.data.length > 0 && (
-          <div className="trend-weekly-section">
-            <WeeklyCategoryGroupedChart
-              data={weeklyComparisonData.data}
-              categories={weeklyComparisonData.categoryKeys}
-            />
-            <div className="trend-comparison-row">
-              <div className="trend-comparison-chart-col">
-                <WeeklyComparisonChart
+          {weeklyComparisonData.data.length > 0 && (
+            <div className="trend-editorial-grid">
+              <div>
+                <SectionHeader title="周度对比" subtitle="比较最近三个完整周的类别投入差异。" compact />
+                <WeeklyCategoryGroupedChart
                   data={weeklyComparisonData.data}
-                  categories={weeklyComparisonData.categoryKeys}
+                  categories={displayWeeklyCategories.map(category => ({ ...category, color: category.displayColor }))}
                 />
               </div>
-              <div className="trend-comparison-summary-col">
+
+              <div>
+                <SectionHeader title="变化摘要" subtitle="用简短注释帮助用户快速扫读本周变化。" compact />
                 <WeeklySummary
                   data={weeklyComparisonData.data}
-                  categories={weeklyComparisonData.categoryKeys}
+                  categories={displayWeeklyCategories.map(category => ({ ...category, color: category.displayColor }))}
                 />
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-      {/* 小图表网格 */}
-      <div className="trend-charts-grid">
-        {categoryTrendData.categoryKeys.map((cat) => (
-          <SingleCategoryChart
-            key={cat.id}
-            categoryId={cat.id}
-            categoryName={cat.name}
-            categoryColor={cat.color}
-            data={categoryTrendData.data}
-          />
-        ))}
+          <div className="trend-editorial-small-grid">
+            {displayCategories.map(category => (
+              <SingleCategoryChart
+                key={category.id}
+                categoryId={category.id}
+                categoryName={category.name}
+                categoryColor={category.displayColor}
+                data={categoryTrendData.data}
+              />
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   );
 };
 
-// === 子组件 ===
-
-/** 时间范围选择器 */
-const DateRangeSelector: React.FC<{ 
-  selected: number; 
+const DateRangeSelector: React.FC<{
+  selected: number;
   onChange: (days: number) => void;
   customRange: DateRange;
   onCustomRangeChange: (range: DateRange) => void;
@@ -302,10 +318,11 @@ const DateRangeSelector: React.FC<{
 
   return (
     <div className="trend-filters">
-      <IonIcon icon={calendarOutline} style={{ fontSize: 18, color: 'hsl(var(--muted-foreground))' }} />
+      <IonIcon icon={calendarOutline} className="trend-filter-icon" />
       {DATE_RANGES.map(range => (
         <button
           key={range.days}
+          type="button"
           className={`trend-range-btn ${selected === range.days ? 'active' : ''}`}
           onClick={() => onChange(range.days)}
         >
@@ -317,9 +334,9 @@ const DateRangeSelector: React.FC<{
           <input
             type="date"
             value={formatDateForInput(customRange.start)}
-            onChange={(e) => {
-              const newStart = new Date(e.target.value);
-              if (!isNaN(newStart.getTime()) && newStart <= customRange.end) {
+            onChange={(event) => {
+              const newStart = dayjs(event.target.value).startOf('day').toDate();
+              if (!Number.isNaN(newStart.getTime()) && newStart <= customRange.end) {
                 onCustomRangeChange({ ...customRange, start: newStart });
               }
             }}
@@ -328,9 +345,9 @@ const DateRangeSelector: React.FC<{
           <input
             type="date"
             value={formatDateForInput(customRange.end)}
-            onChange={(e) => {
-              const newEnd = new Date(e.target.value);
-              if (!isNaN(newEnd.getTime()) && newEnd >= customRange.start) {
+            onChange={(event) => {
+              const newEnd = dayjs(event.target.value).endOf('day').toDate();
+              if (!Number.isNaN(newEnd.getTime()) && newEnd >= customRange.start) {
                 onCustomRangeChange({ ...customRange, end: newEnd });
               }
             }}
@@ -341,15 +358,25 @@ const DateRangeSelector: React.FC<{
   );
 };
 
-/** 总体叠加面积图 */
+const SectionHeader: React.FC<{
+  title: string;
+  subtitle?: string;
+  compact?: boolean;
+}> = ({ title, subtitle, compact = false }) => (
+  <div className={`trend-section-header ${compact ? 'compact' : ''}`}>
+    <div className="trend-section-title-row">
+      <h2>{title}</h2>
+      <span />
+    </div>
+    {subtitle && <p className="trend-section-subtitle">{subtitle}</p>}
+  </div>
+);
+
 const StackedAreaOverview: React.FC<StackedAreaOverviewProps> = ({ data, categories, className }) => {
   const cardClass = className ? `${className} trend-chart-card` : 'trend-chart-card';
 
   return (
     <div className={cardClass}>
-      <div className="trend-chart-header">
-        <div className="trend-chart-title">总体叠加</div>
-      </div>
       <div className="trend-chart-wrapper" style={{ height: 260 }}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -359,16 +386,16 @@ const StackedAreaOverview: React.FC<StackedAreaOverviewProps> = ({ data, categor
               tick={{ fontSize: 10, ...CHART_STYLES.axis.tick }}
               stroke={CHART_STYLES.axis.stroke}
               interval="preserveStartEnd"
-              tickFormatter={(val) => {
-                const parts = (val as string).split('/');
-                return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : (val as string);
+              tickFormatter={(value) => {
+                const parts = (value as string).split('/');
+                return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : (value as string);
               }}
             />
             <YAxis
               tick={{ fontSize: 10, ...CHART_STYLES.axis.tick }}
               stroke={CHART_STYLES.axis.stroke}
               domain={[0, 24]}
-              tickFormatter={(val) => `${val}`}
+              tickFormatter={(value) => `${value}`}
             />
             <Tooltip
               content={(props) => {
@@ -380,8 +407,8 @@ const StackedAreaOverview: React.FC<StackedAreaOverviewProps> = ({ data, categor
                 return (
                   <div style={CHART_STYLES.tooltip.contentStyle}>
                     <div style={{ marginBottom: 6 }}>日期: {label}</div>
-                    {payload.map((item) => (
-                      <div key={item.dataKey} style={{ marginBottom: 4 }}>
+                    {payload.map(item => (
+                      <div key={String(item.dataKey)} style={{ marginBottom: 4 }}>
                         <span
                           style={{
                             display: 'inline-block',
@@ -395,26 +422,24 @@ const StackedAreaOverview: React.FC<StackedAreaOverviewProps> = ({ data, categor
                         {item.name}: {(item.value as number).toFixed(1)}h
                       </div>
                     ))}
-                    <div style={{ marginTop: 6, fontWeight: 600 }}>
-                      总计: {total.toFixed(1)}h
-                    </div>
+                    <div style={{ marginTop: 6, fontWeight: 600 }}>总计: {total.toFixed(1)}h</div>
                   </div>
                 );
               }}
             />
-            {categories.map((cat) => (
+            {categories.map(category => (
               <Area
-                key={cat.id}
+                key={category.id}
                 type="monotone"
-                dataKey={cat.id}
-                name={cat.name}
+                dataKey={category.id}
+                name={category.name}
                 stackId="1"
-                stroke={cat.color}
-                fill={cat.color}
-                fillOpacity={0.55}
-                strokeWidth={1.5}
-                dot={{ r: 2, stroke: 'hsl(var(--card))', strokeWidth: 1 }}
-                activeDot={{ r: 4, strokeWidth: 2, stroke: 'hsl(var(--card))' }}
+                stroke={category.color}
+                fill={category.color}
+                fillOpacity={0.48}
+                strokeWidth={2}
+                dot={{ r: 2, stroke: '#f8f3eb', strokeWidth: 1 }}
+                activeDot={{ r: 4, strokeWidth: 2, stroke: '#f8f3eb' }}
                 isAnimationActive={false}
               />
             ))}
@@ -425,67 +450,56 @@ const StackedAreaOverview: React.FC<StackedAreaOverviewProps> = ({ data, categor
   );
 };
 
-/** 单个类别的小折线图 */
 const SingleCategoryChart: React.FC<{
   categoryId: string;
   categoryName: string;
   categoryColor: string;
   data: CategoryTrendDataPoint[];
 }> = ({ categoryId, categoryName, categoryColor, data }) => {
-  // 提取该类别的数据
-  const chartData = data.map(d => {
-    const value = (d[categoryId] as number) || 0;
+  const chartData = data.map(point => {
+    const value = (point[categoryId] as number) || 0;
     return {
-      label: d.label,
+      label: point.label,
       value,
       percentageOfDay: (value / 24) * 100,
     };
   });
 
-  // 计算平均值
-  const values = chartData.map(d => d.value);
-  const avg = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
-  const total = values.reduce((a, b) => a + b, 0);
+  const values = chartData.map(point => point.value);
+  const avg = values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+  const total = values.reduce((sum, value) => sum + value, 0);
 
   return (
     <div className="trend-chart-card">
       <div className="trend-chart-header">
         <div className="trend-chart-title">
-          <span 
-            className="trend-chart-color-dot" 
-            style={{ backgroundColor: categoryColor }}
-          />
+          <span className="trend-chart-color-dot" style={{ backgroundColor: categoryColor }} />
           {categoryName}
         </div>
         <div className="trend-chart-stats">
-          <span className="trend-stat">
-            总计: <strong>{total.toFixed(1)}h</strong>
-          </span>
-          <span className="trend-stat">
-            均值: <strong>{avg.toFixed(1)}h</strong>
-          </span>
+          <span className="trend-stat">总计: <strong>{total.toFixed(1)}h</strong></span>
+          <span className="trend-stat">均值: <strong>{avg.toFixed(1)}h</strong></span>
         </div>
       </div>
       <div className="trend-chart-wrapper">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <CartesianGrid {...CHART_STYLES.grid} />
-            <XAxis 
-              dataKey="label" 
-              tick={{ fontSize: 10, ...CHART_STYLES.axis.tick }} 
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 10, ...CHART_STYLES.axis.tick }}
               stroke={CHART_STYLES.axis.stroke}
               interval="preserveStartEnd"
-              tickFormatter={(val) => {
-                // 只显示月/日
-                const parts = val.split('/');
-                return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : val;
+              tickFormatter={(value) => {
+                const parts = String(value).split('/');
+                return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : String(value);
               }}
             />
-            <YAxis 
-              tick={{ fontSize: 10, ...CHART_STYLES.axis.tick }} 
-              stroke={CHART_STYLES.axis.stroke} 
+            <YAxis
+              tick={{ fontSize: 10, ...CHART_STYLES.axis.tick }}
+              stroke={CHART_STYLES.axis.stroke}
               domain={[0, 24]}
-              tickFormatter={(val) => `${val}`}
+              tickFormatter={(value) => `${value}`}
             />
             <Tooltip
               content={(props) => {
@@ -496,27 +510,19 @@ const SingleCategoryChart: React.FC<{
                 return (
                   <div style={{ ...CHART_STYLES.tooltip.contentStyle, minWidth: undefined }}>
                     <div style={{ marginBottom: 6 }}>日期: {label}</div>
-                    <div>
-                      {categoryName}: {point.value.toFixed(1)} 小时 ({percent.toFixed(1)}%)
-                    </div>
+                    <div>{categoryName}: {point.value.toFixed(1)} 小时 ({percent.toFixed(1)}%)</div>
                   </div>
                 );
               }}
             />
-            {/* 平均值参考线 */}
-            <ReferenceLine 
-              y={avg} 
-              stroke={categoryColor} 
-              strokeDasharray="4 4" 
-              strokeOpacity={0.5}
-            />
+            <ReferenceLine y={avg} stroke={categoryColor} strokeDasharray="4 4" strokeOpacity={0.5} />
             <Line
               type="linear"
               dataKey="value"
               stroke={categoryColor}
               strokeWidth={2}
               dot={{ r: 2, fill: categoryColor, strokeWidth: 0 }}
-              activeDot={{ r: 4, strokeWidth: 2, stroke: 'hsl(var(--card))' }}
+              activeDot={{ r: 4, strokeWidth: 2, stroke: '#f8f3eb' }}
             />
           </LineChart>
         </ResponsiveContainer>
@@ -525,100 +531,29 @@ const SingleCategoryChart: React.FC<{
   );
 };
 
-/** 周度对比堆叠柱状图 */
-const WeeklyComparisonChart: React.FC<{
-  data: CategoryTrendDataPoint[];
-  categories: { id: string; name: string; color: string }[];
-}> = ({ data, categories }) => {
-  return (
-    <div className="trend-chart-card">
-      <div className="trend-chart-header">
-        <div className="trend-chart-title">周度对比 (Weekly Comparison)</div>
-      </div>
-      <div className="trend-chart-wrapper" style={{ height: 300 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 20, right: 30, left: -20, bottom: 5 }}>
-            <CartesianGrid {...CHART_STYLES.grid} />
-            <XAxis dataKey="label" tick={{ fontSize: 12, ...CHART_STYLES.axis.tick }} stroke={CHART_STYLES.axis.stroke} />
-            <YAxis tick={{ fontSize: 12, ...CHART_STYLES.axis.tick }} stroke={CHART_STYLES.axis.stroke} />
-            <Tooltip
-              cursor={CHART_STYLES.cursor}
-              content={(props) => {
-                const { active, payload, label } = props;
-                if (!active || !payload || payload.length === 0) return null;
-                
-                const total = payload.reduce((sum, item) => sum + ((item.value as number) || 0), 0);
-
-                return (
-                  <div style={{ ...CHART_STYLES.tooltip.contentStyle, minWidth: 150 }}>
-                    <div style={{ marginBottom: 6, fontWeight: 600 }}>{label}</div>
-                    {payload.map((item) => (
-                      <div key={item.dataKey} style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
-                        <span>
-                          <span
-                            style={{
-                              display: 'inline-block',
-                              width: 8,
-                              height: 8,
-                              backgroundColor: item.color,
-                              borderRadius: 2,
-                              marginRight: 6,
-                            }}
-                          />
-                          {item.name}
-                        </span>
-                        <span>{(item.value as number).toFixed(1)}h</span>
-                      </div>
-                    ))}
-                    <div style={{ marginTop: 6, borderTop: '1px solid hsl(var(--border))', paddingTop: 6, fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
-                      <span>总计</span>
-                      <span>{total.toFixed(1)}h</span>
-                    </div>
-                  </div>
-                );
-              }}
-            />
-            <Legend iconType="circle" wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
-            {categories.map((cat) => (
-              <Bar
-                key={cat.id}
-                dataKey={cat.id}
-                name={cat.name}
-                stackId="a"
-                fill={cat.color}
-                maxBarSize={50}
-              />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  );
-};
-
-/** 分组柱状图 (侧重单类别纵向对比) */
 const WeeklyCategoryGroupedChart: React.FC<{
   data: CategoryTrendDataPoint[];
   categories: { id: string; name: string; color: string }[];
 }> = ({ data, categories }) => {
-  // 数据转换：从 [按周聚合] 转换为 [按类别聚合]
-  // 原始数据: [{ date: 'W1', work: 10, study: 5 }, { date: 'W2', work: 12, study: 6 }]
-  // 目标数据: [{ name: 'Work', w1: 10, w2: 12 }, { name: 'Study', w1: 5, w2: 6 }]
-  
   const chartData = React.useMemo(() => {
-    if (data.length === 0) return { transformedData: [], weekKeys: [] };
-    
-    // 提取周标签作为 key
-    const weekKeys = data.map((d, index) => ({
+    if (data.length === 0) {
+      return {
+        transformedData: [] as Array<Record<string, string | number>>,
+        weekKeys: [] as Array<{ key: string; label: string; color: string }>,
+      };
+    }
+
+    const weekPalette = ['#2f251d', '#8f7f6f', '#d4c4b5'];
+    const weekKeys = data.map((point, index) => ({
       key: `week_${index}`,
-      label: d.label,
-      color: index === data.length - 1 ? '#3b82f6' : (index === data.length - 2 ? '#9ca3af' : '#e5e7eb')
+      label: point.label,
+      color: weekPalette[index] ?? '#d4c4b5',
     }));
 
-    const transformedData = categories.map(cat => {
-      const item: any = { name: cat.name, color: cat.color };
-      data.forEach((d, index) => {
-        item[`week_${index}`] = d[cat.id] || 0;
+    const transformedData = categories.map(category => {
+      const item: Record<string, string | number> = { name: category.name, color: category.color };
+      data.forEach((point, index) => {
+        item[`week_${index}`] = point[category.id] || 0;
       });
       return item;
     });
@@ -626,13 +561,12 @@ const WeeklyCategoryGroupedChart: React.FC<{
     return { transformedData, weekKeys };
   }, [data, categories]);
 
-  if (chartData.transformedData.length === 0) return null;
+  if (chartData.transformedData.length === 0) {
+    return null;
+  }
 
   return (
     <div className="trend-chart-card">
-      <div className="trend-chart-header">
-        <div className="trend-chart-title">类别纵向对比 (Category Comparison)</div>
-      </div>
       <div className="trend-chart-wrapper" style={{ height: 300 }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData.transformedData} margin={{ top: 20, right: 30, left: -20, bottom: 5 }}>
@@ -647,9 +581,9 @@ const WeeklyCategoryGroupedChart: React.FC<{
 
                 return (
                   <div style={{ ...CHART_STYLES.tooltip.contentStyle, minWidth: 150 }}>
-                    <div style={{ marginBottom: 6, fontWeight: 600, color: payload[0]?.payload.color }}>{label}</div>
+                    <div style={{ marginBottom: 6, fontWeight: 600, color: String(payload[0]?.payload.color ?? '#1d1712') }}>{label}</div>
                     {payload.map((item, index) => (
-                      <div key={item.dataKey} style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
+                      <div key={String(item.dataKey)} style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
                         <span>
                           <span
                             style={{
@@ -670,17 +604,9 @@ const WeeklyCategoryGroupedChart: React.FC<{
                 );
               }}
             />
-            <Legend 
-              wrapperStyle={{ fontSize: 12, paddingTop: 10 }} 
-            />
-            {chartData.weekKeys.map((week: any) => (
-              <Bar
-                key={week.key}
-                dataKey={week.key}
-                name={week.label}
-                fill={week.color}
-                radius={[2, 2, 0, 0]}
-              />
+            <Legend wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
+            {chartData.weekKeys.map(week => (
+              <Bar key={week.key} dataKey={week.key} name={week.label} fill={week.color} radius={[2, 2, 0, 0]} />
             ))}
           </BarChart>
         </ResponsiveContainer>
@@ -689,39 +615,37 @@ const WeeklyCategoryGroupedChart: React.FC<{
   );
 };
 
-/** 周度变化摘要 */
 const WeeklySummary: React.FC<{
   data: CategoryTrendDataPoint[];
   categories: { id: string; name: string; color: string }[];
 }> = ({ data, categories }) => {
-  if (data.length < 2) return null;
+  if (data.length < 2) {
+    return null;
+  }
 
   const currentWeek = data[data.length - 1];
   const prevWeek = data[data.length - 2];
+  const categoryOrder = ['学习', '工作', '娱乐', '日常', '运动', '休息', '未分类'];
 
-  // 固定的类别显示顺序
-  const categoryOrder = ['学习', '工作', '娱乐', '日常', '运动', '未分类'];
-
-  // 计算所有类别的变化，按固定顺序排序
-  const changes = categories.map(cat => {
-    const currentVal = (currentWeek[cat.id] as number) || 0;
-    const prevVal = (prevWeek[cat.id] as number) || 0;
-    const diff = currentVal - prevVal;
-    return {
-      ...cat,
-      currentVal,
-      prevVal,
-      diff,
-      absDiff: Math.abs(diff)
-    };
-  }).sort((a, b) => {
-    const indexA = categoryOrder.indexOf(a.name);
-    const indexB = categoryOrder.indexOf(b.name);
-    // 如果类别不在预定义列表中，放到最后
-    const orderA = indexA === -1 ? categoryOrder.length : indexA;
-    const orderB = indexB === -1 ? categoryOrder.length : indexB;
-    return orderA - orderB;
-  });
+  const changes = categories
+    .map(category => {
+      const currentVal = (currentWeek[category.id] as number) || 0;
+      const prevVal = (prevWeek[category.id] as number) || 0;
+      const diff = currentVal - prevVal;
+      return {
+        ...category,
+        currentVal,
+        prevVal,
+        diff,
+      };
+    })
+    .sort((left, right) => {
+      const leftIndex = categoryOrder.indexOf(left.name);
+      const rightIndex = categoryOrder.indexOf(right.name);
+      const resolvedLeft = leftIndex === -1 ? categoryOrder.length : leftIndex;
+      const resolvedRight = rightIndex === -1 ? categoryOrder.length : rightIndex;
+      return resolvedLeft - resolvedRight;
+    });
 
   const getDiffClass = (diff: number) => {
     if (diff > 0) return 'positive';
@@ -731,30 +655,24 @@ const WeeklySummary: React.FC<{
 
   return (
     <div className="trend-chart-card trend-summary-card">
-      <div className="trend-chart-header">
-        <div className="trend-chart-title">本周变化摘要 (vs 上周)</div>
-      </div>
       <div className="trend-summary-scroll">
         <div className="trend-summary-list">
           {changes.map(item => (
             <div key={item.id} className="trend-summary-item">
-            <div 
-              className="trend-summary-bar" 
-              style={{ backgroundColor: item.color }}
-            />
-            <div className="trend-summary-content">
-              <div className="trend-summary-name">{item.name}</div>
-              <div className="trend-summary-details">
-                本周 {item.currentVal.toFixed(1)}h
-                <span className="trend-summary-divider">|</span>
-                上周 {item.prevVal.toFixed(1)}h
+              <div className="trend-summary-bar" style={{ backgroundColor: item.color }} />
+              <div className="trend-summary-content">
+                <div className="trend-summary-name">{item.name}</div>
+                <div className="trend-summary-details">
+                  本周 {item.currentVal.toFixed(1)}h
+                  <span className="trend-summary-divider">|</span>
+                  上周 {item.prevVal.toFixed(1)}h
+                </div>
+              </div>
+              <div className={`trend-summary-diff ${getDiffClass(item.diff)}`}>
+                {item.diff > 0 ? '+' : ''}{item.diff.toFixed(1)}h
               </div>
             </div>
-            <div className={`trend-summary-diff ${getDiffClass(item.diff)}`}>
-              {item.diff > 0 ? '+' : ''}{item.diff.toFixed(1)}h
-            </div>
-          </div>
-        ))}
+          ))}
         </div>
       </div>
     </div>

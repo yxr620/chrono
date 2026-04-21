@@ -52,6 +52,9 @@ coverage
 *.tmp
 *.temp
 .cache
+.worktrees/
+.superpowers/
+docs/superpowers/
 
 # Native build artifacts
 ios/App/Pods/

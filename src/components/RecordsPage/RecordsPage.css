@@ -19,16 +19,17 @@
 /* 桌面端样式 */
 @media (min-width: 1024px) {
   .records-page {
+    --desktop-page-max-width: 1320px;
+    max-width: var(--desktop-page-max-width);
+    margin: 0 auto;
     padding: 0 24px 24px;
     gap: 16px;
-    /* 桌面端允许滚动，移除 overflow:hidden */
     overflow: visible;
   }
 
   .records-section {
     background: hsl(var(--card));
     border-radius: 12px;
-    /* 不使用 overflow:hidden，避免裁切子元素的装饰线等 */
     overflow: visible;
   }
 
@@ -37,18 +38,15 @@
     border-radius: 12px;
   }
 
-  /* 时间轴组件：自己处理圆角 */
   .records-section .timeline-view {
     border-radius: 12px;
   }
 
-  /* 列表区域：自己处理圆角 */
   .records-section .entry-list-container {
     border-radius: 12px;
     overflow: hidden;
   }
 
-  /* 两栏布局 */
   .records-body-desktop {
     display: flex;
     gap: 16px;
