@@ -30,7 +30,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-.github
+.github/copilot-instructions.md
+.github/skills/
 
 # macOS
 .DS_Store
