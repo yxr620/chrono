@@ -389,9 +389,8 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
       <IonModal
         isOpen={datePickerVisible}
         onDidDismiss={closeDatePicker}
-        initialBreakpoint={isIOS ? 0.62 : 0.55}
-        breakpoints={isIOS ? [0, 0.62] : [0, 0.55, 0.7]}
-        handle={!isIOS}
+        initialBreakpoint={0.55}
+        breakpoints={isIOS ? [0, 0.55] : [0, 0.55, 0.7]}
         style={isIOS ? ({ '--border-radius': '28px' } as React.CSSProperties) : undefined}
       >
         <IonContent className="ion-padding">
