@@ -78,8 +78,8 @@ export async function loadRawData(filters: AnalysisFilters): Promise<{
     entries = entries.filter(e => e.categoryId && categoryIds.includes(e.categoryId));
   }
 
-  const goals = await db.goals.toArray();
-  const categories = await db.categories.toArray();
+  const goals = (await db.goals.toArray()).filter(g => !g.deleted);
+  const categories = (await db.categories.toArray()).filter(c => !c.deleted);
 
   return { entries, goals, categories };
 }

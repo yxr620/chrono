@@ -160,12 +160,13 @@ export const TimeEntryForm: React.FC = () => {
   }, []);
 
   // 智能预选：当活动名称变化时，防抖调用预测
+  const currentGoalsRef = useRef<typeof goals>([]);
   useEffect(() => {
     if (!activity.trim()) return;
 
     const timer = setTimeout(async () => {
       try {
-        const result = await predictMetadata(activity, currentGoals);
+        const result = await predictMetadata(activity, currentGoalsRef.current);
         // 只在用户尚未手动选择时自动填充
         if (result.categoryId && !userPickedCategoryRef.current) {
           setSelectedCategoryId(result.categoryId);
@@ -179,7 +180,6 @@ export const TimeEntryForm: React.FC = () => {
     }, 300);
 
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activity]);
 
   // 当从记录列表或时间轴点击时，自动设置开始时间和结束时间
@@ -194,7 +194,7 @@ export const TimeEntryForm: React.FC = () => {
     } else {
       setEndTime(null);
     }
-    setTimeRange(null as any, null as any);
+    setTimeRange(null, null);
   }, [nextStartTime, nextEndTime, selectedDate, setTimeRange]);
 
   // 当选中的日期发生变化时，更新开始时间
@@ -256,6 +256,7 @@ export const TimeEntryForm: React.FC = () => {
   // 时间记录只能关联 time 型目标；check 型（如"吃药""早休息"）不参与时长统计
   const trackableGoals = goals.filter(g => (g.type ?? 'time') !== 'check');
   const currentGoals = trackableGoals.filter(g => g.date === currentDateStr);
+  currentGoalsRef.current = currentGoals;
   const prevGoals = trackableGoals.filter(g => g.date === prevDateStr);
   const currentGoalNamesLower = currentGoals.map(g => g.name.toLowerCase().trim());
   const filteredPrevGoals = prevGoals.filter(

@@ -322,6 +322,13 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
 
   const isToday = dayjs(selectedDate).isSame(dayjs(), 'day');
 
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    if (!isToday) return;
+    const id = setInterval(() => setNowTick(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, [isToday]);
+
   const goToPreviousDay = () => {
     if (isEarliestDay) return;
     onDateChange(dayjs(selectedDate).subtract(1, 'day').toDate());
@@ -638,7 +645,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
         {isToday && (
           <div
             className="timeline-current-time"
-            style={{ left: `${getTimePercent(new Date(), dayjs().startOf('day').toDate())}%` }}
+            style={{ left: `${getTimePercent(new Date(nowTick), dayjs().startOf('day').toDate())}%` }}
           />
         )}
 

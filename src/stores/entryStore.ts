@@ -18,7 +18,7 @@ interface EntryStore {
   updateEntry: (id: string, updates: Partial<TimeEntry>) => Promise<void>;
   deleteEntry: (id: string) => Promise<void>;
   setNextStartTime: (time: Date | null) => void;
-  setTimeRange: (startTime: Date, endTime: Date) => void;
+  setTimeRange: (startTime: Date | null, endTime: Date | null) => void;
   getLastEntryEndTime: () => Date | null;
   getLastEntryEndTimeForDate: (date: string) => Date | null;
   getEarliestEntryDate: () => string | null;

@@ -59,6 +59,12 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({ actions, children,
   const onMouseMove = useCallback((e: MouseEvent) => { if (onDragMove(e.clientX, e.clientY)) e.preventDefault(); }, [max]);
   const onMouseUp = useCallback(() => { onDragEnd(); window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('mouseup', onMouseUp); }, [max]);
 
+  // Defensive: if the component unmounts mid-drag, drop the window listeners.
+  useEffect(() => () => {
+    window.removeEventListener('mousemove', onMouseMove);
+    window.removeEventListener('mouseup', onMouseUp);
+  }, [onMouseMove, onMouseUp]);
+
   useEffect(() => {
     if (!isOpen) return;
     const close = (e: Event) => {
