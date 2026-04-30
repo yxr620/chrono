@@ -231,13 +231,16 @@ export const TimeEntryForm: React.FC = () => {
       return;
     }
 
-    const timer = setInterval(() => {
+    const tick = () => {
       const diff = dayjs().diff(dayjs(currentEntry.startTime), 'second');
       const hours = Math.floor(diff / 3600).toString().padStart(2, '0');
       const minutes = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
       const seconds = (diff % 60).toString().padStart(2, '0');
       setElapsed(`${hours}:${minutes}:${seconds}`);
-    }, 1000);
+    };
+
+    tick();
+    const timer = setInterval(tick, 1000);
 
     return () => clearInterval(timer);
   }, [currentEntry]);
