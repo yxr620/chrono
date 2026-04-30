@@ -15,14 +15,19 @@ import dayjs from 'dayjs';
 
 const MAX_SUGGESTIONS = 5;
 const FREQUENCY_LOOKBACK_DAYS = 7;
+const CHECK_LOOKBACK_DAYS = 14;
 
 /**
  * 获取某天设定了目标但完全没有投入时间的目标名列表
  * "没有投入时间" = 该目标 id 在 entries 表中找不到任何关联的已完成记录
+ *
+ * 仅针对 'time' 型目标。check 型目标不与 entries 关联，没有"未完成时间"的语义。
  */
 async function getUnfulfilledGoals(dateStr: string): Promise<string[]> {
     const allGoals = await db.goals.toArray();
-    const dayGoals = allGoals.filter(g => !g.deleted && g.date === dateStr);
+    const dayGoals = allGoals.filter(
+        g => !g.deleted && g.date === dateStr && (g.type ?? 'time') === 'time'
+    );
     if (dayGoals.length === 0) return [];
 
     const allEntries = await db.entries.toArray();
@@ -45,6 +50,7 @@ async function getUnfulfilledGoals(dateStr: string): Promise<string[]> {
 
 /**
  * 获取最近 N 天内高频使用的目标名（按出现天数降序）
+ * 仅针对 'time' 型目标。
  */
 async function getFrequentGoals(excludeNames: Set<string>): Promise<string[]> {
     const today = dayjs().format('YYYY-MM-DD');
@@ -53,6 +59,7 @@ async function getFrequentGoals(excludeNames: Set<string>): Promise<string[]> {
     const allGoals = await db.goals.toArray();
     const recentGoals = allGoals.filter(g =>
         !g.deleted &&
+        (g.type ?? 'time') === 'time' &&
         g.date >= startDate &&
         g.date < today
     );
@@ -113,4 +120,38 @@ export async function suggestGoals(existingNames: string[]): Promise<string[]> {
     }
 
     return result.slice(0, MAX_SUGGESTIONS);
+}
+
+/**
+ * 推荐今日打卡目标（check 型）
+ * 策略：取最近 N 天内出现频率最高的 check 型目标名，排除当天已存在的同名项。
+ */
+export async function suggestCheckGoals(existingNames: string[]): Promise<string[]> {
+    const today = dayjs().format('YYYY-MM-DD');
+    const startDate = dayjs().subtract(CHECK_LOOKBACK_DAYS, 'day').format('YYYY-MM-DD');
+
+    const existingLower = new Set(existingNames.map(n => n.toLowerCase().trim()));
+
+    const allGoals = await db.goals.toArray();
+    const recent = allGoals.filter(g =>
+        !g.deleted &&
+        (g.type ?? 'time') === 'check' &&
+        g.date >= startDate &&
+        g.date < today
+    );
+
+    const nameToDateSet = new Map<string, Set<string>>();
+    for (const g of recent) {
+        const normalized = g.name.trim();
+        if (!normalized || existingLower.has(normalized.toLowerCase())) continue;
+        if (!nameToDateSet.has(normalized)) {
+            nameToDateSet.set(normalized, new Set());
+        }
+        nameToDateSet.get(normalized)!.add(g.date);
+    }
+
+    return [...nameToDateSet.entries()]
+        .sort((a, b) => b[1].size - a[1].size)
+        .slice(0, MAX_SUGGESTIONS)
+        .map(([name]) => name);
 }

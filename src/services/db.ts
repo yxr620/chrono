@@ -21,11 +21,26 @@ export interface TimeEntry extends Syncable {
   updatedAt: Date;
 }
 
+/**
+ * 目标类型
+ *  - 'time'  : 时间投入型目标（默认）。与 entries 关联，按计时累计时长。
+ *  - 'check' : 打卡/提醒型目标。如"吃药""早点睡"，只追踪是否完成，不参与时长统计。
+ *
+ * 兼容性：缺省/未知 type 一律按 'time' 处理；旧版本读到新字段会忽略，不影响任何已有功能。
+ */
+export type GoalType = 'time' | 'check';
+
 export interface Goal extends Syncable {
   id?: string;
   name: string;
   date: string;
   color?: string;
+  /** 目标类型，缺省视为 'time' */
+  type?: GoalType;
+  /** 仅 type === 'check' 时使用 */
+  completed?: boolean;
+  /** 仅 type === 'check' 时使用，标记最近一次完成的时间 */
+  completedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -189,6 +204,23 @@ export class TimeTrackerDB extends Dexie {
           color: PRESET_COLORS[category.id] || '#d9d9d9',
           isPreset,
         });
+      }
+    });
+
+    // 目标类型支持（time / check）：所有旧目标默认补 type='time'，行为完全等同升级前。
+    // 注意：goals 索引保持不变（不需要按 type 查询，前端在内存中过滤即可）。
+    this.version(6).stores({
+      entries: 'id, startTime, endTime, activity, categoryId, goalId, createdAt',
+      goals: 'id, name, date, createdAt',
+      categories: 'id, name, order',
+      syncMetadata: 'key, updatedAt',
+      syncOperations: 'id, timestamp, deviceId, tableName, synced'
+    }).upgrade(async tx => {
+      const goals = await tx.table('goals').toArray();
+      for (const goal of goals) {
+        if (!goal.type) {
+          await tx.table('goals').update(goal.id!, { type: 'time' as const });
+        }
       }
     });
   }

@@ -253,8 +253,10 @@ export const TimeEntryForm: React.FC = () => {
 
   const currentDateStr = selectedDate;
   const prevDateStr = dayjs(selectedDate).subtract(1, 'day').format('YYYY-MM-DD');
-  const currentGoals = goals.filter(g => g.date === currentDateStr);
-  const prevGoals = goals.filter(g => g.date === prevDateStr);
+  // 时间记录只能关联 time 型目标；check 型（如"吃药""早休息"）不参与时长统计
+  const trackableGoals = goals.filter(g => (g.type ?? 'time') !== 'check');
+  const currentGoals = trackableGoals.filter(g => g.date === currentDateStr);
+  const prevGoals = trackableGoals.filter(g => g.date === prevDateStr);
   const currentGoalNamesLower = currentGoals.map(g => g.name.toLowerCase().trim());
   const filteredPrevGoals = prevGoals.filter(
     g => !currentGoalNamesLower.includes(g.name.toLowerCase().trim())
@@ -538,7 +540,7 @@ export const TimeEntryForm: React.FC = () => {
         <IonCardContent style={{ padding: 0 }}>
           <IonItem
             lines="none"
-            style={{ '--background': 'transparent', '--padding-start': '20px', '--padding-end': '20px' }}
+            style={{ '--background': 'transparent', '--padding-start': '20px', '--padding-end': '0px' }}
           >
             <IonIcon
               icon={chatbubbleOutline}

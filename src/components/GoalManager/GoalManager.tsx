@@ -11,7 +11,9 @@ import {
   IonItem,
   IonLabel,
   IonIcon,
-  IonText
+  IonText,
+  IonSegment,
+  IonSegmentButton
 } from '@ionic/react';
 import {
   addOutline,
@@ -19,7 +21,9 @@ import {
   trashOutline,
   chevronBackOutline,
   chevronForwardOutline,
-  calendarOutline
+  calendarOutline,
+  checkmarkCircle,
+  ellipseOutline
 } from 'ionicons/icons';
 import { Capacitor } from '@capacitor/core';
 import { useGoalStore } from '../../stores/goalStore';
@@ -43,6 +47,7 @@ export const GoalManager: React.FC = () => {
   const [showAddGoal, setShowAddGoal] = useState(false);
   const [showEditGoal, setShowEditGoal] = useState(false);
   const [newGoalName, setNewGoalName] = useState('');
+  const [newGoalType, setNewGoalType] = useState<'time' | 'check'>('time');
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [editGoalName, setEditGoalName] = useState('');
   const [matrixExpanded, setMatrixExpanded] = useState(false);
@@ -68,12 +73,12 @@ export const GoalManager: React.FC = () => {
   const editInputRef = useRef<HTMLIonInputElement>(null);
 
   // Platform-specific modal breakpoints
-  // iOS: keyboard overlays content, need taller modal (0.35) to keep button visible above keyboard
-  // Android: adjustResize compresses entire WebView, smaller modal (0.22) to avoid excess whitespace
+  // iOS: keyboard overlays content, need taller modal (0.42) to keep button + segment visible above keyboard
+  // Android: adjustResize compresses entire WebView, smaller modal (0.30) to avoid excess whitespace
   const isIOS = Capacitor.getPlatform() === 'ios';
-  const modalBreakpoint = isIOS ? 0.36 : 0.22;
+  const modalBreakpoint = isIOS ? 0.42 : 0.30;
 
-  const { goals, loadGoals, addGoal, updateGoal, deleteGoal } = useGoalStore();
+  const { goals, loadGoals, addGoal, updateGoal, deleteGoal, toggleCompletion } = useGoalStore();
   const { entries, loadEntries, getEarliestEntryDate } = useEntryStore();
   const earliestDate = getEarliestEntryDate();
 
@@ -82,8 +87,11 @@ export const GoalManager: React.FC = () => {
     loadEntries(currentDate);
   }, [currentDate, loadEntries, loadGoals]);
 
-  // 获取当天的目标
+  // 获取当天的目标，并按类型拆分
   const todayGoals = goals.filter(g => g.date === currentDate);
+  const timeGoals = todayGoals.filter(g => (g.type ?? 'time') === 'time');
+  const checkGoals = todayGoals.filter(g => (g.type ?? 'time') === 'check');
+  const completedCheckCount = checkGoals.filter(g => g.completed).length;
 
   // 计算某个目标的花费时长（分钟）
   const calculateGoalDuration = (goalId: string) => {
@@ -138,10 +146,12 @@ export const GoalManager: React.FC = () => {
     await addGoal({
       name: newGoalName.trim(),
       date: currentDate,
-      color: '#1677ff'
+      type: newGoalType,
+      color: newGoalType === 'check' ? '#94a3b8' : '#1677ff'
     });
 
     setNewGoalName('');
+    setNewGoalType('time');
     setShowAddGoal(false);
   };
 
@@ -222,8 +232,8 @@ export const GoalManager: React.FC = () => {
     return dayjs(currentDate).format('MM月DD日');
   };
 
-  // 计算总时长
-  const totalDuration = todayGoals.reduce((total, goal) => {
+  // 计算总时长（只统计 time 型目标；check 型不参与时长统计）
+  const totalDuration = timeGoals.reduce((total, goal) => {
     return total + calculateGoalDuration(goal.id!);
   }, 0);
 
@@ -384,7 +394,7 @@ export const GoalManager: React.FC = () => {
               >
                 <IonText>
                   <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold' }}>
-                    目标列表 ({todayGoals.length})
+                    目标列表 ({timeGoals.length})
                   </h3>
                 </IonText>
                 <IonButton
@@ -407,7 +417,7 @@ export const GoalManager: React.FC = () => {
                 </IonButton>
               </div>
 
-              {todayGoals.length === 0 ? (
+              {timeGoals.length === 0 ? (
                 <div
                   style={{
                     padding: '32px 16px',
@@ -427,7 +437,7 @@ export const GoalManager: React.FC = () => {
                           onClick={async () => {
                             setLoadingSuggestions(true);
                             try {
-                              const result = await suggestGoals(todayGoals.map(g => g.name));
+                              const result = await suggestGoals(timeGoals.map(g => g.name));
                               if (result.length === 0) {
                                 present({ message: '暂无可推荐目标', duration: 1500, position: 'top', color: 'warning' });
                               } else {
@@ -529,7 +539,7 @@ export const GoalManager: React.FC = () => {
                           disabled={selectedSuggestions.size === 0}
                           onClick={async () => {
                             for (const name of selectedSuggestions) {
-                              await addGoal({ name, date: currentDate, color: '#1677ff' });
+                              await addGoal({ name, date: currentDate, type: 'time', color: '#1677ff' });
                             }
                             present({
                               message: `已添加 ${selectedSuggestions.size} 个目标`,
@@ -557,12 +567,12 @@ export const GoalManager: React.FC = () => {
                     padding: 0
                   }}
                 >
-                  {todayGoals.map((goal, index) => {
+                  {timeGoals.map((goal, index) => {
                     const duration = calculateGoalDuration(goal.id!);
                     return (
                       <IonItem
                         key={goal.id}
-                        lines={index === todayGoals.length - 1 ? 'none' : 'inset'}
+                        lines={index === timeGoals.length - 1 ? 'none' : 'inset'}
                         style={{
                           '--padding-start': '16px',
                           '--padding-end': '12px',
@@ -630,6 +640,111 @@ export const GoalManager: React.FC = () => {
               )}
             </IonCardContent>
           </IonCard>
+
+          {/* ── 打卡 / 提醒 (check 型) ── */}
+          {checkGoals.length > 0 && (
+            <IonCard style={{ ...cardStyle, marginTop: '1rem' }}>
+              <IonCardContent style={{ paddingBottom: 0 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '12px'
+                  }}
+                >
+                  <IonText>
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold' }}>
+                      打卡 / 提醒
+                    </h3>
+                  </IonText>
+                  <IonText color="medium" style={{ fontSize: '13px', fontWeight: 600 }}>
+                    已完成 {completedCheckCount} / {checkGoals.length}
+                  </IonText>
+                </div>
+
+                <IonList
+                  style={{ background: 'transparent', borderRadius: '16px', padding: 0 }}
+                >
+                  {checkGoals.map((goal, index) => {
+                    const isDone = !!goal.completed;
+                    return (
+                      <IonItem
+                        key={goal.id}
+                        lines={index === checkGoals.length - 1 ? 'none' : 'inset'}
+                        button
+                        detail={false}
+                        onClick={() => toggleCompletion(goal.id!)}
+                        style={{
+                          '--padding-start': '16px',
+                          '--padding-end': '12px',
+                          '--inner-padding-end': '0px',
+                          '--min-height': '56px',
+                          '--border-color': isDark ? 'rgba(71, 85, 105, 0.4)' : 'rgba(226, 232, 240, 0.8)',
+                          '--background': 'transparent'
+                        }}
+                      >
+                        <IonIcon
+                          slot="start"
+                          icon={isDone ? checkmarkCircle : ellipseOutline}
+                          style={{
+                            fontSize: '22px',
+                            color: isDone ? '#22c55e' : (isDark ? '#64748b' : '#94a3b8'),
+                            marginInlineEnd: '12px'
+                          }}
+                        />
+                        <IonLabel>
+                          <h2
+                            style={{
+                              fontSize: '15px',
+                              fontWeight: 600,
+                              margin: 0,
+                              color: isDone
+                                ? (isDark ? '#64748b' : '#94a3b8')
+                                : (isDark ? '#f1f5f9' : '#0f172a'),
+                              textDecoration: isDone ? 'line-through' : 'none'
+                            }}
+                          >
+                            {goal.name}
+                          </h2>
+                        </IonLabel>
+                        <div slot="end" style={{ display: 'flex', gap: '2px' }}>
+                          <IonButton
+                            fill="clear"
+                            size="small"
+                            color="medium"
+                            onClick={(e) => { e.stopPropagation(); handleEditGoal(goal); }}
+                            style={{
+                              '--padding-start': '6px',
+                              '--padding-end': '6px',
+                              margin: 0,
+                              height: '34px'
+                            }}
+                          >
+                            <IonIcon icon={createOutline} style={{ fontSize: '18px' }} />
+                          </IonButton>
+                          <IonButton
+                            fill="clear"
+                            size="small"
+                            color="danger"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteGoal(goal); }}
+                            style={{
+                              '--padding-start': '6px',
+                              '--padding-end': '6px',
+                              margin: 0,
+                              height: '34px'
+                            }}
+                          >
+                            <IonIcon icon={trashOutline} style={{ fontSize: '18px' }} />
+                          </IonButton>
+                        </div>
+                      </IonItem>
+                    );
+                  })}
+                </IonList>
+              </IonCardContent>
+            </IonCard>
+          )}
         </div>
 
         {/* ── Right: 日历矩阵 (desktop only, always visible) ── */}
@@ -648,7 +763,7 @@ export const GoalManager: React.FC = () => {
       {/* 添加目标弹窗 (Ionic Sheet Modal) */}
       <IonModal
         isOpen={showAddGoal}
-        onDidDismiss={() => setShowAddGoal(false)}
+        onDidDismiss={() => { setShowAddGoal(false); setNewGoalType('time'); setNewGoalName(''); }}
         // balanced height to keep button visible above keyboard
         initialBreakpoint={modalBreakpoint}
         breakpoints={[0, modalBreakpoint]}
@@ -661,11 +776,27 @@ export const GoalManager: React.FC = () => {
       >
         <IonContent className="ion-padding" style={{ '--padding-top': '16px', '--padding-bottom': '2px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <IonSegment
+              value={newGoalType}
+              onIonChange={e => setNewGoalType((e.detail.value as 'time' | 'check') || 'time')}
+              style={{
+                '--background': isDark ? '#1e293b' : '#f1f5f9',
+                borderRadius: '12px',
+                marginBottom: '4px'
+              } as React.CSSProperties}
+            >
+              <IonSegmentButton value="time">
+                <IonLabel style={{ fontSize: '13px', fontWeight: 600 }}>时间型</IonLabel>
+              </IonSegmentButton>
+              <IonSegmentButton value="check">
+                <IonLabel style={{ fontSize: '13px', fontWeight: 600 }}>打卡型</IonLabel>
+              </IonSegmentButton>
+            </IonSegment>
             <div style={{ position: 'relative' }}>
               <IonInput
                 ref={addInputRef}
                 value={newGoalName}
-                placeholder="输入目标名称"
+                placeholder={newGoalType === 'check' ? '例如：吃药、早点睡、喝水' : '输入目标名称'}
                 onIonInput={e => setNewGoalName(e.detail.value!)}
                 clearInput
                 style={{

@@ -43,8 +43,9 @@ export async function loadGoalAnalysisData(dateRange: DateRange): Promise<{
   });
 
   // 加载所有目标（不限制日期范围，因为聚类需要看全局）
+  // check 型目标（吃药/早休息等）不参与时长分析
   let goals = await db.goals.toArray();
-  goals = goals.filter(g => !g.deleted);
+  goals = goals.filter(g => !g.deleted && (g.type ?? 'time') !== 'check');
 
   return { entries, goals };
 }

@@ -66,7 +66,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
         type: 'function',
         function: {
             name: 'list_goals',
-            description: '获取指定日期范围内用户设定的目标列表',
+            description: '获取指定日期范围内用户设定的目标列表。包含两类：time（时间投入型，与计时记录关联）和 check（打卡/提醒型，仅追踪是否完成，例如"吃药""早休息"）。',
             parameters: {
                 type: 'object',
                 properties: {
@@ -145,7 +145,9 @@ async function queryTimeEntries(args: Record<string, unknown>): Promise<string> 
     let goalIds: string[] | undefined;
     if (args.goal) {
         const goalName = (args.goal as string).toLowerCase();
+        // check 型目标不会被关联到 entries，按目标筛选时直接排除，避免误匹配
         const matched = allGoals.filter(g =>
+            (g.type ?? 'time') !== 'check' &&
             g.name.toLowerCase().includes(goalName),
         );
         if (matched.length > 0) {
@@ -238,6 +240,10 @@ async function listCategories(): Promise<string> {
 
 /**
  * 列出指定日期范围的目标
+ *
+ * 同时返回 time 型（时间投入型）与 check 型（打卡/提醒型，如"吃药""早休息"）。
+ * - time 型：通过 entries 累计时长来反映完成情况，不在此处展示是否完成。
+ * - check 型：仅按是否完成判断，不参与时长统计。
  */
 async function listGoals(args: Record<string, unknown>): Promise<string> {
     const startDate = args.start_date as string;
@@ -256,17 +262,37 @@ async function listGoals(args: Record<string, unknown>): Promise<string> {
         return `${startDate} 至 ${endDate} 范围内没有设定目标。`;
     }
 
-    // 按日期分组
-    const byDate: Record<string, string[]> = {};
+    // 按日期分组，并区分 time / check 两类
+    type GoalEntry = { name: string; type: 'time' | 'check'; completed?: boolean };
+    const byDate: Record<string, GoalEntry[]> = {};
     filtered.forEach(g => {
         if (!byDate[g.date]) byDate[g.date] = [];
-        byDate[g.date].push(g.name);
+        const type = (g.type ?? 'time') as 'time' | 'check';
+        byDate[g.date].push({
+            name: g.name,
+            type,
+            completed: type === 'check' ? !!g.completed : undefined,
+        });
     });
 
     const lines = Object.entries(byDate)
         .sort(([a], [b]) => a.localeCompare(b))
-        .map(([date, names]) => `${date}: ${names.join(', ')}`)
+        .map(([date, items]) => {
+            const timeNames = items.filter(i => i.type === 'time').map(i => i.name);
+            const checkItems = items.filter(i => i.type === 'check');
+            const segments: string[] = [];
+            if (timeNames.length > 0) {
+                segments.push(`时间型: ${timeNames.join(', ')}`);
+            }
+            if (checkItems.length > 0) {
+                const checkText = checkItems
+                    .map(i => `${i.name}${i.completed ? '✓' : '✗'}`)
+                    .join(', ');
+                segments.push(`打卡型: ${checkText}`);
+            }
+            return `${date} | ${segments.join(' | ')}`;
+        })
         .join('\n');
 
-    return `目标列表（${startDate} 至 ${endDate}）：\n${lines}`;
+    return `目标列表（${startDate} 至 ${endDate}，打卡型用 ✓/✗ 标注是否完成）：\n${lines}`;
 }
