@@ -4,6 +4,8 @@ import {
   IonSpinner,
   useIonAlert,
   IonToggle,
+  IonCard,
+  IonCardContent,
 } from '@ionic/react';
 import { SyncManagementPage } from '../SyncManagementPage/SyncManagementPage';
 import { exportFullJSON, exportIncrementalJSON, importFromJSON, ImportStrategy } from '../../services/export';
@@ -167,7 +169,6 @@ ${result.details.errors.length > 0 ? `\n⚠️ ${result.details.errors.length} �
           });
         }, 500);
 
-        // 通过 store 刷新数据，而不是 reload 整个页面
         await refreshAllStores();
       } else {
         showToast(result.message, 'danger', 3000);
@@ -196,46 +197,75 @@ ${result.details.errors.length > 0 ? `\n⚠️ ${result.details.errors.length} �
   };
 
   return (
-    <div className="page-content-wrapper export-page">
-      <div className="export-page-sections">
-
-        {/* 同步管理 */}
-        <section className="export-section">
-          <h3 className="export-section-title">云端同步</h3>
-          <SyncManagementPage />
-        </section>
-
-        <hr className="export-divider" />
-
-        {/* 通用设置 */}
-        <section className="export-section">
-          <h3 className="export-section-title">通用设置</h3>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'hsl(var(--card))', borderRadius: '12px', border: '1px solid hsl(var(--border))' }}>
-            <div>
-              <div style={{ fontSize: '15px', color: 'hsl(var(--foreground))', fontWeight: '500' }}>深色模式</div>
-              <div style={{ fontSize: '12px', color: 'hsl(var(--muted-foreground))', marginTop: '4px' }}>切换应用主题外观</div>
+    <div className={`settings-page${isDark ? ' settings-page-dark' : ''}`}>
+      <IonCard className="settings-card">
+        <IonCardContent className="settings-card-content">
+          <h3 className="settings-card-title">通用设置</h3>
+          <div className="settings-row">
+            <div className="settings-row-text">
+              <div className="settings-row-label">深色模式</div>
+              <div className="settings-row-sub">切换应用主题外观</div>
             </div>
             <IonToggle checked={isDark} onIonChange={(e) => setDark(e.detail.checked)} />
           </div>
-        </section>
+        </IonCardContent>
+      </IonCard>
 
-        <hr className="export-divider" />
+      <IonCard className="settings-card">
+        <IonCardContent className="settings-card-content">
+          <h3 className="settings-card-title">云端同步</h3>
+          <SyncManagementPage />
+        </IonCardContent>
+      </IonCard>
 
-        {/* 导入部分 */}
-        <section className="export-section">
-          <h3 className="export-section-title">数据导入</h3>
-          <p className="export-section-desc">从之前导出的JSON文件中恢复数据</p>
+      <IonCard className="settings-card">
+        <IonCardContent className="settings-card-content">
+          <h3 className="settings-card-title">数据备份</h3>
+          <div className="settings-button-stack">
+            <IonButton
+              expand="block"
+              color="success"
+              onClick={handleImportClick}
+              disabled={isLoading}
+              className="settings-action-button"
+            >
+              {isLoading ? <IonSpinner name="dots" /> : '📥 导入数据'}
+            </IonButton>
+            <p className="settings-button-hint">从之前导出的 JSON 文件中恢复数据</p>
 
-          <IonButton
-            expand="block"
-            color="success"
-            onClick={handleImportClick}
-            disabled={isLoading}
-            style={{ '--border-radius': '12px', height: '48px', marginBottom: '8px' }}
-          >
-            {isLoading ? <IonSpinner name="dots" /> : '📥 导入数据'}
-          </IonButton>
-          <p className="export-section-hint">支持全量导出和增量导出的JSON文件</p>
+            <IonButton
+              expand="block"
+              color="primary"
+              onClick={handleExportIncrementalJSON}
+              disabled={isLoading}
+              className="settings-action-button"
+            >
+              {isLoading ? <IonSpinner name="dots" /> : '📤 增量导出（推荐）'}
+            </IonButton>
+            <p className="settings-button-hint">只导出自上次同步后的新数据</p>
+
+            <IonButton
+              expand="block"
+              fill="outline"
+              onClick={handleExportFullJSON}
+              disabled={isLoading}
+              className="settings-action-button"
+            >
+              {isLoading ? <IonSpinner name="dots" /> : '📦 全量导出'}
+            </IonButton>
+            <p className="settings-button-hint">导出所有记录和目标数据</p>
+
+            <IonButton
+              expand="block"
+              fill="clear"
+              color="medium"
+              onClick={handleCopyJSON}
+              disabled={isLoading}
+              className="settings-action-button settings-action-button-link"
+            >
+              📋 复制 JSON 到剪贴板
+            </IonButton>
+          </div>
 
           <input
             ref={fileInputRef}
@@ -244,54 +274,8 @@ ${result.details.errors.length > 0 ? `\n⚠️ ${result.details.errors.length} �
             style={{ display: 'none' }}
             onChange={handleFileChange}
           />
-        </section>
-
-        <hr className="export-divider" />
-
-        {/* 导出部分 */}
-        <section className="export-section">
-          <h3 className="export-section-title">数据导出</h3>
-          <p className="export-section-desc">推荐日常使用增量导出，首次同步或数据恢复时使用全量导出</p>
-
-          <IonButton
-            expand="block"
-            color="primary"
-            onClick={handleExportIncrementalJSON}
-            disabled={isLoading}
-            style={{ '--border-radius': '12px', height: '48px', marginBottom: '8px' }}
-          >
-            {isLoading ? <IonSpinner name="dots" /> : '📤 增量导出（推荐）'}
-          </IonButton>
-          <p className="export-section-hint">只导出自上次同步后的新数据</p>
-
-          <IonButton
-            expand="block"
-            fill="outline"
-            onClick={handleExportFullJSON}
-            disabled={isLoading}
-            style={{ '--border-radius': '12px', height: '48px', marginBottom: '8px', marginTop: '12px' }}
-          >
-            {isLoading ? <IonSpinner name="dots" /> : '📦 全量导出'}
-          </IonButton>
-          <p className="export-section-hint">导出所有记录和目标数据</p>
-        </section>
-
-        <hr className="export-divider" />
-
-        {/* 备用复制 */}
-        <section className="export-section">
-          <p className="export-section-desc">如果导出失败，可以使用复制功能：</p>
-          <IonButton
-            expand="block"
-            fill="outline"
-            onClick={handleCopyJSON}
-            disabled={isLoading}
-            style={{ '--border-radius': '12px', height: '48px' }}
-          >
-            📋 复制 JSON 到剪贴板
-          </IonButton>
-        </section>
-      </div>
+        </IonCardContent>
+      </IonCard>
     </div>
   );
 };
