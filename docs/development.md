@@ -179,7 +179,7 @@ npm run build:local    → localdev mode   → .env.local (有密钥)     → �
 
 #### 版本号规范
 
-采用 Semantic Versioning：`0.0.x`（早期）→ `0.x.0`（迭代）→ `1.0.0+`（正式）。每次发布前更新 `android/app/build.gradle` 中的 `versionCode` 和 `versionName`。
+ 采用 Semantic Versioning：`0.0.x`（早期）→ `0.x.0`（迭代）→ `1.0.0+`（正式）。Android 的 `versionCode` 和 `versionName` 现在会在构建时从 `package.json` 自动派生，因此发布时使用 `npm version patch|minor|major` 作为单一版本入口即可。
 
 #### 附录：创建签名密钥（仅首次）
 
