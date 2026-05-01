@@ -1,0 +1,124 @@
+/* ── 确认卡片 ───────────────────────────────────────────── */
+
+.confirm-card {
+  border-radius: 10px;
+  background: hsl(var(--muted) / 0.35);
+  border: 1px solid hsl(var(--border));
+  border-left: 4px solid hsl(var(--primary));
+  padding: 12px 14px;
+  margin: 8px 0 4px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.confirm-card-low {
+  border-left-color: hsl(var(--success, 142 71% 45%));
+}
+
+.confirm-card-high {
+  border-left-color: hsl(var(--danger, 0 84% 60%));
+}
+
+.confirm-card-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: hsl(var(--foreground));
+  margin-bottom: 4px;
+}
+
+.confirm-card-desc {
+  color: hsl(var(--muted-foreground));
+  margin-bottom: 8px;
+}
+
+/* 变更列表 */
+.confirm-card-changes {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.confirm-change {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.confirm-change-icon {
+  flex-shrink: 0;
+  font-weight: 700;
+  width: 16px;
+  text-align: center;
+}
+
+.confirm-change-create .confirm-change-icon {
+  color: hsl(var(--success, 142 71% 45%));
+}
+
+.confirm-change-update .confirm-change-icon {
+  color: hsl(var(--primary));
+}
+
+.confirm-change-delete .confirm-change-icon {
+  color: hsl(var(--destructive));
+}
+
+.confirm-change-summary {
+  color: hsl(var(--foreground));
+}
+
+/* 操作按钮 */
+.confirm-card-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.confirm-btn-cancel,
+.confirm-btn-confirm {
+  padding: 5px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+  border: none;
+}
+
+.confirm-btn-cancel {
+  background: hsl(var(--muted) / 0.6);
+  color: hsl(var(--muted-foreground));
+  border: 1px solid hsl(var(--border));
+}
+
+.confirm-btn-cancel:hover {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.confirm-btn-confirm {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.confirm-btn-confirm:hover {
+  opacity: 0.9;
+}
+
+/* 已决定的状态 */
+.confirm-card-resolved {
+  font-size: 13px;
+  font-weight: 500;
+  padding-top: 2px;
+}
+
+.confirm-resolved-ok {
+  color: hsl(var(--success, 142 71% 45%));
+}
+
+.confirm-resolved-cancel {
+  color: hsl(var(--muted-foreground));
+}

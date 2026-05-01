@@ -1,6 +1,10 @@
 /**
- * AI 工具定义
- * 定义 LLM 可调用的工具（Function Calling）及其本地执行函数
+ * @deprecated 工具定义已迁移至 src/services/actions/。
+ * 本文件保留以供参考和类型导出（ToolDefinition），不再被 toolCallEngine 使用。
+ * 所有新工具应添加到 src/services/actions/ 目录。
+ *
+ * 原始说明：
+ * AI 工具定义 — 定义 LLM 可调用的工具（Function Calling）及其本地执行函数
  * 所有工具在浏览器本地执行，直接访问 IndexedDB
  */
 

@@ -12,6 +12,8 @@ import { useAIStore } from '../../stores/aiStore';
 import { runToolCallLoop } from '../../services/ai/toolCallEngine';
 import type { ChatMessage as LLMMessage } from '../../services/ai/llmClient';
 import { AI_PROVIDERS } from '../../services/ai/providers';
+import { ConfirmationCard } from './ConfirmationCard';
+import type { ConfirmationCard as ConfirmationCardType } from '../../services/actions/types';
 import './AIAssistant.css';
 
 // 配置 marked：关闭 mangle/headerIds 避免不必要的输出
@@ -119,6 +121,12 @@ export const AIAssistant: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [pendingConfirmation, setPendingConfirmation] = useState<{
+    card: ConfirmationCardType;
+    resolve: (confirmed: boolean) => void;
+    resolved?: 'confirmed' | 'cancelled';
+  } | null>(null);
+  const confirmCountRef = useRef(0);
 
   const currentProvider = AI_PROVIDERS.find(p => p.id === config.providerId);
   /** 当前 provider 的用户自定义模型 */
@@ -179,6 +187,7 @@ export const AIAssistant: React.FC = () => {
     const aiMsgId = addMessage({ role: 'assistant', content: '', loading: true });
     // 每次发送前重置阶段列表
     phasesRef.current = [];
+    confirmCountRef.current = 0;
 
     const abort = new AbortController();
     abortRef.current = abort;
@@ -216,6 +225,12 @@ export const AIAssistant: React.FC = () => {
           onToolCall: () => {
             // 工具调用信息已通过 onPhase 显示
           },
+          onConfirmRequired: (card) => {
+            return new Promise<boolean>((resolve) => {
+              confirmCountRef.current++;
+              setPendingConfirmation({ card, resolve });
+            });
+          },
         },
         abort.signal,
       );
@@ -242,6 +257,20 @@ export const AIAssistant: React.FC = () => {
   const handleStop = () => {
     abortRef.current?.abort();
   };
+
+  const handleConfirm = useCallback(() => {
+    if (!pendingConfirmation || pendingConfirmation.resolved) return;
+    pendingConfirmation.resolve(true);
+    setPendingConfirmation(prev => prev ? { ...prev, resolved: 'confirmed' } : null);
+    setTimeout(() => setPendingConfirmation(null), 1500);
+  }, [pendingConfirmation]);
+
+  const handleCancelConfirm = useCallback(() => {
+    if (!pendingConfirmation || pendingConfirmation.resolved) return;
+    pendingConfirmation.resolve(false);
+    setPendingConfirmation(prev => prev ? { ...prev, resolved: 'cancelled' } : null);
+    setTimeout(() => setPendingConfirmation(null), 1500);
+  }, [pendingConfirmation]);
 
   // 键盘快捷键
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -503,6 +532,18 @@ export const AIAssistant: React.FC = () => {
                 </div>
               </div>
             ))}
+            {pendingConfirmation && (
+              <div className="ai-msg ai-msg-assistant">
+                <div className="ai-msg-bubble">
+                  <ConfirmationCard
+                    card={pendingConfirmation.card}
+                    onConfirm={handleConfirm}
+                    onCancel={handleCancelConfirm}
+                    resolved={pendingConfirmation.resolved}
+                  />
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </>
         )}
