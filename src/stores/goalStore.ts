@@ -10,6 +10,7 @@ interface GoalStore {
   addGoal: (goal: Omit<Goal, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateGoal: (id: string, updates: Partial<Goal>) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
+  toggleCompletion: (id: string) => Promise<void>;
   getGoalsByDate: (date: string) => Goal[];
 }
 
@@ -39,6 +40,12 @@ export const useGoalStore = create<GoalStore>((set, get) => ({
     await dataService.goals.delete(id);
     await get().loadGoals();
     autoPush('删除目标后');
+  },
+
+  toggleCompletion: async (id) => {
+    await dataService.goals.toggleCompletion(id);
+    await get().loadGoals();
+    autoPush('切换打卡目标完成状态后');
   },
 
   getGoalsByDate: (date: string) => {

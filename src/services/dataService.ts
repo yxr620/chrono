@@ -113,7 +113,17 @@ async function addGoal(
   goal: Omit<Goal, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<string> {
   const now = new Date();
-  return syncDb.goals.add({ id: uuidv4(), ...goal, createdAt: now, updatedAt: now });
+  const type = goal.type ?? 'time';
+  // check 型默认未完成；time 型不写 completed 字段，避免污染语义
+  const checkDefaults = type === 'check' ? { completed: goal.completed ?? false } : {};
+  return syncDb.goals.add({
+    id: uuidv4(),
+    ...goal,
+    type,
+    ...checkDefaults,
+    createdAt: now,
+    updatedAt: now,
+  });
 }
 
 async function updateGoal(id: string, updates: Partial<Goal>): Promise<void> {
@@ -122,6 +132,21 @@ async function updateGoal(id: string, updates: Partial<Goal>): Promise<void> {
 
 async function deleteGoal(id: string): Promise<void> {
   await syncDb.goals.delete(id);
+}
+
+/**
+ * 切换 check 型目标的完成状态。
+ * 仅对 type === 'check' 的目标有效；其他类型直接忽略，避免误用。
+ */
+async function toggleGoalCompletion(id: string): Promise<void> {
+  const goal = await db.goals.get(id);
+  if (!goal || goal.deleted) return;
+  if ((goal.type ?? 'time') !== 'check') return;
+  const nextCompleted = !goal.completed;
+  await syncDb.goals.update(id, {
+    completed: nextCompleted,
+    completedAt: nextCompleted ? new Date() : undefined,
+  });
 }
 
 // ============ Categories ============
@@ -410,6 +435,6 @@ export const dataService = {
     findOverlaps,
     findAnomalies,
   },
-  goals: { query: queryGoals, add: addGoal, update: updateGoal, delete: deleteGoal },
+  goals: { query: queryGoals, add: addGoal, update: updateGoal, delete: deleteGoal, toggleCompletion: toggleGoalCompletion },
   categories: { list: listCategories, add: addCategory, update: updateCategory, delete: deleteCategory },
 };

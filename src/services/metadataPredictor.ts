@@ -206,7 +206,9 @@ function predictGoal(
     todayGoals: Goal[],
 ): string | null {
     const input = activityInput.trim();
-    if (!input || todayGoals.length === 0) return null;
+    // check 型目标不参与时间记录关联，因此预测时直接排除
+    const candidateGoals = todayGoals.filter(g => (g.type ?? 'time') !== 'check');
+    if (!input || candidateGoals.length === 0) return null;
 
     const SIMILARITY_THRESHOLD = 0.2; // Jaccard 阈值
 
@@ -231,7 +233,7 @@ function predictGoal(
 
             for (const [histGoalName] of candidates) {
                 // 精确名称匹配
-                const exactGoal = todayGoals.find(
+                const exactGoal = candidateGoals.find(
                     g => g.name.toLowerCase().trim() === histGoalName.toLowerCase().trim()
                 );
                 if (exactGoal) return exactGoal.id!;
@@ -239,7 +241,7 @@ function predictGoal(
                 // 模糊匹配
                 let bestGoal: Goal | null = null;
                 let bestSim = 0;
-                for (const g of todayGoals) {
+                for (const g of candidateGoals) {
                     const sim = tokenSimilarity(histGoalName, g.name);
                     if (sim > bestSim && sim >= SIMILARITY_THRESHOLD) {
                         bestSim = sim;
@@ -257,7 +259,7 @@ function predictGoal(
     let bestDirectGoal: Goal | null = null;
     let bestDirectSim = 0;
 
-    for (const g of todayGoals) {
+    for (const g of candidateGoals) {
         // 优先检查：是否有区分力的 token 重叠（如 comp8015、app 等）
         const hasOverlap = hasSignificantTokenOverlap(input, g.name);
         const sim = tokenSimilarity(input, g.name);

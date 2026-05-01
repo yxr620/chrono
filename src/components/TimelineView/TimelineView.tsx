@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { useEntryStore } from '../../stores/entryStore';
 import { useCategoryStore } from '../../stores/categoryStore';
 import { useGoalStore } from '../../stores/goalStore';
@@ -31,11 +32,14 @@ interface TimelineViewProps {
   onDateChange: (date: Date) => void;
 }
 
+const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日'];
+
 
 export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDateChange }) => {
   const { entries, loadEntries, setNextStartTime, setTimeRange, getEarliestEntryDate } = useEntryStore();
   const { loadCategories, getCategoryColor } = useCategoryStore();
   const { goals, loadGoals } = useGoalStore();
+  const isIOS = Capacitor.getPlatform() === 'ios';
   const earliestDate = getEarliestEntryDate();
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
   const [gapBlocks, setGapBlocks] = useState<GapBlock[]>([]);
@@ -48,6 +52,35 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
   const containerRef = useRef<HTMLDivElement>(null);
   const datetimeRef = useRef<HTMLIonDatetimeElement>(null);
   const { isDark } = useDarkMode();
+  const currentMonthDate = useMemo(
+    () => dayjs(`${viewYear}-${String(viewMonth).padStart(2, '0')}-01`),
+    [viewYear, viewMonth]
+  );
+  const earliestSelectableDate = useMemo(
+    () => (earliestDate ? dayjs(earliestDate) : null),
+    [earliestDate]
+  );
+  const calendarDays = useMemo(() => {
+    const daysInMonth = currentMonthDate.daysInMonth();
+    const firstDayOfWeek = (currentMonthDate.day() + 6) % 7;
+    const days: (string | null)[] = [];
+
+    for (let i = 0; i < firstDayOfWeek; i++) {
+      days.push(null);
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(currentMonthDate.date(day).format('YYYY-MM-DD'));
+    }
+
+    return days;
+  }, [currentMonthDate]);
+  const canGoPrevMonth = useMemo(() => {
+    if (!earliestSelectableDate) return true;
+    return currentMonthDate.isAfter(earliestSelectableDate, 'month');
+  }, [currentMonthDate, earliestSelectableDate]);
+  const canGoNextMonth = currentMonthDate.isBefore(dayjs(), 'month');
+  const monthTitle = currentMonthDate.format('YYYY年M月');
 
   // Initialize all picker state from selectedDate when opening
   const openDatePicker = () => {
@@ -59,10 +92,47 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
     setDatePickerVisible(true);
   };
 
+  const closeDatePicker = () => {
+    setDatePickerVisible(false);
+    setShowMonthWheel(false);
+  };
+
+  const handleDateSelect = (value: string | Date) => {
+    const parsed = dayjs(value);
+    if (!parsed.isValid()) return;
+
+    setCalendarDate(parsed.format('YYYY-MM-DD'));
+    setViewYear(parsed.year());
+    setViewMonth(parsed.month() + 1);
+    onDateChange(parsed.toDate());
+    closeDatePicker();
+  };
+
+  const handleCalendarChange = (value: string | string[] | null | undefined) => {
+    if (!value) return;
+
+    const dateStr = Array.isArray(value) ? value[0] : value;
+    handleDateSelect(dateStr);
+  };
+
+  const goToPreviousMonth = () => {
+    if (!canGoPrevMonth) return;
+    const prevMonth = currentMonthDate.subtract(1, 'month');
+    setViewYear(prevMonth.year());
+    setViewMonth(prevMonth.month() + 1);
+  };
+
+  const goToNextMonth = () => {
+    if (!canGoNextMonth) return;
+    const nextMonth = currentMonthDate.add(1, 'month');
+    setViewYear(nextMonth.year());
+    setViewMonth(nextMonth.month() + 1);
+  };
+
   // Intercept Ionic's built-in month-year-button click (shadow DOM)
   // and replace it with our custom wheel picker
   useEffect(() => {
-    if (!datePickerVisible || showMonthWheel) return;
+    if (isIOS || !datePickerVisible || showMonthWheel) return;
 
     let cleanup: (() => void) | undefined;
 
@@ -90,7 +160,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
       return () => { clearTimeout(timer); cleanup?.(); };
     }
     return () => cleanup?.();
-  }, [datePickerVisible, showMonthWheel, calendarDate]);
+  }, [isIOS, datePickerVisible, showMonthWheel, calendarDate]);
 
   useEffect(() => {
     loadEntries();
@@ -112,16 +182,12 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
     return () => document.removeEventListener('click', handleClickOutside);
   }, [tooltip]);
 
-  useEffect(() => {
-    processTimelineData();
-  }, [entries, selectedDate]);
-
   const getTimePercent = (time: Date, dayStart: Date): number => {
     const diff = dayjs(time).diff(dayjs(dayStart), 'minute');
     return (diff / (24 * 60)) * 100;
   };
 
-  const processTimelineData = () => {
+  const processTimelineData = useCallback(() => {
     const dayStart = dayjs(selectedDate).startOf('day').toDate();
     const dayEnd = dayjs(selectedDate).endOf('day').toDate();
 
@@ -227,7 +293,11 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
     }
 
     setGapBlocks(gaps);
-  };
+  }, [entries, selectedDate, goals, getCategoryColor]);
+
+  useEffect(() => {
+    processTimelineData();
+  }, [processTimelineData]);
 
   const formatDuration = (start: Date, end: Date | null) => {
     if (!end) return '进行中';
@@ -252,6 +322,13 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
 
   const isToday = dayjs(selectedDate).isSame(dayjs(), 'day');
 
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    if (!isToday) return;
+    const id = setInterval(() => setNowTick(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, [isToday]);
+
   const goToPreviousDay = () => {
     if (isEarliestDay) return;
     onDateChange(dayjs(selectedDate).subtract(1, 'day').toDate());
@@ -261,7 +338,9 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
     onDateChange(dayjs(selectedDate).add(1, 'day').toDate());
   };
 
-  const goToToday = () => onDateChange(new Date());
+  const goToToday = () => {
+    handleDateSelect(new Date());
+  };
 
   return (
     <div className="timeline-view">
@@ -307,15 +386,166 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
         </div>
       </div>
 
-      {/* 日期选择弹窗 */}
       <IonModal
         isOpen={datePickerVisible}
-        onDidDismiss={() => { setDatePickerVisible(false); setShowMonthWheel(false); }}
+        onDidDismiss={closeDatePicker}
         initialBreakpoint={0.55}
-        breakpoints={[0, 0.55, 0.7]}
+        breakpoints={isIOS ? [0, 0.55] : [0, 0.55, 0.7]}
+        style={isIOS ? ({ '--border-radius': '28px' } as React.CSSProperties) : undefined}
       >
         <IonContent className="ion-padding">
-          {showMonthWheel ? (
+          {isIOS ? (
+            <div style={{ maxWidth: '380px', margin: '0 auto', paddingBottom: '8px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '12px'
+                }}
+              >
+                <button
+                  onClick={closeDatePicker}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: isDark ? '#94a3b8' : '#64748b',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    padding: 0
+                  }}
+                >
+                  取消
+                </button>
+                <span style={{ fontSize: '15px', fontWeight: 700, color: isDark ? '#e2e8f0' : '#334155' }}>
+                  快速选择日期
+                </span>
+                <button
+                  onClick={goToToday}
+                  disabled={isToday}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: isToday ? (isDark ? '#475569' : '#cbd5e1') : '#3b82f6',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    padding: 0,
+                    opacity: isToday ? 0.55 : 1
+                  }}
+                >
+                  今天
+                </button>
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '10px'
+                }}
+              >
+                <button
+                  onClick={goToPreviousMonth}
+                  disabled={!canGoPrevMonth}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: isDark ? '#94a3b8' : '#64748b',
+                    fontSize: '18px',
+                    padding: '4px 6px',
+                    opacity: canGoPrevMonth ? 1 : 0.25
+                  }}
+                  aria-label="上个月"
+                >
+                  ‹
+                </button>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: isDark ? '#e2e8f0' : '#334155' }}>
+                  {monthTitle}
+                </span>
+                <button
+                  onClick={goToNextMonth}
+                  disabled={!canGoNextMonth}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: isDark ? '#94a3b8' : '#64748b',
+                    fontSize: '18px',
+                    padding: '4px 6px',
+                    opacity: canGoNextMonth ? 1 : 0.25
+                  }}
+                  aria-label="下个月"
+                >
+                  ›
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', marginBottom: '6px' }}>
+                {WEEKDAYS.map((weekday) => (
+                  <div
+                    key={weekday}
+                    style={{
+                      textAlign: 'center',
+                      fontSize: '10px',
+                      fontWeight: 600,
+                      color: isDark ? '#64748b' : '#94a3b8',
+                      lineHeight: '16px'
+                    }}
+                  >
+                    {weekday}
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
+                {calendarDays.map((date, index) => {
+                  if (!date) {
+                    return <div key={`empty-${index}`} />;
+                  }
+
+                  const dateValue = dayjs(date);
+                  const isTodayCell = dateValue.isSame(dayjs(), 'day');
+                  const isSelected = dateValue.isSame(dayjs(selectedDate), 'day');
+                  const isBeforeEarliest = earliestSelectableDate ? dateValue.isBefore(earliestSelectableDate, 'day') : false;
+                  const isFuture = dateValue.isAfter(dayjs(), 'day');
+                  const isDisabled = isBeforeEarliest || isFuture;
+
+                  return (
+                    <button
+                      key={date}
+                      type="button"
+                      disabled={isDisabled}
+                      onClick={() => handleDateSelect(date)}
+                      style={{
+                        aspectRatio: '1',
+                        borderRadius: '6px',
+                        border: isSelected
+                          ? '1px solid #3b82f6'
+                          : `1px solid ${isDark ? 'rgba(71, 85, 105, 0.32)' : 'rgba(203, 213, 225, 0.9)'}`,
+                        background: isSelected
+                          ? (isDark ? 'rgba(59, 130, 246, 0.16)' : 'rgba(59, 130, 246, 0.1)')
+                          : (isDark ? 'rgba(30, 41, 59, 0.55)' : '#ffffff'),
+                        color: isSelected
+                          ? '#3b82f6'
+                          : isDisabled
+                            ? (isDark ? '#334155' : '#cbd5e1')
+                            : (isDark ? '#e2e8f0' : '#334155'),
+                        fontSize: '12px',
+                        fontWeight: isSelected || isTodayCell ? 700 : 500,
+                        opacity: isDisabled ? 0.45 : 1,
+                        outline: isTodayCell && !isSelected ? `1px solid ${isDark ? '#60a5fa' : '#93c5fd'}` : 'none',
+                        outlineOffset: '-2px',
+                        padding: 0,
+                        minHeight: '36px'
+                      }}
+                    >
+                      {dateValue.date()}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : showMonthWheel ? (
             /* ── Year / Month wheel view ── */
             <div>
               {/* Back → calendar button */}
@@ -359,14 +589,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
               max={dayjs().format('YYYY-MM-DD')}
               locale="zh-CN"
               firstDayOfWeek={1}
-              onIonChange={(e) => {
-                const value = e.detail.value;
-                if (value) {
-                  const dateStr = typeof value === 'string' ? value : value[0];
-                  onDateChange(dayjs(dateStr).toDate());
-                }
-                setDatePickerVisible(false);
-              }}
+              onIonChange={(e) => handleCalendarChange(e.detail.value)}
               style={{ width: '100%', margin: '0 auto' }}
             />
           )}
@@ -421,7 +644,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
         {isToday && (
           <div
             className="timeline-current-time"
-            style={{ left: `${getTimePercent(new Date(), dayjs().startOf('day').toDate())}%` }}
+            style={{ left: `${getTimePercent(new Date(nowTick), dayjs().startOf('day').toDate())}%` }}
           />
         )}
 

@@ -78,8 +78,8 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
   const today = entry ? dayjs(entry.startTime).format('YYYY-MM-DD') : '';
   const yesterday = entry ? dayjs(entry.startTime).subtract(1, 'day').format('YYYY-MM-DD') : '';
 
-  const todayGoals = entry ? goals.filter(g => g.date === today) : [];
-  const yesterdayGoals = entry ? goals.filter(g => g.date === yesterday) : [];
+  const todayGoals = entry ? goals.filter(g => g.date === today && (g.type ?? 'time') !== 'check') : [];
+  const yesterdayGoals = entry ? goals.filter(g => g.date === yesterday && (g.type ?? 'time') !== 'check') : [];
 
   const entryDateGoals = [...todayGoals, ...yesterdayGoals];
 
