@@ -198,7 +198,6 @@ export const AIAssistant: React.FC = () => {
       let thinkingAccum = '';
 
       const { content, thinking } = await runToolCallLoop(
-        { baseURL: config.baseURL, apiKey: config.apiKey, model: config.model },
         query,
         recentHistory,
         {

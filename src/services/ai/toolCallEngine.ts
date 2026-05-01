@@ -18,8 +18,9 @@
 
 import dayjs from 'dayjs';
 import { db } from '../db';
-import { chatWithTools, chatStream, type ChatMessage, type LLMConfig } from './llmClient';
+import { chatWithTools, chatStream, type ChatMessage } from './llmClient';
 import { actionRegistry } from '../actions';
+import { gateway } from '../gateway';
 import type { ConfirmationCard } from '../actions';
 
 const MAX_TOOL_ROUNDS = 5;
@@ -96,12 +97,13 @@ ${categoryList || '（暂无类别）'}
  * 主入口：执行工具调用循环
  */
 export async function runToolCallLoop(
-    config: LLMConfig,
     userQuery: string,
     history: ChatMessage[],
     callbacks: ToolCallEngineCallbacks,
     signal?: AbortSignal,
 ): Promise<{ content: string; thinking?: string }> {
+    const config = await gateway.getAiClientConfig();
+
     // 1. 构建 system prompt
     callbacks.onPhase('preparing', '构建上下文');
     const systemPrompt = await buildSystemPrompt();
