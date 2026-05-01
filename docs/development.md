@@ -7,7 +7,7 @@
 - **Git**
 
 **Android 开发额外需要：**
-- JDK >= 17
+- JDK >= 21
 - Android Studio（最新版）
 - Android SDK API Level 33+
 
@@ -113,6 +113,71 @@ npm run build:local && npx cap copy
 - `npm run build:local` — TypeScript 检查 + 构建 `dist/`（包含 `.env.local` 中的密钥，用于本地调试）
 - `npx cap copy` — 复制 `dist/` 到 `android/app/src/main/assets/public/`
 
+### 推荐调试流程（当前最常用）
+
+如果你平时主要是自己在 Android 手机上使用 Chrono，推荐直接按下面的节奏开发和调试。
+
+#### 1. 只改 React / TypeScript / CSS 时
+
+在仓库根目录执行：
+
+```bash
+npm run build:local
+npx cap copy
+```
+
+然后去 Android Studio：
+
+1. 选择设备
+2. 点击 `Run`
+
+这是最常见的本地自用流程，因为：
+
+- 会保留 `.env.local` 里的密钥
+- 不会被 `.env.production` 的空值覆盖
+- 不需要每次都重新同步原生工程
+
+#### 2. 改了 Capacitor 插件、Android 配置或原生依赖时
+
+执行：
+
+```bash
+npm run build:local
+npx cap sync android
+```
+
+然后再回 Android Studio 运行。
+
+`npx cap sync android` 适用于这些情况：
+
+- 改了 `capacitor.config.ts`
+- 新增或升级了 Capacitor 插件
+- 改了 `android/` 里的 Gradle / 原生配置
+
+#### 3. 只想快速看 Web UI 时
+
+执行：
+
+```bash
+npm run dev
+```
+
+然后在浏览器打开终端里显示的地址，默认通常是 `http://localhost:5173`。
+
+#### 4. 想确认 Android 工程本身还能编译 Debug 包时
+
+执行：
+
+```bash
+cd android
+./gradlew assembleDebug
+```
+
+### 什么时候用 `build`，什么时候用 `build:local`
+
+- `npm run build:local`：本地调试 / 自己日常使用，保留 `.env.local` 里的配置。
+- `npm run build`：正式发布前验证和 GitHub Actions 发布流程，使用 `.env.production`，不会把本地密钥打进产物。
+
 ### 真机调试
 
 1. 手机 → 设置 → 关于手机 → 连续点击"版本号"7 次（启用开发者选项）
@@ -120,46 +185,149 @@ npm run build:local && npx cap copy
 3. USB 连接手机，手机上允许调试
 4. Android Studio 选择设备 → Run
 
-### 发布 APK
+### 发布到 GitHub（自动打包 APK）
 
-将 Chrono 打包为签名 APK 并发布到 GitHub Release。
+现在的正式发布流程已经改成：**推送 `v*` tag 到 GitHub，GitHub Actions 自动完成 Web 构建、Android 签名构建、Artifact 上传和 GitHub Release 创建。**
 
-#### 前提条件
+不再需要手动执行 `apksigner` 或 `gh release create`。
 
-- Java 21（Android Studio 内置 JBR）
-- [GitHub CLI (`gh`)](https://cli.github.com/)，已登录
-- 签名密钥 `~/chrono-release-key.jks`（创建方法见末尾附录）
+#### 一次性准备
 
-#### 快速参考
-
-将 `<VERSION>` 替换为实际版本号（如 `0.0.2`）：
+1. 在可信机器上创建发布 keystore：
 
 ```bash
-VERSION=0.0.2
-cd /Users/lumosk/Workspace/time_tracker
-
-# 发布构建（自动不含密钥，无需手动移除 .env）
-npm run build
-
-# 验证构建产物无密钥
-grep -r "LTAI\|sk-" dist/assets/*.js && echo "⚠️ 密钥泄露！停止发布！" && exit 1
-
-# 打包签名
-npx cap sync android
-cd android && ./gradlew assembleRelease
-~/Library/Android/sdk/build-tools/36.1.0/apksigner sign \
-  --ks ~/chrono-release-key.jks --ks-key-alias chrono \
-  --out app/build/outputs/apk/release/chrono-v${VERSION}.apk \
-  app/build/outputs/apk/release/app-release-unsigned.apk
-
-# 发布
-cd /Users/lumosk/Workspace/time_tracker
-gh release create v${VERSION} \
-  android/app/build/outputs/apk/release/chrono-v${VERSION}.apk \
-  --title "Chrono v${VERSION}" --notes "Release notes" --prerelease
+keytool -genkeypair -v \
+  -keystore ~/chrono-release-key.jks \
+  -alias chrono \
+  -keyalg RSA \
+  -keysize 2048 \
+  -validity 10000
 ```
 
-> `build-tools` 版本号按实际安装调整：`ls ~/Library/Android/sdk/build-tools/`
+2. 把 keystore 转成单行 base64：
+
+```bash
+base64 < ~/chrono-release-key.jks | tr -d '\n'
+```
+
+3. 打开 GitHub 仓库网页：
+
+- `Settings` → `Secrets and variables` → `Actions`
+
+4. 添加这些 repository secrets：
+
+- `ANDROID_KEYSTORE_BASE64`
+- `KEYSTORE_PASSWORD`
+- `KEY_ALIAS`
+- `KEY_PASSWORD`
+
+#### 每次正式发布前先确认
+
+在仓库根目录执行：
+
+```bash
+npm pkg get version
+npm run build
+grep -n "Content-Security-Policy" dist/index.html
+grep -rE "LTAI|sk-[A-Za-z0-9]{20,}" dist/
+```
+
+预期结果：
+
+- `npm pkg get version` 显示这次准备发布的版本号
+- `npm run build` 成功
+- CSP grep 能命中 `dist/index.html`
+- 密钥 grep 没有输出
+
+#### 标准正式发布流程（推荐长期使用）
+
+假设你要发布的版本号已经在 `package.json` 里。
+
+在仓库根目录执行：
+
+```bash
+VERSION=$(npm pkg get version | tr -d '"')
+git checkout main
+git pull origin main
+git push origin main
+git tag "v${VERSION}"
+git push origin "v${VERSION}"
+```
+
+然后去 GitHub 网页查看：
+
+1. `Actions` → `Release`
+2. 确认最新的 workflow run 成功
+3. 打开 `Artifacts`，确认至少看到：
+   - `android-apk`
+   - `web-dist`
+4. 打开 `Releases`，确认出现稳定版 `v${VERSION}`
+
+#### 如果目标版本还没写进 `package.json`
+
+可以先在 `main` 上执行一次版本升级：
+
+```bash
+git checkout main
+git pull origin main
+npm version patch
+git push origin main --follow-tags
+```
+
+说明：
+
+- `npm version patch` 会把版本从例如 `0.0.3` 升到 `0.0.4`
+- 它会同时更新 `package.json` 和 `package-lock.json`
+- 默认还会创建一个 git commit 和一个 tag（例如 `v0.0.4`）
+- `git push origin main --follow-tags` 会把 commit 和 tag 一起推上去，从而触发 GitHub Release workflow
+
+如果当前 `package.json` 已经是你要发的版本，**不要再跑 `npm version patch`**，否则会多升一个版本。
+
+#### 需要先做 rehearsal 时
+
+如果你想先用一个临时分支和 `-rc` tag 做预演，再发稳定版，可以这样做：
+
+```bash
+VERSION=$(npm pkg get version | tr -d '"')
+git checkout main
+git pull origin main
+git checkout -B public
+git push -u origin public
+git tag "v${VERSION}-rc.1"
+git push origin "v${VERSION}-rc.1"
+```
+
+然后去 GitHub 网页检查：
+
+1. `Actions` 里的 `Release` workflow 成功
+2. `Artifacts` 里有 `android-apk` 和 `web-dist`
+3. `Releases` 里出现 `v${VERSION}-rc.1`，并且是 `Pre-release`
+4. 把 APK 装到测试设备上确认能运行
+
+预演通过后，再回到稳定版发布：
+
+```bash
+VERSION=$(npm pkg get version | tr -d '"')
+git checkout main
+git merge --ff-only public
+git push origin main
+git tag "v${VERSION}"
+git push origin "v${VERSION}"
+```
+
+#### `public` 分支要不要保留
+
+- `main`：推荐作为长期主分支和正式发布基线
+- `public`：适合作为临时 rehearsal / 发布预演分支
+
+如果 `public` 已经完成使命，并且和 `main` 指向同一个 commit，可以删除，减少分支混乱：
+
+```bash
+git push origin --delete public
+git branch -d public
+```
+
+删除后不会影响已经发布的 tag 和 GitHub Release。
 
 #### 安全原理
 
@@ -179,13 +347,22 @@ npm run build:local    → localdev mode   → .env.local (有密钥)     → �
 
 #### 版本号规范
 
- 采用 Semantic Versioning：`0.0.x`（早期）→ `0.x.0`（迭代）→ `1.0.0+`（正式）。Android 的 `versionCode` 和 `versionName` 现在会在构建时从 `package.json` 自动派生，因此发布时使用 `npm version patch|minor|major` 作为单一版本入口即可。
+ 采用 Semantic Versioning：`0.0.x`（早期）→ `0.x.0`（迭代）→ `1.0.0+`（正式）。Android 的 `versionCode` 和 `versionName` 会在构建时从 `package.json` 自动派生。
+
+常见规则：
+
+- 已经把 `package.json` 调到目标版本：直接打 `vX.Y.Z` tag 发布
+- 还没调到目标版本：先执行一次 `npm version patch|minor|major`
 
 #### 附录：创建签名密钥（仅首次）
 
 ```bash
-keytool -genkey -v -keystore ~/chrono-release-key.jks \
-  -keyalg RSA -keysize 2048 -validity 10000 -alias chrono
+keytool -genkeypair -v \
+  -keystore ~/chrono-release-key.jks \
+  -alias chrono \
+  -keyalg RSA \
+  -keysize 2048 \
+  -validity 10000
 ```
 
 ---
@@ -248,7 +425,7 @@ npm run electron:make    # 生成 .dmg / .app
 
 **Android Studio 找不到 SDK？** — 检查 `android/local.properties` 的 `sdk.dir` 路径。
 
-**Android 应用未更新？** — 必须先 `npm run build && npx cap copy`，再在 Android Studio 中 Build → Clean Project → Run。
+**Android 应用未更新？** — 本地自用调试通常应先执行 `npm run build:local && npx cap copy`，如果改了插件或原生配置，再改用 `npm run build:local && npx cap sync android`。
 
 **清空 IndexedDB 数据？**
 - Web：浏览器 DevTools → Application → Storage → Clear Site Data
