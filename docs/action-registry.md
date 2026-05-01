@@ -1,10 +1,8 @@
 # Action Registry — AI-First 操作注册表
 
-> **分支：** `feat/ai`（尚未合并到 main）  
 > **实现日期：** 2026-04-02 ~ 2026-04-03  
-> **设计方案：** [设计文档](superpowers/specs/2026-04-02-ai-first-action-registry-design.md)  
-> **实施计划：** [实施计划](superpowers/plans/2026-04-02-ai-first-action-registry.md)  
-> **变更规模：** 32 文件，+3721 / -63 行
+> **变更规模：** 32 文件，+3721 / -63 行  
+> **设计与实施记录：** 原始 design spec 与 plan 文档仅保留在本地工作区（`docs/superpowers/`，未入库）。最初版本可见 git 历史：`3a966e3`（设计）、`6bbe4c0`（计划）。
 
 ## 概述
 
