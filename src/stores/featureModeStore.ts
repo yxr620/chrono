@@ -27,6 +27,7 @@ function readStorage(): Partial<ModeMap> | null {
   try {
     return JSON.parse(raw) as Partial<ModeMap>;
   } catch {
+    console.warn('[featureModeStore] corrupt data in', STORAGE_KEY, '— re-seeding');
     return null;
   }
 }
@@ -59,6 +60,8 @@ export const useFeatureModeStore = create<FeatureModeStore>((set, get) => ({
   loadFromStorage: () => {
     const stored = readStorage();
     if (stored) {
+      // Storage exists — respect persisted state. Seeding only runs on
+      // first boot; later credential changes flip modes via setMode.
       set({ modes: { ...DEFAULT_MODES, ...stored } });
       return;
     }
