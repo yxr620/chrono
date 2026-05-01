@@ -12,6 +12,7 @@
 import OSS from 'ali-oss';
 import { getDeviceId } from './db';
 import { getSavedOSSConfig } from './syncConfig';
+import { gateway } from './gateway';
 
 /**
  * 获取 OSS 配置（动态读取）
@@ -39,14 +40,17 @@ const getUserId = (): string => {
 /**
  * 初始化 OSS 客户端
  */
-function getOSSClient(): OSS {
-  const config = getOSSConfig();
-  if (!config.accessKeyId || !config.accessKeySecret) {
-    throw new Error('OSS 配置缺失，请在设置页面配置 OSS 或设置环境变量');
-  }
-
+async function getOSSClient(): Promise<OSS> {
+  const creds = await gateway.getSyncCredentials();
   try {
-    return new OSS(config);
+    return new OSS({
+      region: creds.region,
+      bucket: creds.bucket,
+      accessKeyId: creds.accessKeyId,
+      accessKeySecret: creds.accessKeySecret,
+      stsToken: creds.securityToken,
+      secure: true,
+    });
   } catch (error) {
     console.error('[OSS] 客户端初始化失败:', error);
     throw error;
@@ -72,7 +76,7 @@ export async function uploadSyncFile(data: any[]): Promise<string> {
   }
 
   try {
-    const client = getOSSClient();
+    const client = await getOSSClient();
     const userId = getUserId();
     const deviceId = await getDeviceId();
     const timestamp = Date.now();
@@ -107,7 +111,7 @@ export interface OSSObject {
  * 分页列出指定前缀下的所有 OSS 对象
  */
 async function listAllObjects(prefix: string): Promise<OSSObject[]> {
-  const client = getOSSClient();
+  const client = await getOSSClient();
   const allObjects: OSSObject[] = [];
   let marker: string | undefined;
 
@@ -181,7 +185,7 @@ export async function downloadSyncFile(fileName: string): Promise<any[]> {
     throw new Error('OSS 未配置');
   }
 
-  const client = getOSSClient();
+  const client = await getOSSClient();
 
   try {
     const result = await client.get(fileName);
@@ -228,7 +232,7 @@ export async function uploadSnapshot(data: SnapshotData): Promise<string> {
     throw new Error('OSS 未配置');
   }
 
-  const client = getOSSClient();
+  const client = await getOSSClient();
   const userId = getUserId();
 
   const fileName = `sync/${userId}/snapshots/${data.deviceId}.json`;
@@ -275,7 +279,7 @@ export async function downloadSnapshot(fileName: string): Promise<SnapshotData> 
     throw new Error('OSS 未配置');
   }
 
-  const client = getOSSClient();
+  const client = await getOSSClient();
   const result = await client.get(fileName);
   const content = result.content.toString('utf-8');
   const data: SnapshotData = JSON.parse(content);
@@ -325,7 +329,7 @@ export async function deleteOSSFiles(fileNames: string[]): Promise<void> {
     throw new Error('OSS 未配置');
   }
 
-  const client = getOSSClient();
+  const client = await getOSSClient();
 
   const batchSize = 1000;
   for (let i = 0; i < fileNames.length; i += batchSize) {
