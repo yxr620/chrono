@@ -8,6 +8,13 @@
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
   <meta name="format-detection" content="telephone=no" />
   <meta name="msapplication-tap-highlight" content="no" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self';
+           script-src 'self';
+           style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+           connect-src 'self' http: https:;
+           img-src 'self' data: blob:;
+           font-src 'self' data: https://fonts.gstatic.com;" />
   <title>Chrono</title>
 </head>
 

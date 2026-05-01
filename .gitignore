@@ -68,3 +68,4 @@ electron/dist/
 
 # Android signing keys
 *.jks
+*.keystore
