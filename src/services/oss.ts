@@ -12,6 +12,8 @@
 import OSS from 'ali-oss';
 import { getDeviceId } from './db';
 import { getSavedOSSConfig } from './syncConfig';
+// Cycle (gateway → byoGateway → oss → gateway) is safe: gateway is only
+// dereferenced inside getOSSClient() at call time, not at module init.
 import { gateway } from './gateway';
 
 /**
