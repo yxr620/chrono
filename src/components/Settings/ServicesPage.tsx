@@ -1,17 +1,7 @@
 import React from 'react';
 import { useFeatureModeStore } from '../../stores/featureModeStore';
+import { SyncServiceSection } from './SyncServiceSection';
 import './ServicesPage.css';
-
-// TODO Task 2: replace with <SyncServiceSection />
-const SyncServiceSectionStub: React.FC = () => (
-  <section className="service-section">
-    <header className="service-section__header">
-      <span className="service-section__icon">☁️</span>
-      <span className="service-section__title">多设备同步</span>
-    </header>
-    <p className="service-section__placeholder">同步设置占位（Task 2 实装）</p>
-  </section>
-);
 
 // TODO Task 4: replace with <AiServiceSection />
 const AiServiceSectionStub: React.FC = () => (
@@ -35,7 +25,7 @@ export const ServicesPage: React.FC = () => {
         每项功能可独立选择关闭、使用自己的凭据（BYO）或由 Chrono 后端代理。
       </p>
 
-      <SyncServiceSectionStub />
+      <SyncServiceSection />
       <AiServiceSectionStub />
 
       {anyManaged && (
