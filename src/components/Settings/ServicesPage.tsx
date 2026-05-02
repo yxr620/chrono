@@ -1,12 +1,15 @@
 import React from 'react';
 import { useFeatureModeStore } from '../../stores/featureModeStore';
+import { useAuthStore } from '../../stores/authStore';
 import { AiServiceSection } from './AiServiceSection';
 import { SyncServiceSection } from './SyncServiceSection';
 import './ServicesPage.css';
 
 export const ServicesPage: React.FC = () => {
   const modes = useFeatureModeStore((s) => s.modes);
-  const anyManaged = modes.sync === 'managed' || modes.ai === 'managed';
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
 
   return (
     <div className="services-page">
@@ -14,6 +17,13 @@ export const ServicesPage: React.FC = () => {
       <p className="services-page__hint">
         每项功能可独立选择关闭、使用自己的凭据（BYO）或由 Chrono 后端代理。
       </p>
+
+      {isAuthenticated && (
+        <div className="services-page__account">
+          <span>已登录：{user?.email}</span>
+          <button type="button" onClick={() => logout()}>退出</button>
+        </div>
+      )}
 
       {modes.sync === 'disabled' && modes.ai === 'disabled' && (
         <div className="services-page__first-run">
@@ -23,13 +33,6 @@ export const ServicesPage: React.FC = () => {
 
       <SyncServiceSection />
       <AiServiceSection />
-
-      {anyManaged && (
-        // TODO Plan 3: update banner copy before Managed is user-activatable
-        <div className="services-page__signin-banner">
-          <span>已启用 Managed 模式（暂未上线，等待 plan 3 的后端部署）</span>
-        </div>
-      )}
     </div>
   );
 };

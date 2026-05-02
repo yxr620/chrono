@@ -41,12 +41,29 @@
   padding-top: 12px;
   border-top: 1px dashed var(--ion-color-step-150, #e0e0e0);
 }
-.services-page__signin-banner {
-  margin-top: 16px;
-  padding: 12px;
+.services-page__account {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
   border-radius: 8px;
-  background: var(--ion-color-warning-tint);
-  color: var(--ion-color-warning-contrast);
+  background: var(--ion-color-success-tint, #e6f4ea);
+  color: var(--ion-color-success-shade, #0e6027);
+  font-size: 14px;
+}
+.services-page__account button {
+  padding: 4px 10px;
+  font-size: 13px;
+  border-radius: 6px;
+  border: 1px solid var(--ion-color-success-shade, #0e6027);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.services-page__account button:hover {
+  background: rgba(0, 0, 0, 0.05);
 }
 .service-form__hint {
   margin-top: 6px;
