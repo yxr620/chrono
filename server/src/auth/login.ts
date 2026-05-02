@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { register as registerRoute } from '../index.js';
+import { register as registerRoute } from '../shared/router.js';
 import { findUserByEmail } from './users.js';
 import { signJwt } from './jwt.js';
 import { badRequest, unauthorized } from '../shared/errors.js';

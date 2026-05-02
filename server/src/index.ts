@@ -1,26 +1,6 @@
-import { config } from './config.js';
 import { corsHeaders } from './shared/cors.js';
 import { HttpError } from './shared/errors.js';
-
-interface FCRequest {
-  method: string;
-  path: string;
-  headers: Record<string, string>;
-  body: string;
-}
-interface FCResponse {
-  setStatusCode: (n: number) => void;
-  setHeader: (k: string, v: string) => void;
-  send: (body: string) => void;
-}
-
-type Handler = (req: FCRequest, body: any, userId?: string) => Promise<unknown>;
-
-const routes: Array<{ method: string; pattern: RegExp; auth: boolean; handler: Handler }> = [];
-
-export function register(method: string, pattern: RegExp, auth: boolean, handler: Handler) {
-  routes.push({ method, pattern, auth, handler });
-}
+import { routes, type FCRequest, type FCResponse } from './shared/router.js';
 
 export const handler = async (req: FCRequest, resp: FCResponse) => {
   const origin = req.headers['origin'] ?? req.headers['Origin'];
@@ -70,7 +50,8 @@ export const handler = async (req: FCRequest, resp: FCResponse) => {
   }
 };
 
-// Route registrations (filled by import side effects)
+// Route registrations (filled by import side effects).
+// router.ts owns the registry, so these no longer create a circular import.
 import './auth/register.js';
 import './auth/login.js';
 import './features/me.js';
