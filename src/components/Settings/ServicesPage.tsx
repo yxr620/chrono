@@ -39,6 +39,7 @@ export const ServicesPage: React.FC = () => {
       <AiServiceSectionStub />
 
       {anyManaged && (
+        // TODO Plan 3: update banner copy before Managed is user-activatable
         <div className="services-page__signin-banner">
           <span>已启用 Managed 模式（暂未上线，等待 plan 3 的后端部署）</span>
         </div>
