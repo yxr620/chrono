@@ -1,0 +1,48 @@
+.services-page {
+  padding: 16px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+.services-page__title {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 600;
+}
+.services-page__hint {
+  margin: 0 0 24px;
+  color: var(--ion-color-medium);
+  font-size: 14px;
+}
+.service-section {
+  border: 1px solid var(--ion-color-step-150, #e0e0e0);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: var(--ion-card-background, #fff);
+}
+.service-section__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.service-section__icon { font-size: 20px; }
+.service-section__title { font-size: 16px; font-weight: 600; }
+.service-section__radios { display: flex; flex-direction: column; gap: 4px; }
+.service-section__byo-form {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--ion-color-step-150, #e0e0e0);
+}
+.services-page__signin-banner {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--ion-color-warning-tint);
+  color: var(--ion-color-warning-contrast);
+}
+.service-section__placeholder {
+  color: var(--ion-color-medium);
+  font-style: italic;
+  padding: 8px 0;
+}
