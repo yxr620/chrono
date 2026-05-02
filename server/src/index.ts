@@ -45,14 +45,12 @@ export const handler = async (req: FCRequest, resp: FCResponse) => {
 
     let userId: string | undefined;
     if (route.auth) {
-      // verifyJwt wired up in Task 5
-      // const { verifyJwt } = await import('./auth/jwt.js');
-      // const auth = req.headers['authorization'] ?? req.headers['Authorization'] ?? '';
-      // const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
-      // if (!token) throw new HttpError(401, 'missing_token');
-      // const claims = verifyJwt(token);
-      // userId = claims.sub;
-      throw new HttpError(401, 'auth_not_wired');
+      const { verifyJwt } = await import('./auth/jwt.js');
+      const auth = req.headers['authorization'] ?? req.headers['Authorization'] ?? '';
+      const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+      if (!token) throw new HttpError(401, 'missing_token');
+      const claims = verifyJwt(token);
+      userId = claims.sub;
     }
 
     const result = await route.handler(req, parsedBody, userId);
