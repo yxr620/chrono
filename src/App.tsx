@@ -16,6 +16,7 @@ import { ServicesPage } from './components/Settings/ServicesPage';
 import { AIAssistant } from './components/AIAssistant/AIAssistant';
 import recordsIcon from './assets/recordsIcon.png';
 import { GoalManager } from './components/GoalManager/GoalManager';
+import { APP_NAVIGATE_EVENT } from './services/appNavigation';
 import { useSyncStore } from './stores/syncStore';
 import { isSyncReady } from './services/syncConfig';
 import { syncEngine } from './services/syncEngine';
@@ -115,6 +116,19 @@ function App() {
     const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    const handleNavigate = (event: Event) => {
+      const nextTab = (event as CustomEvent<DesktopTab>).detail;
+      if (!nextTab) {
+        return;
+      }
+      setActiveTab(nextTab);
+    };
+
+    window.addEventListener(APP_NAVIGATE_EVENT, handleNavigate as EventListener);
+    return () => window.removeEventListener(APP_NAVIGATE_EVENT, handleNavigate as EventListener);
   }, []);
 
   useLayoutEffect(() => {

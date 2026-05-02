@@ -13,6 +13,13 @@
   color: var(--ion-color-medium);
   font-size: 14px;
 }
+.services-page__first-run {
+  margin-bottom: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--ion-color-primary-tint);
+  color: var(--ion-color-primary-contrast);
+}
 .service-section {
   border: 1px solid var(--ion-color-step-150, #e0e0e0);
   border-radius: 12px;
@@ -41,8 +48,70 @@
   background: var(--ion-color-warning-tint);
   color: var(--ion-color-warning-contrast);
 }
-.service-section__placeholder {
-  color: var(--ion-color-medium);
-  font-style: italic;
-  padding: 8px 0;
+.service-form__hint {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: hsl(var(--muted-foreground));
+}
+.service-form__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.service-form__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 999px;
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.service-form__chip--active {
+  border-color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.08);
+  color: hsl(var(--primary));
+}
+.service-form__chip-remove {
+  color: hsl(var(--muted-foreground));
+  font-size: 11px;
+}
+.service-form__chip-remove:hover {
+  color: hsl(var(--destructive));
+}
+.service-form__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.service-form__actions .settings-input-field {
+  flex: 1;
+}
+.service-form__button {
+  border: 1px solid hsl(var(--primary) / 0.2);
+  border-radius: 10px;
+  background: hsl(var(--primary) / 0.08);
+  color: hsl(var(--primary));
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.service-form__button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.service-form__button:hover:not(:disabled) {
+  background: hsl(var(--primary) / 0.14);
+}
+@media (max-width: 640px) {
+  .service-form__actions {
+    flex-direction: column;
+  }
 }

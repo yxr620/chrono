@@ -1,18 +1,8 @@
 import React from 'react';
 import { useFeatureModeStore } from '../../stores/featureModeStore';
+import { AiServiceSection } from './AiServiceSection';
 import { SyncServiceSection } from './SyncServiceSection';
 import './ServicesPage.css';
-
-// TODO Task 4: replace with <AiServiceSection />
-const AiServiceSectionStub: React.FC = () => (
-  <section className="service-section">
-    <header className="service-section__header">
-      <span className="service-section__icon">🤖</span>
-      <span className="service-section__title">AI 助手</span>
-    </header>
-    <p className="service-section__placeholder">AI 设置占位（Task 4 实装）</p>
-  </section>
-);
 
 export const ServicesPage: React.FC = () => {
   const modes = useFeatureModeStore((s) => s.modes);
@@ -25,8 +15,14 @@ export const ServicesPage: React.FC = () => {
         每项功能可独立选择关闭、使用自己的凭据（BYO）或由 Chrono 后端代理。
       </p>
 
+      {modes.sync === 'disabled' && modes.ai === 'disabled' && (
+        <div className="services-page__first-run">
+          Chrono 默认本地优先。如需多设备同步或 AI 助手，请在下方各项中选择 BYO 或 Managed 模式。
+        </div>
+      )}
+
       <SyncServiceSection />
-      <AiServiceSectionStub />
+      <AiServiceSection />
 
       {anyManaged && (
         // TODO Plan 3: update banner copy before Managed is user-activatable

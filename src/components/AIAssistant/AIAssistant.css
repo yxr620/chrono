@@ -28,6 +28,24 @@
   min-width: 0;
 }
 
+.ai-header-summary {
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-header-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: hsl(var(--foreground));
+}
+
+.ai-header-subtitle {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: hsl(var(--muted-foreground));
+}
+
 .ai-config-select,
 .ai-config-input {
   padding: 6px 10px;
@@ -70,6 +88,50 @@
   display: flex;
   gap: 4px;
   flex-shrink: 0;
+}
+
+.ai-service-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  border-radius: 10px;
+  color: hsl(var(--foreground));
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.ai-service-link:hover {
+  border-color: hsl(var(--primary) / 0.25);
+  background: hsl(var(--primary) / 0.08);
+}
+
+.ai-service-link-inline {
+  min-width: auto;
+}
+
+.ai-service-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  background: hsl(var(--primary) / 0.08);
+  border: 1px solid hsl(var(--primary) / 0.12);
+}
+
+.ai-service-banner-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: hsl(var(--muted-foreground));
 }
 
 .ai-icon-btn {
@@ -554,6 +616,86 @@
   color: hsl(var(--destructive-foreground, 0 0% 100%));
 }
 
+.ai-settings-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: hsl(0 0% 0% / 0.45);
+  z-index: 1000;
+}
+
+.ai-settings-modal {
+  width: min(520px, 100%);
+  padding: 20px;
+  border-radius: 20px;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 20px 60px hsl(0 0% 0% / 0.18);
+}
+
+.ai-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.ai-settings-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.ai-settings-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+}
+
+.ai-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.ai-field-hint {
+  font-size: 13px;
+  line-height: 1.5;
+  color: hsl(var(--muted-foreground));
+}
+
+.ai-save-btn {
+  margin-top: 16px;
+  width: 100%;
+  height: 42px;
+  border: none;
+  border-radius: 12px;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ai-save-btn:hover {
+  opacity: 0.94;
+}
+
 /* （设置弹窗已移至头部内联，保留空注释以免影响后续选择器） */
 
 /* ── 执行阶段列表 ─────────────────────────────────────────── */
@@ -886,4 +1028,11 @@ details[open] .ai-thinking-summary::before {
   margin-top: 8px;
   margin-bottom: 2px;
   font-weight: 500;
+}
+
+@media (max-width: 640px) {
+  .ai-service-banner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }

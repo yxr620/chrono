@@ -2,11 +2,7 @@ import React from 'react';
 import { IonRadioGroup, IonRadio, IonItem, IonLabel } from '@ionic/react';
 import { useFeatureModeStore } from '../../stores/featureModeStore';
 import type { FeatureMode } from '../../services/gateway/types';
-
-// TODO Task 3: replace with <OssCredentialsForm />
-const OssCredentialsFormStub: React.FC = () => (
-  <p className="service-section__placeholder">OSS 凭据表单占位（Task 3 实装）</p>
-);
+import { OssCredentialsForm } from './OssCredentialsForm';
 
 const SYNC_OPTIONS: Array<{ mode: FeatureMode; label: string; hint: string; disabled?: boolean }> = [
   { mode: 'disabled', label: '关闭',                   hint: '不进行多设备同步' },
@@ -44,7 +40,7 @@ export const SyncServiceSection: React.FC = () => {
 
       {mode === 'byo' && (
         <div className="service-section__byo-form">
-          <OssCredentialsFormStub />
+          <OssCredentialsForm />
         </div>
       )}
     </section>
