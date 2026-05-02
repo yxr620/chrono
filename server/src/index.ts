@@ -132,3 +132,4 @@ export const handler = async (arg1: any, arg2: any, _arg3?: any): Promise<unknow
 import './auth/register.js';
 import './auth/login.js';
 import './features/me.js';
+import './features/sts.js';
