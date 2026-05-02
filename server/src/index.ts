@@ -70,8 +70,7 @@ export const handler = async (req: FCRequest, resp: FCResponse) => {
   }
 };
 
-// Route registrations (filled by import side effects).
-// Imports added in Task 7 once the route files exist.
-// import './auth/register.js';
-// import './auth/login.js';
-// import './features/me.js';
+// Route registrations (filled by import side effects)
+import './auth/register.js';
+import './auth/login.js';
+import './features/me.js';
