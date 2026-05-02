@@ -29,6 +29,7 @@ export const SyncServiceSection: React.FC = () => {
         value={mode}
         onIonChange={(e) => setMode('sync', e.detail.value as FeatureMode)}
         className="service-section__radios"
+        aria-label="同步模式"
       >
         {SYNC_OPTIONS.map((opt) => (
           <IonItem key={opt.mode} lines="none">
