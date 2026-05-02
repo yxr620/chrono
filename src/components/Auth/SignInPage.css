@@ -1,0 +1,85 @@
+.signin-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.signin-modal {
+  background: var(--ion-card-background, #fff);
+  padding: 24px;
+  border-radius: 12px;
+  min-width: 320px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.signin-modal h3 {
+  margin: 0 0 4px;
+}
+
+.signin-modal label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.signin-modal input {
+  padding: 8px;
+  border: 1px solid var(--ion-color-step-200, #ccc);
+  border-radius: 6px;
+  font-size: 15px;
+}
+
+.signin-error {
+  color: var(--ion-color-danger);
+  margin: 0;
+  font-size: 13px;
+}
+
+.signin-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.signin-actions button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--ion-color-step-200, #ccc);
+  background: var(--ion-card-background, #fff);
+  cursor: pointer;
+}
+
+.signin-actions button[type='submit'] {
+  background: var(--ion-color-primary);
+  color: #fff;
+  border-color: var(--ion-color-primary);
+}
+
+.signin-actions button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.signin-switch {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ion-color-medium);
+}
+
+.signin-switch button {
+  background: none;
+  border: 0;
+  color: var(--ion-color-primary);
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 13px;
+}
