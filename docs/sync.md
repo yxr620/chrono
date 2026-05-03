@@ -179,7 +179,7 @@ Bucket → 权限管理 → 跨域设置：
 
 | 字段 | 值 |
 |---|---|
-| 来源 | 推荐逐行填写：`http://localhost:5173`、`http://localhost`、`capacitor://localhost`，以及正式 Web 域名 |
+| 来源 | 推荐逐行填写：`http://localhost:5173`、`https://localhost`、`http://localhost`、`capacitor://localhost`，以及正式 Web 域名 |
 | 允许 Methods | `GET, POST, PUT, DELETE, HEAD` |
 | 允许 Headers | `*` |
 

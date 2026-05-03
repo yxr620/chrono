@@ -4,6 +4,25 @@
 
 ---
 
+## 配置前端来源白名单 / Configure CORS origins
+
+FC 控制台 → `chrono-api` 函数 → **配置 → 环境变量** → 设置 `CORS_ALLOWED_ORIGINS`。
+
+推荐至少包含这些值（逗号分隔，无空格）：
+
+```text
+https://your-web-domain.example,https://localhost,http://localhost,capacitor://localhost
+```
+
+- `https://localhost`：当前 Capacitor Android WebView 默认 origin
+- `http://localhost`：旧 Android 配置或自定义 scheme 时仍可能出现
+- `capacitor://localhost`：Capacitor iOS WebView
+- 另外再加正式 Web 域名
+
+服务端会把 `https://localhost`、`http://localhost` 与 `capacitor://localhost` 视为同一组本地 app origin，但环境变量里把三者都写上更清晰，也便于排查 `Failed to fetch` 这类 CORS 问题。
+
+---
+
 ## 添加用户到白名单 / Add a user to the allowlist
 
 1. FC 控制台 → 进入 `chrono-api` 函数 → **配置 → 环境变量**
