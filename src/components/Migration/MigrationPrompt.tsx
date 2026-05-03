@@ -5,9 +5,8 @@ import { authService } from '../../services/authService';
 import { clearOSSConfig } from '../../services/syncConfig';
 import { useAIStore } from '../../stores/aiStore';
 import { SignInPage } from '../Auth/SignInPage';
+import { MIGRATION_SEEN_KEY } from './migrationGuard';
 import './MigrationPrompt.css';
-
-const SEEN_KEY = 'chrono_migration_seen';
 
 interface Props { onClose: () => void }
 
@@ -35,7 +34,7 @@ export const MigrationPrompt: React.FC<Props> = ({ onClose }) => {
   const [busy, setBusy] = useState(false);
 
   const dismiss = () => {
-    localStorage.setItem(SEEN_KEY, 'true');
+    localStorage.setItem(MIGRATION_SEEN_KEY, 'true');
     onClose();
   };
 
@@ -61,7 +60,7 @@ export const MigrationPrompt: React.FC<Props> = ({ onClose }) => {
         setBusy(false);
         return;
       }
-      localStorage.setItem(SEEN_KEY, 'true');
+      localStorage.setItem(MIGRATION_SEEN_KEY, 'true');
       onClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'migration_failed';
@@ -94,27 +93,3 @@ export const MigrationPrompt: React.FC<Props> = ({ onClose }) => {
   );
 };
 
-export const shouldShowMigration = (): boolean => {
-  if (!import.meta.env.VITE_AUTH_API_URL) return false;
-  if (localStorage.getItem(SEEN_KEY) === 'true') return false;
-  const ossSaved = localStorage.getItem('ossConfig');
-  const aiSaved = localStorage.getItem('ai-config');
-  if (!ossSaved && !aiSaved) return false;
-  // Only prompt if the user actually has a non-empty BYO secret somewhere.
-  try {
-    if (ossSaved) {
-      const oss = JSON.parse(ossSaved);
-      if (oss?.accessKeyId && oss?.accessKeySecret) return true;
-    }
-  } catch { /* ignore */ }
-  try {
-    if (aiSaved) {
-      const ai = JSON.parse(aiSaved);
-      const providers = ai?.providers ?? {};
-      for (const pc of Object.values(providers) as Array<{ apiKey?: string }>) {
-        if (pc?.apiKey) return true;
-      }
-    }
-  } catch { /* ignore */ }
-  return false;
-};
