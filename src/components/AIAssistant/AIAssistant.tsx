@@ -10,6 +10,7 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { useAIStore } from '../../stores/aiStore';
 import { useFeatureModeStore } from '../../stores/featureModeStore';
+import { useAuthStore } from '../../stores/authStore';
 import { runToolCallLoop } from '../../services/ai/toolCallEngine';
 import { navigateToTab } from '../../services/appNavigation';
 import type { ChatMessage as LLMMessage } from '../../services/ai/llmClient';
@@ -114,6 +115,7 @@ const PhasesIndicator: React.FC<{
 export const AIAssistant: React.FC = () => {
   const { config, messages, addMessage, updateMessage, clearMessages, isConfigured } = useAIStore();
   const aiMode = useFeatureModeStore((state) => state.modes.ai);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
@@ -128,7 +130,9 @@ export const AIAssistant: React.FC = () => {
   const confirmCountRef = useRef(0);
 
   const currentProvider = AI_PROVIDERS.find(p => p.id === config.providerId);
-  const aiConfigured = aiMode === 'byo' && isConfigured();
+  const aiConfigured = aiMode === 'managed'
+    ? isAuthenticated
+    : aiMode === 'byo' && isConfigured();
   // 阶段累积：每次发送前重置，onPhase 调用时追加
   const phasesRef = useRef<Array<{ key: string; detail?: string; level?: number; failed?: boolean; debugInfo?: string }>>([]);
   const handleOpenServices = useCallback(() => {
@@ -318,22 +322,24 @@ export const AIAssistant: React.FC = () => {
   const welcomeTitle = aiConfigured ? '你好！' : '先配置 AI 服务';
   const welcomeDescription = aiMode === 'disabled'
     ? 'AI 助手当前已关闭，请先在「服务」页面启用。'
-    : aiMode === 'managed'
-      ? 'Managed 模式将在后续计划接通，请先使用 BYO。'
+    : aiMode === 'managed' && !isAuthenticated
+      ? '请先在「服务」页面登录 Chrono 账号。'
       : aiConfigured
         ? '向我提问关于你的时间记录的任何问题'
         : '供应商凭据现在在「服务」页面配置。';
   const serviceBannerText = aiConfigured
-    ? '供应商凭据现在在「服务」页面配置。'
+    ? aiMode === 'managed'
+      ? '当前使用 Chrono 托管 AI。'
+      : '供应商凭据现在在「服务」页面配置。'
     : aiMode === 'disabled'
       ? 'AI 助手当前处于关闭模式。'
       : aiMode === 'managed'
-        ? 'Managed 模式尚未开放，请先切换到 BYO。'
+        ? '请先在「服务」页面登录 Chrono 账号。'
         : '请先在「服务」页面填写 provider / API Key / model。';
   const inputPlaceholder = aiMode === 'disabled'
     ? 'AI 助手已关闭，请先在服务页面启用 →'
-    : aiMode === 'managed'
-      ? 'Managed 模式暂未开放，请先选择 BYO →'
+    : aiMode === 'managed' && !isAuthenticated
+      ? '请先登录 Chrono 账号 →'
       : aiConfigured
         ? '问我任何关于你时间的问题...'
         : '请先在服务页面配置 AI 凭据 →';
@@ -347,7 +353,9 @@ export const AIAssistant: React.FC = () => {
             {aiMode === 'disabled'
               ? '当前已关闭，请前往「服务」页面启用。'
               : aiMode === 'managed'
-                ? 'Managed 模式暂未开放，请先使用 BYO。'
+                ? aiConfigured
+                  ? '当前使用 Chrono 托管 AI'
+                  : '请先登录 Chrono 账号。'
                 : aiConfigured
                   ? `当前使用 ${currentProvider?.name || config.providerId} · ${config.model}`
                   : 'BYO 已启用，但尚未填写完整凭据。'}
