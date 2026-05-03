@@ -27,6 +27,7 @@ import { DesktopSidebar } from './components/Desktop/DesktopSidebar';
 import { getDesktopShellTheme } from './components/Desktop/desktopNavigation';
 import { SyncToastListener } from './components/common/SyncToastListener';
 import { SyncIndicator } from './components/common/SyncIndicator';
+import { MigrationPrompt, shouldShowMigration } from './components/Migration/MigrationPrompt';
 import { getDefaultDateRange } from './services/analysis/processor';
 import type { DesktopShellTheme, DesktopTab } from './components/Desktop/desktopNavigation';
 import type { DateRange } from './types/analysis';
@@ -115,6 +116,12 @@ function App() {
 
   // 屏幕宽度检测
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
+
+  // 一次性迁移提示：BYO 用户在 VITE_AUTH_API_URL 配置后首次启动会看到一次
+  const [showMigration, setShowMigration] = useState(false);
+  useEffect(() => {
+    if (shouldShowMigration()) setShowMigration(true);
+  }, []);
 
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
@@ -362,6 +369,7 @@ function App() {
       >
         {renderPageContent()}
       </Layout>
+      {showMigration && <MigrationPrompt onClose={() => setShowMigration(false)} />}
     </IonApp>
   );
 }
