@@ -1,15 +1,24 @@
-import Sts, * as $Sts from '@alicloud/sts20150401';
+import StsModule, * as $Sts from '@alicloud/sts20150401';
 import * as $OpenApi from '@alicloud/openapi-client';
 import { register as registerRoute } from '../shared/router.js';
 import { findUserById } from '../auth/users.js';
 import { config } from '../config.js';
 import { forbidden, internal } from '../shared/errors.js';
 
-let stsClient: Sts | null = null;
-function getStsClient(): Sts {
+// `@alicloud/sts20150401` is published as CommonJS. Under module=ESNext +
+// Node ESM interop, the default-import binding is the whole module.exports
+// object (`{ default: StsClass, AssumeRoleRequest: ..., ... }`) rather than
+// the class itself, so `new StsModule(...)` throws "is not a constructor".
+// Reach through `.default` (with a fallback in case a future release fixes
+// the export shape).
+const StsCtor = ((StsModule as unknown as { default?: typeof StsModule }).default ?? StsModule) as typeof StsModule;
+type StsInstance = InstanceType<typeof StsCtor>;
+
+let stsClient: StsInstance | null = null;
+function getStsClient(): StsInstance {
   if (!stsClient) {
     if (!config.stsRoleArn) throw internal('sts_not_configured');
-    stsClient = new Sts(new $OpenApi.Config({
+    stsClient = new StsCtor(new $OpenApi.Config({
       accessKeyId: config.oss.accessKeyId,
       accessKeySecret: config.oss.accessKeySecret,
       endpoint: 'sts.aliyuncs.com',
