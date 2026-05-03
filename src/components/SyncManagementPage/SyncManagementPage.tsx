@@ -6,6 +6,7 @@ import {
   IonItem,
   IonLabel,
   IonSpinner,
+  IonToggle,
   useIonAlert,
 } from '@ionic/react';
 import { useAppToast } from '../../hooks/useAppToast';
@@ -14,6 +15,7 @@ import { navigateToTab } from '../../services/appNavigation';
 import { emitSyncStatus } from '../../services/syncToast';
 import type { SyncDirection } from '../../services/syncToast';
 import { useFeatureModeStore } from '../../stores/featureModeStore';
+import { useSyncStore } from '../../stores/syncStore';
 import './SyncManagementPage.css';
 
 interface SyncErrorLog {
@@ -25,7 +27,7 @@ interface SyncErrorLog {
 const SYNC_MODE_LABEL: Record<'disabled' | 'byo' | 'managed', string> = {
   disabled: '已关闭',
   byo: '使用我的 OSS 凭据',
-  managed: 'Chrono 托管（即将推出）',
+  managed: '使用 Chrono 托管同步',
 };
 
 const formatTimestamp = (value: Date | number | null): string => {
@@ -56,6 +58,9 @@ const fetchSyncStats = async (): Promise<SyncStats | null> => {
 
 export const SyncManagementPage: React.FC = () => {
   const syncMode = useFeatureModeStore((state) => state.modes.sync);
+  const autoSyncEnabled = useSyncStore((state) => state.autoSyncEnabled);
+  const isConfigured = useSyncStore((state) => state.isConfigured);
+  const setAutoSyncEnabled = useSyncStore((state) => state.setAutoSyncEnabled);
   const [presentAlert] = useIonAlert();
   const [stats, setStats] = useState<SyncStats | null>(null);
   const [loading, setLoading] = useState(false);
@@ -241,6 +246,11 @@ export const SyncManagementPage: React.FC = () => {
   const totalDeleted = stats
     ? stats.deletedEntries + stats.deletedGoals + stats.deletedCategories
     : 0;
+  const autoSyncDescription = syncMode === 'disabled'
+    ? '请先在服务页面启用 BYO 或 Managed 同步，再决定是否自动同步。'
+    : !isConfigured
+      ? '自动同步偏好会保留；当前同步尚未就绪，完成登录或凭据配置后生效。'
+      : '开启后会在数据变更后自动 Push，并在应用启动时自动 Pull。';
   const statusTone = loading
     ? 'syncing'
     : syncMode === 'disabled'
@@ -261,8 +271,10 @@ export const SyncManagementPage: React.FC = () => {
           : '等待同步';
   const statusDescription = syncMode === 'disabled'
     ? '多设备同步当前已关闭，可前往「服务」页面重新启用。'
-    : syncMode === 'managed'
-      ? '托管同步尚未上线，请先使用 BYO 模式。'
+    : !isConfigured
+      ? syncMode === 'managed'
+        ? '托管同步模式已选中，请先登录 Chrono 账号后再同步。'
+        : 'BYO 模式需要有效的 OSS 凭据，请前往服务页面完成配置。'
       : stats && stats.pendingOps > 0
         ? `当前有 ${stats.pendingOps} 条待同步操作。`
         : '当前没有待同步操作。';
@@ -330,6 +342,21 @@ export const SyncManagementPage: React.FC = () => {
             </div>
           </div>
         )}
+      </section>
+
+      <section className="sync-status-card">
+        <div className="sync-status-toggle-row">
+          <div>
+            <h4 className="settings-subsection-title">自动同步</h4>
+            <p className="sync-status-subtitle">{autoSyncDescription}</p>
+          </div>
+          <IonToggle
+            checked={autoSyncEnabled}
+            disabled={syncMode === 'disabled'}
+            onIonChange={(event) => setAutoSyncEnabled(event.detail.checked)}
+            aria-label="自动同步开关"
+          />
+        </div>
       </section>
 
       {lastResult && (

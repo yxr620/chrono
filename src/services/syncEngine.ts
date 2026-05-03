@@ -11,9 +11,10 @@
 
 import { db, type SyncOperation, getDeviceId } from './db';
 import {
-  uploadSyncFile, listSyncFiles, downloadSyncFile, extractTimestamp, isOSSConfigured,
+  uploadSyncFile, listSyncFiles, downloadSyncFile, extractTimestamp,
   uploadSnapshot, downloadSnapshot, listSnapshotFiles, listOwnOplogFiles, deleteOSSFiles,
 } from './oss';
+import { getSyncUnavailableReason } from './syncAvailability';
 import { emitSyncToast, emitSyncStatus } from './syncToast';
 
 // ─── 类型定义 ────────────────────────────────────────────
@@ -246,7 +247,7 @@ export class SyncEngine {
 
   /**
    * 同步操作守卫：确保同一时间只有一个同步操作在执行，
-   * 统一处理 isSyncing / isOSSConfigured 检查和错误捕获。
+   * 统一处理 isSyncing / sync readiness 检查和错误捕获。
    */
   private async withSyncGuard(
     name: string,
@@ -255,8 +256,12 @@ export class SyncEngine {
     if (this.isSyncing) {
       return { status: 'error', message: '正在同步中，请稍候' };
     }
-    if (!isOSSConfigured()) {
-      return { status: 'error', message: 'OSS 未配置，无法同步' };
+    const blockedReason = getSyncUnavailableReason();
+    if (blockedReason) {
+      return {
+        status: 'error',
+        message: blockedReason === '同步功能已关闭' ? blockedReason : `${blockedReason}，无法同步`,
+      };
     }
     this.isSyncing = true;
     try {

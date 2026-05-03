@@ -18,7 +18,9 @@ import recordsIcon from './assets/recordsIcon.png';
 import { GoalManager } from './components/GoalManager/GoalManager';
 import { APP_NAVIGATE_EVENT } from './services/appNavigation';
 import { useSyncStore } from './stores/syncStore';
-import { isSyncReady } from './services/syncConfig';
+import { useFeatureModeStore } from './stores/featureModeStore';
+import { useAuthStore } from './stores/authStore';
+import { isSyncReady } from './services/syncAvailability';
 import { syncEngine } from './services/syncEngine';
 import { emitSyncToast, emitSyncStatus } from './services/syncToast';
 import { DesktopSidebar } from './components/Desktop/DesktopSidebar';
@@ -104,6 +106,8 @@ const DesktopLayout: React.FC<LayoutProps> = ({ activeTab, onTabChange, children
 function App() {
   const [activeTab, setActiveTab] = useState<DesktopTab>('records');
   const { checkConfig } = useSyncStore();
+  const syncMode = useFeatureModeStore((state) => state.modes.sync);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [analysisDateRange, setAnalysisDateRange] = useState<DateRange>(getDefaultDateRange());
   const [analysisSelectedRange, setAnalysisSelectedRange] = useState(30);
   const isAnalysisTab = activeTab === 'dashboard' || activeTab === 'trend' || activeTab === 'goalAnalysis';
@@ -258,14 +262,14 @@ function App() {
     };
   }, [isDesktop]);
 
-  // 检查 OSS 配置
+  // 检查当前同步模式是否已就绪（BYO 凭据或 Managed 登录状态）
   useEffect(() => {
     try {
       checkConfig();
     } catch (error) {
       console.error('[App] 检查配置失败:', error);
     }
-  }, [checkConfig]);
+  }, [checkConfig, syncMode, isAuthenticated]);
 
   // 应用启动时自动 Pull
   useEffect(() => {

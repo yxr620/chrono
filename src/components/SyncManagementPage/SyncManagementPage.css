@@ -139,6 +139,13 @@
   color: hsl(var(--muted-foreground));
 }
 
+.sync-status-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
 .sync-status-actions {
   display: flex;
   flex-direction: column;
@@ -146,6 +153,11 @@
 
 @media (max-width: 640px) {
   .sync-status-banner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sync-status-toggle-row {
     align-items: flex-start;
     flex-direction: column;
   }
