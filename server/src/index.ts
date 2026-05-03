@@ -118,6 +118,10 @@ export const handler = async (arg1: any, arg2: any, _arg3?: any): Promise<unknow
     }
 
     const result = await route.handler(req, parsedBody, userId);
+    if (result && typeof result === 'object' && (result as { __raw?: boolean }).__raw) {
+      const raw = result as { status: number; contentType: string; body: string };
+      return reply(raw.status, raw.body, raw.contentType);
+    }
     return reply(200, JSON.stringify(result), 'application/json');
   } catch (err) {
     if (err instanceof HttpError) {
@@ -133,6 +137,7 @@ import './auth/register.js';
 import './auth/login.js';
 import './features/me.js';
 import './features/sts.js';
+import './features/ai.js';
 import './userdata/syncNamespace.js';
 import './userdata/devicesEndpoints.js';
 import './userdata/storageEndpoint.js';
