@@ -1,7 +1,7 @@
 /**
  * ManagedGateway — Chrono 后端代理实现
- * Sync 由 plan 4 启用：通过 /auth/sts 拉取临时凭据，缓存至到期前 5 分钟。
- * AI 仍未实现（plan 6）。
+ * Sync：通过 /auth/sts 拉取临时凭据，缓存至到期前 5 分钟。
+ * AI：通过 /v1/chat/completions 代理至上游 LLM，使用 JWT 作为 Bearer。
  */
 
 import type {
@@ -11,7 +11,6 @@ import type {
   SyncCredentials,
   AiClientConfig,
 } from './types';
-import { ManagedNotYetImplementedError } from './types';
 import { useFeatureModeStore } from '../../stores/featureModeStore';
 import { useAuthStore } from '../../stores/authStore';
 import { authService } from '../authService';
@@ -65,6 +64,16 @@ export class ManagedGateway implements PaidFeatureGateway {
   }
 
   async getAiClientConfig(): Promise<AiClientConfig> {
-    throw new ManagedNotYetImplementedError('ai');
+    const auth = useAuthStore.getState();
+    if (!auth.isAuthenticated || !auth.token) {
+      throw new Error('not_authenticated');
+    }
+    const baseURL = import.meta.env.VITE_AUTH_API_URL ?? '';
+    if (!baseURL) throw new Error('VITE_AUTH_API_URL not set');
+    return {
+      baseURL: `${baseURL.replace(/\/$/, '')}/v1`,
+      apiKey: auth.token,
+      model: 'managed',
+    };
   }
 }
