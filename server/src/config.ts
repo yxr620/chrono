@@ -22,7 +22,7 @@ export const config = {
   ai: {
     apiKey: optional('AI_API_KEY'),
     baseURL: optional('AI_BASE_URL') ?? 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    model: optional('AI_MODEL') ?? 'qwen-plus',
+    model: optional('AI_MODEL') ?? 'qwen3.6-max-preview',
   },
   allowedSyncEmails: (optional('ALLOWED_SYNC_EMAILS') ?? '').split(',').map(s => s.trim()).filter(Boolean),
   allowedAiEmails: (optional('ALLOWED_AI_EMAILS') ?? '').split(',').map(s => s.trim()).filter(Boolean),

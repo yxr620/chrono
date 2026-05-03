@@ -54,7 +54,7 @@ VITE_OSS_BUCKET=your-bucket-name
 VITE_OSS_ACCESS_KEY_ID=your-access-key-id
 VITE_OSS_ACCESS_KEY_SECRET=your-access-key-secret
 VITE_AI_PROVIDER_ID=qwen
-VITE_AI_MODEL=qwen3.5-plus
+VITE_AI_MODEL=qwen3.6-max-preview
 VITE_AI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 VITE_AI_API_KEY=your-api-key
 ```

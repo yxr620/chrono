@@ -7,19 +7,19 @@ AI 助手是**仅桌面端**的功能，通过自然语言查询本地时间数�
 通过 `.env` 文件或应用内设置（ExportPage → AI 设置）配置：
 
 ```env
-VITE_AI_PROVIDER=qwen
+VITE_AI_PROVIDER_ID=qwen
 VITE_AI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 VITE_AI_API_KEY=sk-...
-VITE_AI_MODEL=qwen3.5-plus
+VITE_AI_MODEL=qwen3.6-max-preview
 ```
 
-所有 Provider 均使用 OpenAI 兼容的 `/v1/chat/completions` 协议。
+所有 Provider 均使用 OpenAI 兼容的 `/v1/chat/completions` 协议。阿里云百炼在北京地域的兼容入口仍然是 `https://dashscope.aliyuncs.com/compatible-mode/v1`；如果使用新加坡或美国地域，请改成对应的 regional endpoint。
 
 ## 支持的 LLM Provider
 
 | Provider | 内置模型 |
 |---|---|
-| 阿里云 Qwen | qwen3.5-plus, qwen3-max-preview |
+| 阿里云百炼 Qwen | qwen3.6-max-preview, qwen3.6-plus, qwen3.6-flash |
 | Google Gemini | gemini-3-flash-preview, gemini-3.1-pro-preview |
 | 智谱 GLM | glm-4-flash, glm-4-plus, glm-4-long |
 | Kimi | moonshot-v1-auto, moonshot-v1-128k |
