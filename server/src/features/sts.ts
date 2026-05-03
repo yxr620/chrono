@@ -28,19 +28,33 @@ function getStsClient(): StsInstance {
 }
 
 function buildSessionPolicy(userId: string): string {
+  const bucket = config.oss.bucket;
+  const userPrefix = `sync/${userId}/`;
+  // Two statements:
+  //   1. Object-level ops (Get/Put/Delete/AbortMpu) on objects under
+  //      sync/{userId}/* — no Condition; the Resource ARN already
+  //      restricts paths.
+  //   2. ListObjects on the bucket itself, gated by an oss:Prefix
+  //      Condition so the session can only list its own prefix.
+  // Combining both in one statement (with the Condition applied to all
+  // actions) breaks Put/Get because those operations do not provide an
+  // `oss:Prefix` request-context key, so StringLike never matches and
+  // OSS denies them with "Access denied by authorizer's policy".
   return JSON.stringify({
     Version: '1',
     Statement: [
       {
         Effect: 'Allow',
-        Action: ['oss:GetObject', 'oss:PutObject', 'oss:DeleteObject', 'oss:ListObjects', 'oss:AbortMultipartUpload'],
-        Resource: [
-          `acs:oss:*:*:${config.oss.bucket}`,
-          `acs:oss:*:*:${config.oss.bucket}/sync/${userId}/*`,
-        ],
+        Action: ['oss:GetObject', 'oss:PutObject', 'oss:DeleteObject', 'oss:AbortMultipartUpload'],
+        Resource: [`acs:oss:*:*:${bucket}/${userPrefix}*`],
+      },
+      {
+        Effect: 'Allow',
+        Action: ['oss:ListObjects'],
+        Resource: [`acs:oss:*:*:${bucket}`],
         Condition: {
           StringLike: {
-            'oss:Prefix': [`sync/${userId}/`, `sync/${userId}/*`],
+            'oss:Prefix': [userPrefix, `${userPrefix}*`],
           },
         },
       },
