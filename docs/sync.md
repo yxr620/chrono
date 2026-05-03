@@ -20,12 +20,22 @@
 | `src/services/db.ts` | Dexie Schema、Syncable 接口、同步辅助函数 |
 | `src/services/syncDb.ts` | 同步感知的 CRUD（自动记录 oplog，软删除） |
 | `src/services/oss.ts` | 阿里云 OSS 封装（分页列表、oplog/snapshot CRUD） |
-| `src/services/syncConfig.ts` | 同步配置管理（自动同步开关 + OSS 配置，localStorage 持久化） |
+| `src/services/syncConfig.ts` | 同步本地设置持久化（自动同步开关 + BYO OSS 配置） |
+| `src/services/syncAvailability.ts` | 按当前模式判断同步是否就绪（BYO 凭据 / Managed 登录态） |
+| `src/services/gateway/*` | Paid feature gateway 抽象；在 BYO 与 Managed 之间路由同步凭据 |
 | `src/services/syncEngine.ts` | **同步引擎核心**（Push / Pull / LWW 合并、Snapshot-First、清理） |
 | `src/services/syncToast.ts` | 同步状态 Toast 事件总线 |
 | `src/services/syncDebugTools.ts` | 浏览器控制台调试工具（`window.syncDebug`） |
-| `src/utils/autoPush.ts` | 数据变更后自动触发增量 Push |
+| `src/services/autoPush.ts` | 数据变更后自动触发增量 Push |
 | `src/stores/syncStore.ts` | 同步 UI 状态（Zustand） |
+| `src/stores/authStore.ts` | Managed 模式下的登录态、JWT 与当前用户 |
+
+## BYO 与 Managed
+
+- **BYO**：同步凭据来自应用内保存的 OSS 配置或 `.env`。远端路径前缀是 `sync/{userId}/`，其中 `userId` 来自 `localStorage.userId`，缺失时回落到 `default-user`。
+- **Managed**：客户端先向 Chrono 后端请求 `/auth/sts`，拿到 1 小时的 STS 临时凭据，再由浏览器直接访问 OSS。远端路径前缀仍然是 `sync/{userId}/`，但这里的 `userId` 必须等于登录账号的 Chrono user id。
+- **两种模式共享本地 IndexedDB，但不共享远端命名空间**。切换模式不会迁移已有远端数据，只会改变后续读写的 bucket/前缀。
+- **自动同步开关是模式无关的偏好项**。只有在当前 sync mode 已启用且已就绪时，自动 Push / 启动时 Pull 才会真正执行。
 
 ## 数据流
 
@@ -74,12 +84,17 @@
 
 ### 自动触发
 
-> 自动同步开关存储在 `localStorage`（key: `autoSyncEnabled`），新设备**默认关闭**。在「设置 → 同步管理」中开启。
+> 自动同步开关存储在 `localStorage`（key: `autoSyncEnabled`），新设备**默认关闭**。在「同步管理」页面开启。
 
 | 时机 | 操作 | 前置条件 |
 |---|---|---|
-| 应用启动 | 增量 Pull | `isSyncReady()`（OSS 已配置 + 开关开启） |
+| 应用启动 | 增量 Pull | `isSyncReady()`（自动同步开关开启，且当前 sync mode 已就绪） |
 | 数据变更后 | 增量 Push（via `autoPush`） | `isSyncReady()` |
+
+当前 mode 的“已就绪”定义：
+
+- **BYO**：已保存有效的 OSS 凭据（应用内或 `.env`）。
+- **Managed**：sync mode 已切到 `managed`，且用户已登录 Chrono 账号。
 
 涉及的写操作：`startTracking` / `stopTracking` / `addEntry` / `updateEntry` / `deleteEntry` / `addGoal` / `updateGoal` / `deleteGoal`。
 
@@ -119,6 +134,8 @@ OSS Bucket/
             ├── {deviceId1}.json               # 每设备一个，覆盖写入
             └── {deviceId2}.json
 ```
+
+    在 Managed 模式下，这里的 `{userId}` 是 Chrono 账号的 user id；后续 Plan 5 的用户数据管理平面也将基于这一前缀枚举设备和统计存储量。
 
 ### Oplog 文件格式
 
@@ -162,9 +179,11 @@ Bucket → 权限管理 → 跨域设置：
 
 | 字段 | 值 |
 |---|---|
-| 来源 | `*` |
+| 来源 | 推荐逐行填写：`http://localhost:5173`、`https://localhost`、`http://localhost`、`capacitor://localhost`，以及正式 Web 域名 |
 | 允许 Methods | `GET, POST, PUT, DELETE, HEAD` |
 | 允许 Headers | `*` |
+
+说明：Managed 模式下浏览器会拿着 STS 临时凭据直接访问 OSS，所以 bucket 必须允许前端 origin 发起跨域请求。为了省事直接填 `*` 也能工作，但更推荐显式列出实际 origin。
 
 ### 3. 创建 AccessKey
 
@@ -199,7 +218,7 @@ VITE_OSS_ACCESS_KEY_SECRET=your-key-secret
 
 | 问题 | 排查步骤 |
 |---|---|
-| 同步失败 | 查看控制台 `[Sync]` / `[OSS]` 日志；检查 AccessKey 权限、Bucket 名称、CORS |
+| 同步失败 | 查看控制台 `[Sync]` / `[OSS]` 日志；BYO 检查 AccessKey 权限 / Bucket 名称，Managed 检查登录态、`/auth/sts` 响应与 bucket CORS |
 | 数据不一致 | 所有设备执行「增量同步」；仍不一致则「强制全量同步」 |
 | 同步状态异常 | 「重置同步状态」→「增量同步」 |
 | Electron 同步失败 | `electron/src/setup.ts` 的 `webPreferences` 添加 `webSecurity: false`，CSP 添加阿里云域名 |

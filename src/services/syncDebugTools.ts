@@ -7,6 +7,7 @@
 import { db, type SyncOperation } from './db';
 import { syncEngine } from './syncEngine';
 import { isOSSConfigured } from './oss';
+import { getSyncAvailability } from './syncAvailability';
 
 /**
  * 测试工具对象
@@ -17,6 +18,9 @@ export const SyncDebugTools = {
    */
   async checkConfig() {
     console.log('=== OSS 配置检查 ===');
+    console.log('当前同步模式:', getSyncAvailability().mode);
+    console.log('当前模式是否已就绪:', getSyncAvailability().configured);
+    console.log('未就绪原因:', getSyncAvailability().reason);
     console.log('OSS 是否已配置:', isOSSConfigured());
     console.log('环境变量:', {
       VITE_OSS_REGION: import.meta.env.VITE_OSS_REGION,

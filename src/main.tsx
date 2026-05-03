@@ -21,6 +21,8 @@ import { setupIonicReact } from '@ionic/react';
 
 import App from './App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { useFeatureModeStore } from './stores/featureModeStore'
+import { useAuthStore } from './stores/authStore'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { Capacitor } from '@capacitor/core'
 
@@ -66,6 +68,10 @@ window.addEventListener('unhandledrejection', (event) => {
   console.error('[Unhandled Promise Rejection]', event.reason);
   // 不阻止默认行为
 });
+
+// Hydrate feature modes from localStorage before any consumer reads them.
+useFeatureModeStore.getState().loadFromStorage();
+useAuthStore.getState().loadFromStorage();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -8,6 +8,7 @@ import {
   IonCardContent,
 } from '@ionic/react';
 import { SyncManagementPage } from '../SyncManagementPage/SyncManagementPage';
+import { navigateToTab } from '../../services/appNavigation';
 import { exportFullJSON, exportIncrementalJSON, importFromJSON, ImportStrategy } from '../../services/export';
 import { db } from '../../services/db';
 import { useEntryStore } from '../../stores/entryStore';
@@ -207,6 +208,23 @@ ${result.details.errors.length > 0 ? `\n⚠️ ${result.details.errors.length} �
               <div className="settings-row-sub">切换应用主题外观</div>
             </div>
             <IonToggle checked={isDark} onIonChange={(e) => setDark(e.detail.checked)} />
+          </div>
+        </IonCardContent>
+      </IonCard>
+
+      <IonCard className="settings-card">
+        <IonCardContent className="settings-card-content">
+          <h3 className="settings-card-title">服务</h3>
+          <div className="settings-button-stack">
+            <IonButton
+              expand="block"
+              fill="outline"
+              onClick={() => navigateToTab('services')}
+              className="settings-action-button"
+            >
+              打开服务页面
+            </IonButton>
+            <p className="settings-button-hint">统一配置多设备同步与 AI 助手的 Off / BYO / Managed 模式。</p>
           </div>
         </IonCardContent>
       </IonCard>

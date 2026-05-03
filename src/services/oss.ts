@@ -12,6 +12,9 @@
 import OSS from 'ali-oss';
 import { getDeviceId } from './db';
 import { getSavedOSSConfig } from './syncConfig';
+// Cycle (gateway → byoGateway → oss → gateway) is safe: gateway is only
+// dereferenced inside getOSSClient() at call time, not at module init.
+import { gateway } from './gateway';
 
 /**
  * 获取 OSS 配置（动态读取）
@@ -29,28 +32,32 @@ export function getOSSConfig() {
   };
 }
 
-// 用户 ID（未来可以通过登录系统获取）
-const getUserId = (): string => {
-  // MVP 阶段：使用设备 ID 作为用户 ID
-  // 未来可以集成真正的用户系统
-  return localStorage.getItem('userId') || 'default-user';
-};
-
 /**
- * 初始化 OSS 客户端
+ * 初始化 OSS 客户端，并返回当前同步上下文的 userId。
+ * userId 由 gateway 决定（BYO=localStorage.userId，Managed=auth user id），
+ * 与 STS session policy 强制的路径前缀保持一致。
  */
-function getOSSClient(): OSS {
-  const config = getOSSConfig();
-  if (!config.accessKeyId || !config.accessKeySecret) {
-    throw new Error('OSS 配置缺失，请在设置页面配置 OSS 或设置环境变量');
-  }
-
+async function getOSSClient(): Promise<{ client: OSS; userId: string }> {
+  const creds = await gateway.getSyncCredentials();
   try {
-    return new OSS(config);
+    const client = new OSS({
+      region: creds.region,
+      bucket: creds.bucket,
+      accessKeyId: creds.accessKeyId,
+      accessKeySecret: creds.accessKeySecret,
+      stsToken: creds.securityToken,
+      secure: true,
+    });
+    return { client, userId: creds.userId };
   } catch (error) {
     console.error('[OSS] 客户端初始化失败:', error);
     throw error;
   }
+}
+
+/** 仅获取当前同步 userId（不构建 OSS client）。 */
+async function getCurrentUserId(): Promise<string> {
+  return (await gateway.getSyncCredentials()).userId;
 }
 
 /**
@@ -67,13 +74,8 @@ export function isOSSConfigured(): boolean {
  * @returns 上传的文件路径
  */
 export async function uploadSyncFile(data: any[]): Promise<string> {
-  if (!isOSSConfigured()) {
-    throw new Error('OSS 未配置');
-  }
-
   try {
-    const client = getOSSClient();
-    const userId = getUserId();
+    const { client, userId } = await getOSSClient();
     const deviceId = await getDeviceId();
     const timestamp = Date.now();
 
@@ -107,7 +109,7 @@ export interface OSSObject {
  * 分页列出指定前缀下的所有 OSS 对象
  */
 async function listAllObjects(prefix: string): Promise<OSSObject[]> {
-  const client = getOSSClient();
+  const { client } = await getOSSClient();
   const allObjects: OSSObject[] = [];
   let marker: string | undefined;
 
@@ -135,11 +137,7 @@ async function listAllObjects(prefix: string): Promise<OSSObject[]> {
  * @returns 文件列表
  */
 export async function listSyncFiles(afterTimestamp?: number): Promise<OSSObject[]> {
-  if (!isOSSConfigured()) {
-    throw new Error('OSS 未配置');
-  }
-
-  const userId = getUserId();
+  const userId = await getCurrentUserId();
   const deviceId = await getDeviceId();
   const prefix = `sync/${userId}/oplog/`;
 
@@ -177,11 +175,7 @@ export async function listSyncFiles(afterTimestamp?: number): Promise<OSSObject[
  * @returns 文件内容（操作日志数组）
  */
 export async function downloadSyncFile(fileName: string): Promise<any[]> {
-  if (!isOSSConfigured()) {
-    throw new Error('OSS 未配置');
-  }
-
-  const client = getOSSClient();
+  const { client } = await getOSSClient();
 
   try {
     const result = await client.get(fileName);
@@ -224,12 +218,7 @@ export interface SnapshotData {
  * 每个设备只保留一个快照文件
  */
 export async function uploadSnapshot(data: SnapshotData): Promise<string> {
-  if (!isOSSConfigured()) {
-    throw new Error('OSS 未配置');
-  }
-
-  const client = getOSSClient();
-  const userId = getUserId();
+  const { client, userId } = await getOSSClient();
 
   const fileName = `sync/${userId}/snapshots/${data.deviceId}.json`;
 
@@ -247,12 +236,8 @@ export async function uploadSnapshot(data: SnapshotData): Promise<string> {
  * 列出其他设备的快照文件
  */
 export async function listSnapshotFiles(): Promise<OSSObject[]> {
-  if (!isOSSConfigured()) {
-    throw new Error('OSS 未配置');
-  }
-
   const deviceId = await getDeviceId();
-  const userId = getUserId();
+  const userId = await getCurrentUserId();
   const prefix = `sync/${userId}/snapshots/`;
 
   const allObjects = await listAllObjects(prefix);
@@ -271,11 +256,7 @@ export async function listSnapshotFiles(): Promise<OSSObject[]> {
  * 下载快照文件
  */
 export async function downloadSnapshot(fileName: string): Promise<SnapshotData> {
-  if (!isOSSConfigured()) {
-    throw new Error('OSS 未配置');
-  }
-
-  const client = getOSSClient();
+  const { client } = await getOSSClient();
   const result = await client.get(fileName);
   const content = result.content.toString('utf-8');
   const data: SnapshotData = JSON.parse(content);
@@ -292,12 +273,8 @@ export async function downloadSnapshot(fileName: string): Promise<SnapshotData> 
  * 列出本设备的操作日志文件（用于清理）
  */
 export async function listOwnOplogFiles(): Promise<OSSObject[]> {
-  if (!isOSSConfigured()) {
-    throw new Error('OSS 未配置');
-  }
-
   const deviceId = await getDeviceId();
-  const userId = getUserId();
+  const userId = await getCurrentUserId();
   const prefix = `sync/${userId}/oplog/`;
 
   const allObjects = await listAllObjects(prefix);
@@ -321,11 +298,8 @@ export async function listOwnOplogFiles(): Promise<OSSObject[]> {
  */
 export async function deleteOSSFiles(fileNames: string[]): Promise<void> {
   if (fileNames.length === 0) return;
-  if (!isOSSConfigured()) {
-    throw new Error('OSS 未配置');
-  }
 
-  const client = getOSSClient();
+  const { client } = await getOSSClient();
 
   const batchSize = 1000;
   for (let i = 0; i < fileNames.length; i += batchSize) {

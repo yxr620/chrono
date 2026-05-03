@@ -8,7 +8,7 @@
  */
 
 import { syncEngine } from './syncEngine';
-import { isSyncReady } from './syncConfig';
+import { isSyncReady } from './syncAvailability';
 import { emitSyncToast, emitSyncStatus } from './syncToast';
 
 /**

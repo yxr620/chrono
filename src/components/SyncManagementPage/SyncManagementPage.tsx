@@ -1,72 +1,94 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  IonAccordion,
+  IonAccordionGroup,
   IonButton,
+  IonItem,
+  IonLabel,
   IonSpinner,
   IonToggle,
   useIonAlert,
-  IonAccordionGroup,
-  IonAccordion,
-  IonItem,
-  IonLabel
 } from '@ionic/react';
-import { syncEngine, type SyncStats, type SyncResult } from '../../services/syncEngine';
-import { isOSSConfigured, getOSSConfig } from '../../services/oss';
-import { useSyncStore } from '../../stores/syncStore';
+import { useAppToast } from '../../hooks/useAppToast';
+import { syncEngine, type SyncResult, type SyncStats } from '../../services/syncEngine';
+import { navigateToTab } from '../../services/appNavigation';
 import { emitSyncStatus } from '../../services/syncToast';
 import type { SyncDirection } from '../../services/syncToast';
-import { useAppToast } from '../../hooks/useAppToast';
-import {
-  getSavedOSSConfig,
-  saveOSSConfig as persistOSSConfig,
-  clearOSSConfig as removeOSSConfig,
-  type OSSConfig,
-} from '../../services/syncConfig';
+import { useFeatureModeStore } from '../../stores/featureModeStore';
+import { useSyncStore } from '../../stores/syncStore';
 import './SyncManagementPage.css';
 
+interface SyncErrorLog {
+  id: number;
+  message: string;
+  time: number;
+}
+
+const SYNC_MODE_LABEL: Record<'disabled' | 'byo' | 'managed', string> = {
+  disabled: '已关闭',
+  byo: '使用我的 OSS 凭据',
+  managed: '使用 Chrono 托管同步',
+};
+
+const formatTimestamp = (value: Date | number | null): string => {
+  if (!value) {
+    return '未同步';
+  }
+
+  const timestamp = value instanceof Date ? value.getTime() : value;
+  return new Date(timestamp).toLocaleString('zh-CN', {
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+};
+
+const fetchSyncStats = async (): Promise<SyncStats | null> => {
+  try {
+    return await syncEngine.getSyncStats();
+  } catch (error) {
+    console.error('加载同步状态失败:', error);
+    return null;
+  }
+};
+
 export const SyncManagementPage: React.FC = () => {
-  const { autoSyncEnabled, setAutoSyncEnabled, checkConfig } = useSyncStore();
+  const syncMode = useFeatureModeStore((state) => state.modes.sync);
+  const autoSyncEnabled = useSyncStore((state) => state.autoSyncEnabled);
+  const isConfigured = useSyncStore((state) => state.isConfigured);
+  const setAutoSyncEnabled = useSyncStore((state) => state.setAutoSyncEnabled);
+  const [presentAlert] = useIonAlert();
   const [stats, setStats] = useState<SyncStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastResult, setLastResult] = useState<SyncResult | null>(null);
-  const [isConfigured, setIsConfigured] = useState(false);
-  const [showOSSForm, setShowOSSForm] = useState(false);
-  const [ossForm, setOSSForm] = useState<OSSConfig>({
-    region: '', bucket: '', accessKeyId: '', accessKeySecret: ''
-  });
-  const [configSource, setConfigSource] = useState<'manual' | 'env' | 'none'>('none');
-  const [presentAlert] = useIonAlert();
+  const [errorHistory, setErrorHistory] = useState<SyncErrorLog[]>([]);
   const [presentToast] = useAppToast();
 
   useEffect(() => {
-    loadStats();
-    const configured = isOSSConfigured();
-    setIsConfigured(configured);
-    if (!configured) setShowOSSForm(true);
-    const saved = getSavedOSSConfig();
-    if (saved) {
-      setOSSForm(saved);
-      setConfigSource('manual');
-    } else {
-      const envConfig = getOSSConfig();
-      const hasEnv = !!(envConfig.accessKeyId || envConfig.bucket || envConfig.region !== 'oss-cn-hangzhou');
-      if (hasEnv) {
-        setOSSForm({
-          region: envConfig.region,
-          bucket: envConfig.bucket,
-          accessKeyId: envConfig.accessKeyId,
-          accessKeySecret: envConfig.accessKeySecret,
-        });
-        setConfigSource('env');
+    let cancelled = false;
+
+    const loadInitialStats = async () => {
+      const data = await fetchSyncStats();
+      if (!cancelled) {
+        setStats(data);
       }
-    }
+    };
+
+    void loadInitialStats();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const loadStats = async () => {
-    try {
-      const data = await syncEngine.getSyncStats();
+  const refreshStats = async () => {
+    const data = await fetchSyncStats();
+    if (data) {
       setStats(data);
-    } catch (error) {
-      console.error('加载同步状态失败:', error);
     }
   };
 
@@ -74,13 +96,21 @@ export const SyncManagementPage: React.FC = () => {
     presentToast({ message, duration: 2000, position: 'top', color });
   };
 
+  const recordError = (message: string) => {
+    setErrorHistory((current) => [
+      { id: Date.now(), message, time: Date.now() },
+      ...current,
+    ].slice(0, 5));
+  };
+
   const handleSync = async (syncFn: () => Promise<SyncResult>, actionName: string, direction: SyncDirection = 'both') => {
     setLoading(true);
     emitSyncStatus({ phase: 'syncing', direction });
+
     try {
       const result = await syncFn();
       setLastResult(result);
-      await loadStats();
+      await refreshStats();
 
       if (result.status === 'success') {
         emitSyncStatus({
@@ -92,438 +122,329 @@ export const SyncManagementPage: React.FC = () => {
         showToast(result.message, 'success');
       } else {
         emitSyncStatus({ phase: 'error', direction });
+        recordError(result.message);
         showToast(`${actionName}失败`, 'danger');
       }
     } catch (error) {
       console.error(`${actionName} 失败:`, error);
       emitSyncStatus({ phase: 'error', direction });
+      recordError(error instanceof Error ? error.message : `${actionName}失败`);
       showToast(`${actionName}失败`, 'danger');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleIncrementalSync = () => handleSync(() => syncEngine.incrementalSync(), '增量同步', 'both');
+  const handleSyncNow = () => handleSync(() => syncEngine.incrementalSync(), '立即同步', 'both');
   const handleIncrementalPush = () => handleSync(() => syncEngine.incrementalPush(), '增量 Push', 'push');
   const handleIncrementalPull = () => handleSync(() => syncEngine.incrementalPull(), '增量 Pull', 'pull');
 
-  const handleForceFullSync = () => {
+  const runMaintenanceAction = async (
+    actionName: string,
+    operation: () => Promise<string>,
+  ) => {
+    setLoading(true);
+
+    try {
+      const successMessage = await operation();
+      await refreshStats();
+      showToast(successMessage, 'success');
+    } catch (error) {
+      console.error(`${actionName}失败:`, error);
+      recordError(error instanceof Error ? error.message : `${actionName}失败`);
+      showToast(`${actionName}失败`, 'danger');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const confirmThenRun = (
+    header: string,
+    message: string,
+    onConfirm: () => void,
+  ) => {
     presentAlert({
-      header: '强制全量同步',
-      message: '这将重新上传所有本地数据，并拉取所有远程数据。确定继续？',
+      header,
+      message,
       buttons: [
         { text: '取消', role: 'cancel' },
-        { text: '确定', handler: () => handleSync(() => syncEngine.forceFullSync(), '强制全量同步') }
-      ]
+        { text: '确定', handler: onConfirm },
+      ],
     });
+  };
+
+  const handleForceFullSync = () => {
+    confirmThenRun(
+      '强制全量同步',
+      '这将重新上传所有本地数据，并拉取所有远程数据。确定继续？',
+      () => {
+        void handleSync(() => syncEngine.forceFullSync(), '强制全量同步', 'both');
+      },
+    );
   };
 
   const handleForceFullPush = () => {
-    presentAlert({
-      header: '强制全量 Push',
-      message: '⚠️ 这将重新上传所有本地数据到云端。适用于 OSS 被清空的恢复场景。确定继续？',
-      buttons: [
-        { text: '取消', role: 'cancel' },
-        { text: '确定', handler: () => handleSync(() => syncEngine.forceFullPush(), '强制全量 Push') }
-      ]
-    });
+    confirmThenRun(
+      '强制全量 Push',
+      '⚠️ 这将重新上传所有本地数据到云端。适用于 OSS 被清空的恢复场景。确定继续？',
+      () => {
+        void handleSync(() => syncEngine.forceFullPush(), '强制全量 Push', 'push');
+      },
+    );
   };
 
   const handleForceFullPull = () => {
-    presentAlert({
-      header: '强制全量 Pull',
-      message: '⚠️ 这将拉取并合并所有远程数据。可能会覆盖本地未同步的修改。确定继续？',
-      buttons: [
-        { text: '取消', role: 'cancel' },
-        { text: '确定', handler: () => handleSync(() => syncEngine.forceFullPull(), '强制全量 Pull') }
-      ]
-    });
+    confirmThenRun(
+      '强制全量 Pull',
+      '⚠️ 这将拉取并合并所有远程数据。可能会覆盖本地未同步的修改。确定继续？',
+      () => {
+        void handleSync(() => syncEngine.forceFullPull(), '强制全量 Pull', 'pull');
+      },
+    );
   };
 
   const handleResetSyncState = () => {
-    presentAlert({
-      header: '重置同步状态',
-      message: '这将清空最后处理的时间戳，下次 Pull 会重新拉取所有文件。确定继续？',
-      buttons: [
-        { text: '取消', role: 'cancel' },
-        {
-          text: '确定',
-          handler: async () => {
-            try {
-              await syncEngine.resetSyncState();
-              await loadStats();
-              showToast('同步状态已重置', 'success');
-            } catch (error) {
-              console.error('重置同步状态失败:', error);
-              showToast('重置失败', 'danger');
-            }
-          }
-        }
-      ]
-    });
+    confirmThenRun(
+      '重置同步状态',
+      '这将清空最后处理的时间戳，下次 Pull 会重新拉取所有文件。确定继续？',
+      () => {
+        void runMaintenanceAction('重置同步状态', async () => {
+          await syncEngine.resetSyncState();
+          return '同步状态已重置';
+        });
+      },
+    );
   };
 
   const handleCleanupLogs = () => {
-    presentAlert({
-      header: '清理操作日志',
-      message: '这将删除 7 天前的已同步操作日志。确定继续？',
-      buttons: [
-        { text: '取消', role: 'cancel' },
-        {
-          text: '确定',
-          handler: async () => {
-            try {
-              const count = await syncEngine.cleanupSyncedOperations(7);
-              await loadStats();
-              showToast(`已清理 ${count} 条操作日志`, 'success');
-            } catch (error) {
-              console.error('清理操作日志失败:', error);
-              showToast('清理失败', 'danger');
-            }
-          }
-        }
-      ]
-    });
+    confirmThenRun(
+      '清理操作日志',
+      '这将删除 7 天前的已同步操作日志。确定继续？',
+      () => {
+        void runMaintenanceAction('清理操作日志', async () => {
+          const count = await syncEngine.cleanupSyncedOperations(7);
+          return `已清理 ${count} 条操作日志`;
+        });
+      },
+    );
   };
 
   const handlePurgeDeletedRecords = () => {
-    presentAlert({
-      header: '清理已删除数据',
-      message: '这将物理删除 30 天前已软删除的记录。确保所有设备都已同步后再执行。确定继续？',
-      buttons: [
-        { text: '取消', role: 'cancel' },
-        {
-          text: '确定',
-          handler: async () => {
-            setLoading(true);
-            try {
-              const result = await syncEngine.purgeDeletedRecords(30);
-              const total = result.entries + result.goals + result.categories;
-              await loadStats();
-              showToast(`已清理 ${total} 条软删除记录`, 'success');
-            } catch (error) {
-              console.error('清理已删除数据失败:', error);
-              showToast('清理失败', 'danger');
-            } finally {
-              setLoading(false);
-            }
-          }
-        }
-      ]
-    });
-  };
-
-  const handleSaveOSSConfig = () => {
-    if (!ossForm.bucket || !ossForm.accessKeyId || !ossForm.accessKeySecret) {
-      showToast('请填写必要的 OSS 配置', 'danger');
-      return;
-    }
-    const config: OSSConfig = {
-      region: ossForm.region || 'oss-cn-hangzhou',
-      bucket: ossForm.bucket,
-      accessKeyId: ossForm.accessKeyId,
-      accessKeySecret: ossForm.accessKeySecret,
-    };
-    persistOSSConfig(config);
-    setIsConfigured(true);
-    setShowOSSForm(false);
-    setConfigSource('manual');
-    checkConfig();
-    loadStats();
-    showToast('OSS 配置已保存', 'success');
-  };
-
-  const handleClearOSSConfig = () => {
-    presentAlert({
-      header: '清除 OSS 配置',
-      message: '清除后将回退到 .env 环境变量配置。如果 .env 中没有配置，同步功能将被禁用。确定继续？',
-      buttons: [
-        { text: '取消', role: 'cancel' },
-        {
-          text: '确定清除',
-          handler: () => {
-            removeOSSConfig();
-            const envConfig = getOSSConfig();
-            const hasEnv = !!(envConfig.accessKeyId || envConfig.bucket);
-            if (hasEnv) {
-              setOSSForm({
-                region: envConfig.region,
-                bucket: envConfig.bucket,
-                accessKeyId: envConfig.accessKeyId,
-                accessKeySecret: envConfig.accessKeySecret,
-              });
-              setConfigSource('env');
-            } else {
-              setOSSForm({ region: '', bucket: '', accessKeyId: '', accessKeySecret: '' });
-              setConfigSource('none');
-            }
-            const nowConfigured = isOSSConfigured();
-            setIsConfigured(nowConfigured);
-            if (!nowConfigured) setShowOSSForm(true);
-            checkConfig();
-            showToast('OSS 配置已清除', 'success');
-          }
-        }
-      ]
-    });
-  };
-
-  // ─── Sub-renderers ────────────────────────────────────────────────
-
-  const renderOSSForm = () => (
-    <div>
-      {configSource === 'env' && (
-        <div className="settings-banner settings-banner-info">
-          📋 当前使用 .env 环境变量配置，修改后将保存为应用内配置
-        </div>
-      )}
-      {configSource === 'manual' && isConfigured && (
-        <div className="settings-banner settings-banner-success">
-          ✅ 当前使用应用内手动配置
-        </div>
-      )}
-      {!isConfigured && configSource === 'none' && (
-        <div className="settings-banner settings-banner-muted">
-          请输入阿里云 OSS 配置信息以启用同步功能
-        </div>
-      )}
-      <div className="settings-input-group">
-        <div>
-          <label className="settings-input-label">Region</label>
-          <input
-            type="text"
-            className="settings-input-field"
-            value={ossForm.region}
-            onChange={(e) => setOSSForm(f => ({ ...f, region: e.target.value }))}
-            placeholder="oss-cn-hangzhou"
-          />
-        </div>
-        <div>
-          <label className="settings-input-label">Bucket</label>
-          <input
-            type="text"
-            className="settings-input-field"
-            value={ossForm.bucket}
-            onChange={(e) => setOSSForm(f => ({ ...f, bucket: e.target.value }))}
-            placeholder="your-bucket-name"
-          />
-        </div>
-        <div>
-          <label className="settings-input-label">AccessKey ID</label>
-          <input
-            type="password"
-            className="settings-input-field"
-            value={ossForm.accessKeyId}
-            onChange={(e) => setOSSForm(f => ({ ...f, accessKeyId: e.target.value }))}
-            placeholder="your-access-key-id"
-          />
-        </div>
-        <div>
-          <label className="settings-input-label">AccessKey Secret</label>
-          <input
-            type="password"
-            className="settings-input-field"
-            value={ossForm.accessKeySecret}
-            onChange={(e) => setOSSForm(f => ({ ...f, accessKeySecret: e.target.value }))}
-            placeholder="your-access-key-secret"
-          />
-        </div>
-        <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-          <IonButton
-            expand="block"
-            onClick={handleSaveOSSConfig}
-            className="settings-action-button"
-            style={{ flex: 1 }}
-          >
-            💾 保存配置
-          </IonButton>
-          {isConfigured && (
-            <IonButton
-              fill="outline"
-              onClick={() => setShowOSSForm(false)}
-              className="settings-action-button"
-            >
-              取消
-            </IonButton>
-          )}
-        </div>
-        {isConfigured && (
-          <IonButton
-            expand="block"
-            fill="outline"
-            color="danger"
-            onClick={handleClearOSSConfig}
-            className="settings-action-button"
-          >
-            🗑️ 清除应用内配置
-          </IonButton>
-        )}
-      </div>
-    </div>
-  );
-
-  const renderSyncStats = () => {
-    if (!stats) {
-      return (
-        <div style={{ textAlign: 'center', padding: '12px' }}>
-          <IonSpinner />
-        </div>
-      );
-    }
-    const totalDeleted = stats.deletedEntries + stats.deletedGoals + stats.deletedCategories;
-    return (
-      <div className="settings-stat-list">
-        <div className="settings-stat-row">
-          <span className="settings-stat-label">OSS 配置</span>
-          <span
-            className="settings-stat-value settings-stat-value-link"
-            onClick={() => setShowOSSForm(true)}
-          >
-            ✅ 已配置（点击修改）
-          </span>
-        </div>
-        <div className="settings-stat-row">
-          <span className="settings-stat-label">设备 ID</span>
-          <span className="settings-stat-value settings-stat-value-mono">
-            {stats.deviceId.substring(0, 8)}...
-          </span>
-        </div>
-        <div className="settings-stat-row">
-          <span className="settings-stat-label">未同步操作</span>
-          <span className={`settings-stat-value${stats.pendingOps > 0 ? ' settings-stat-value-warn' : ''}`}>
-            {stats.pendingOps} 条
-          </span>
-        </div>
-        <div className="settings-stat-row">
-          <span className="settings-stat-label">已同步操作</span>
-          <span className="settings-stat-value">{stats.syncedOps} 条</span>
-        </div>
-        <div className="settings-stat-row">
-          <span className="settings-stat-label">数据记录</span>
-          <span className="settings-stat-value">
-            {stats.totalEntries} 条目 / {stats.totalGoals} 目标 / {stats.totalCategories} 分类
-          </span>
-        </div>
-        <div className="settings-stat-row">
-          <span className="settings-stat-label">已删除记录</span>
-          <span className={`settings-stat-value${totalDeleted > 0 ? ' settings-stat-value-warn' : ''}`}>
-            {totalDeleted} 条
-          </span>
-        </div>
-      </div>
+    confirmThenRun(
+      '清理已删除数据',
+      '这将物理删除 30 天前已软删除的记录。确保所有设备都已同步后再执行。确定继续？',
+      () => {
+        void runMaintenanceAction('清理已删除数据', async () => {
+          const result = await syncEngine.purgeDeletedRecords(30);
+          const total = result.entries + result.goals + result.categories;
+          return `已清理 ${total} 条软删除记录`;
+        });
+      },
     );
   };
 
-  const renderLastResult = () => {
-    if (!lastResult) return null;
-    return (
-      <div className="settings-sync-result">
-        <h4 className="settings-subsection-title">最近同步结果</h4>
-        <div className="settings-stat-list">
-          <div className="settings-stat-row">
-            <span className="settings-stat-label">状态</span>
-            <span
-              className="settings-stat-value"
-              style={{ color: lastResult.status === 'success' ? 'hsl(142 76% 36%)' : 'hsl(var(--destructive))' }}
-            >
-              {lastResult.status === 'success' ? '✅ 成功' : '❌ 失败'}
-            </span>
+  const totalDeleted = stats
+    ? stats.deletedEntries + stats.deletedGoals + stats.deletedCategories
+    : 0;
+  const autoSyncDescription = syncMode === 'disabled'
+    ? '请先在服务页面启用 BYO 或 Managed 同步，再决定是否自动同步。'
+    : !isConfigured
+      ? '自动同步偏好会保留；当前同步尚未就绪，完成登录或凭据配置后生效。'
+      : '开启后会在数据变更后自动 Push，并在应用启动时自动 Pull。';
+  const statusTone = loading
+    ? 'syncing'
+    : syncMode === 'disabled'
+      ? 'disabled'
+      : lastResult?.status === 'success'
+        ? 'success'
+        : lastResult?.status === 'error'
+          ? 'error'
+          : 'idle';
+  const statusLabel = loading
+    ? '同步中'
+    : syncMode === 'disabled'
+      ? '已关闭'
+      : lastResult?.status === 'success'
+        ? '最近成功'
+        : lastResult?.status === 'error'
+          ? '最近失败'
+          : '等待同步';
+  const statusDescription = syncMode === 'disabled'
+    ? '多设备同步当前已关闭，可前往「服务」页面重新启用。'
+    : !isConfigured
+      ? syncMode === 'managed'
+        ? '托管同步模式已选中，请先登录 Chrono 账号后再同步。'
+        : 'BYO 模式需要有效的 OSS 凭据，请前往服务页面完成配置。'
+      : stats && stats.pendingOps > 0
+        ? `当前有 ${stats.pendingOps} 条待同步操作。`
+        : '当前没有待同步操作。';
+
+  return (
+    <div className="sync-status-view">
+      <div className="sync-status-banner">
+        <div>
+          <div className="sync-status-banner-title">凭据配置已移至「服务」页面</div>
+          <div className="sync-status-banner-text">在服务页面切换 Off / BYO / Managed，并维护 OSS 凭据。</div>
+        </div>
+        <button type="button" className="sync-status-link" onClick={() => navigateToTab('services')}>
+          打开服务
+        </button>
+      </div>
+
+      <section className="sync-status-card">
+        <div className="sync-status-header">
+          <div>
+            <h4 className="settings-subsection-title">同步状态</h4>
+            <p className="sync-status-subtitle">{statusDescription}</p>
           </div>
-          <div className="settings-stat-row">
-            <span className="settings-stat-label">消息</span>
-            <span className="settings-stat-value">{lastResult.message}</span>
+          <span className={`sync-status-badge sync-status-badge--${statusTone}`}>{statusLabel}</span>
+        </div>
+
+        {!stats ? (
+          <div className="sync-status-spinner">
+            <IonSpinner />
           </div>
-          {lastResult.pushedCount !== undefined && (
+        ) : (
+          <div className="settings-stat-list">
+            <div className="settings-stat-row">
+              <span className="settings-stat-label">服务模式</span>
+              <span className="settings-stat-value">{SYNC_MODE_LABEL[syncMode]}</span>
+            </div>
+            <div className="settings-stat-row">
+              <span className="settings-stat-label">最后同步</span>
+              <span className="settings-stat-value">{formatTimestamp(stats.lastSyncTime)}</span>
+            </div>
+            <div className="settings-stat-row">
+              <span className="settings-stat-label">未同步操作</span>
+              <span className={`settings-stat-value${stats.pendingOps > 0 ? ' settings-stat-value-warn' : ''}`}>
+                {stats.pendingOps} 条
+              </span>
+            </div>
+            <div className="settings-stat-row">
+              <span className="settings-stat-label">已同步操作</span>
+              <span className="settings-stat-value">{stats.syncedOps} 条</span>
+            </div>
+            <div className="settings-stat-row">
+              <span className="settings-stat-label">设备 ID</span>
+              <span className="settings-stat-value settings-stat-value-mono">{stats.deviceId.substring(0, 8)}...</span>
+            </div>
+            <div className="settings-stat-row">
+              <span className="settings-stat-label">数据概览</span>
+              <span className="settings-stat-value">
+                {stats.totalEntries} 条目 / {stats.totalGoals} 目标 / {stats.totalCategories} 分类
+              </span>
+            </div>
+            <div className="settings-stat-row">
+              <span className="settings-stat-label">已删除记录</span>
+              <span className={`settings-stat-value${totalDeleted > 0 ? ' settings-stat-value-warn' : ''}`}>
+                {totalDeleted} 条
+              </span>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="sync-status-card">
+        <div className="sync-status-toggle-row">
+          <div>
+            <h4 className="settings-subsection-title">自动同步</h4>
+            <p className="sync-status-subtitle">{autoSyncDescription}</p>
+          </div>
+          <IonToggle
+            checked={autoSyncEnabled}
+            disabled={syncMode === 'disabled'}
+            onIonChange={(event) => setAutoSyncEnabled(event.detail.checked)}
+            aria-label="自动同步开关"
+          />
+        </div>
+      </section>
+
+      {lastResult && (
+        <section className="sync-status-card">
+          <h4 className="settings-subsection-title">最近一次同步</h4>
+          <div className="settings-stat-list">
+            <div className="settings-stat-row">
+              <span className="settings-stat-label">状态</span>
+              <span className={`settings-stat-value${lastResult.status === 'error' ? ' settings-stat-value-warn' : ''}`}>
+                {lastResult.status === 'success' ? '成功' : '失败'}
+              </span>
+            </div>
+            <div className="settings-stat-row">
+              <span className="settings-stat-label">消息</span>
+              <span className="settings-stat-value">{lastResult.message}</span>
+            </div>
             <div className="settings-stat-row">
               <span className="settings-stat-label">上传</span>
-              <span className="settings-stat-value">↑ {lastResult.pushedCount} 条</span>
+              <span className="settings-stat-value">{lastResult.pushedCount ?? 0} 条</span>
             </div>
-          )}
-          {lastResult.pulledCount !== undefined && (
             <div className="settings-stat-row">
               <span className="settings-stat-label">下载</span>
-              <span className="settings-stat-value">↓ {lastResult.pulledCount} 条</span>
+              <span className="settings-stat-value">{lastResult.pulledCount ?? 0} 条</span>
             </div>
-          )}
-        </div>
-      </div>
-    );
-  };
+          </div>
+        </section>
+      )}
 
-  // ─── Render ────────────────────────────────────────────────────────
+      <section className="sync-status-card">
+        <h4 className="settings-subsection-title">最近错误</h4>
+        {errorHistory.length === 0 ? (
+          <p className="sync-status-empty">本次会话暂无同步错误。</p>
+        ) : (
+          <div className="sync-status-log">
+            {errorHistory.map((entry) => (
+              <div key={entry.id} className="sync-status-log-item">
+                <span className="sync-status-log-time">{formatTimestamp(entry.time)}</span>
+                <span className="sync-status-log-message">{entry.message}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
-  // First-time setup or explicit edit: show form full-width
-  if (!isConfigured || showOSSForm) {
-    return (
-      <div>
-        <h4 className="settings-subsection-title" style={{ marginBottom: '8px' }}>
-          {isConfigured ? '修改 OSS 配置' : 'OSS 配置'}
-        </h4>
-        {renderOSSForm()}
-      </div>
-    );
-  }
-
-  // Configured: always-visible primary block + accordion for the rest
-  return (
-    <div className="sync-primary-block">
-      <div className="settings-row">
-        <div className="settings-row-text">
-          <div className="settings-row-label">自动同步</div>
-          <div className="settings-row-sub">数据变更自动推送，启动时自动拉取</div>
-        </div>
-        <IonToggle checked={autoSyncEnabled} onIonChange={(e) => setAutoSyncEnabled(e.detail.checked)} />
-      </div>
-
-      <div className="sync-primary-buttons">
-        <IonButton
-          expand="block"
-          onClick={handleIncrementalSync}
-          disabled={loading}
-          className="settings-action-button"
-        >
-          {loading ? <IonSpinner name="dots" /> : '🔄 增量同步 (Push + Pull)'}
+      <div className="sync-status-actions">
+        <IonButton expand="block" onClick={handleSyncNow} disabled={loading} className="settings-action-button">
+          {loading ? <IonSpinner name="dots" /> : '立即同步'}
         </IonButton>
-        <p className="settings-button-hint">同步本地和云端的增量数据</p>
-
-        <IonButton
-          expand="block"
-          fill="outline"
-          onClick={handleIncrementalPush}
-          disabled={loading}
-          className="settings-action-button"
-        >
-          ⬆️ 增量 Push
-        </IonButton>
-        <p className="settings-button-hint">上传本地未同步的数据到云端</p>
-
-        <IonButton
-          expand="block"
-          fill="outline"
-          onClick={handleIncrementalPull}
-          disabled={loading}
-          className="settings-action-button"
-        >
-          ⬇️ 增量 Pull
-        </IonButton>
-        <p className="settings-button-hint">下载云端的增量数据到本地</p>
+        <p className="settings-button-hint">会按照当前服务模式执行同步；若功能已关闭，将返回配置错误但不会导致页面崩溃。</p>
       </div>
 
       <div className="settings-accordion-wrap">
         <IonAccordionGroup>
-          <IonAccordion value="advanced">
+          <IonAccordion value="advanced-sync-actions">
             <IonItem slot="header" lines="none">
-              <IonLabel>高级与同步状态</IonLabel>
+              <IonLabel>高级同步操作</IonLabel>
             </IonItem>
+
             <div className="settings-accordion-content" slot="content">
               <div className="settings-subsection">
-                <h4 className="settings-subsection-title">同步状态</h4>
-                {renderSyncStats()}
+                <h4 className="settings-subsection-title">增量控制</h4>
+                <IonButton
+                  expand="block"
+                  fill="outline"
+                  onClick={handleIncrementalPush}
+                  disabled={loading}
+                  className="settings-action-button"
+                >
+                  增量 Push
+                </IonButton>
+                <p className="settings-button-hint">仅上传本地未同步的数据到云端。</p>
+
+                <IonButton
+                  expand="block"
+                  fill="outline"
+                  onClick={handleIncrementalPull}
+                  disabled={loading}
+                  className="settings-action-button"
+                >
+                  增量 Pull
+                </IonButton>
+                <p className="settings-button-hint">仅拉取云端新增或变更的数据到本地。</p>
               </div>
 
               <div className="settings-subsection">
                 <h4 className="settings-subsection-title">强制全量同步</h4>
-                <p className="settings-subsection-desc">⚠️ 适用于数据恢复或重建同步状态的场景</p>
+                <p className="settings-subsection-desc">适用于数据恢复、远端重建或同步状态错乱后的手动修复。</p>
+
                 <IonButton
                   expand="block"
                   color="warning"
@@ -531,9 +452,10 @@ export const SyncManagementPage: React.FC = () => {
                   disabled={loading}
                   className="settings-action-button"
                 >
-                  ⚠️ 强制全量同步 (Push + Pull)
+                  强制全量同步
                 </IonButton>
-                <p className="settings-button-hint">重新上传并拉取所有数据</p>
+                <p className="settings-button-hint">重新上传并重新拉取全部数据。</p>
+
                 <IonButton
                   expand="block"
                   fill="outline"
@@ -542,9 +464,10 @@ export const SyncManagementPage: React.FC = () => {
                   disabled={loading}
                   className="settings-action-button"
                 >
-                  强制全量 Push ⚠️
+                  强制全量 Push
                 </IonButton>
-                <p className="settings-button-hint">重新上传所有本地数据到云端</p>
+                <p className="settings-button-hint">重新上传所有本地数据到云端。</p>
+
                 <IonButton
                   expand="block"
                   fill="outline"
@@ -553,13 +476,14 @@ export const SyncManagementPage: React.FC = () => {
                   disabled={loading}
                   className="settings-action-button"
                 >
-                  强制全量 Pull ⚠️
+                  强制全量 Pull
                 </IonButton>
-                <p className="settings-button-hint">拉取并合并所有远程数据</p>
+                <p className="settings-button-hint">重新拉取并合并所有远程数据。</p>
               </div>
 
               <div className="settings-subsection">
-                <h4 className="settings-subsection-title">高级维护</h4>
+                <h4 className="settings-subsection-title">维护工具</h4>
+
                 <IonButton
                   expand="block"
                   fill="outline"
@@ -567,9 +491,10 @@ export const SyncManagementPage: React.FC = () => {
                   disabled={loading}
                   className="settings-action-button"
                 >
-                  🔄 重置同步状态
+                  重置同步状态
                 </IonButton>
-                <p className="settings-button-hint">清空时间戳，下次 Pull 会重新拉取所有文件</p>
+                <p className="settings-button-hint">清空时间戳，下次 Pull 会重新扫描全部远端文件。</p>
+
                 <IonButton
                   expand="block"
                   fill="outline"
@@ -577,9 +502,10 @@ export const SyncManagementPage: React.FC = () => {
                   disabled={loading}
                   className="settings-action-button"
                 >
-                  🗑️ 清理操作日志
+                  清理操作日志
                 </IonButton>
-                <p className="settings-button-hint">删除 7 天前的已同步操作日志</p>
+                <p className="settings-button-hint">删除 7 天前已完成同步的本地操作日志。</p>
+
                 <IonButton
                   expand="block"
                   fill="outline"
@@ -587,12 +513,10 @@ export const SyncManagementPage: React.FC = () => {
                   disabled={loading}
                   className="settings-action-button"
                 >
-                  🗑️ 清理已删除数据
+                  清理已删除数据
                 </IonButton>
-                <p className="settings-button-hint">物理删除 30 天前已软删除的记录</p>
+                <p className="settings-button-hint">物理删除 30 天前已软删除的记录。</p>
               </div>
-
-              {lastResult && renderLastResult()}
             </div>
           </IonAccordion>
         </IonAccordionGroup>

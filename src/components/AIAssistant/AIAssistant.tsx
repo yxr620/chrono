@@ -5,13 +5,18 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { IonIcon } from '@ionic/react';
-import { sendOutline, trashOutline, stopCircleOutline, settingsOutline, addOutline, closeCircleOutline } from 'ionicons/icons';
+import { sendOutline, trashOutline, stopCircleOutline } from 'ionicons/icons';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { useAIStore } from '../../stores/aiStore';
+import { useFeatureModeStore } from '../../stores/featureModeStore';
+import { useAuthStore } from '../../stores/authStore';
 import { runToolCallLoop } from '../../services/ai/toolCallEngine';
+import { navigateToTab } from '../../services/appNavigation';
 import type { ChatMessage as LLMMessage } from '../../services/ai/llmClient';
 import { AI_PROVIDERS } from '../../services/ai/providers';
+import { ConfirmationCard } from './ConfirmationCard';
+import type { ConfirmationCard as ConfirmationCardType } from '../../services/actions/types';
 import './AIAssistant.css';
 
 // 配置 marked：关闭 mangle/headerIds 避免不必要的输出
@@ -108,26 +113,31 @@ const PhasesIndicator: React.FC<{
 );
 
 export const AIAssistant: React.FC = () => {
-  const { config, providerConfigs, customModels, messages, addMessage, updateMessage, clearMessages, isConfigured, updateConfig, setProvider, addCustomModel, removeCustomModel } = useAIStore();
+  const { config, messages, addMessage, updateMessage, clearMessages, isConfigured } = useAIStore();
+  const aiMode = useFeatureModeStore((state) => state.modes.ai);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
-  /** 自定义模型：是否处于手动输入新模型模式 */
-  const [customModelInput, setCustomModelInput] = useState(false);
-  const [customModelDraft, setCustomModelDraft] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [pendingConfirmation, setPendingConfirmation] = useState<{
+    card: ConfirmationCardType;
+    resolve: (confirmed: boolean) => void;
+    resolved?: 'confirmed' | 'cancelled';
+  } | null>(null);
+  const confirmCountRef = useRef(0);
 
   const currentProvider = AI_PROVIDERS.find(p => p.id === config.providerId);
-  /** 当前 provider 的用户自定义模型 */
-  const providerCustomModels = customModels[config.providerId] || [];
-  /** 预设模型 + 用户添加的模型合并列表 */
-  const presetModels = currentProvider?.models || [];
-  const allModels = [...presetModels, ...providerCustomModels.filter(m => !presetModels.includes(m))];
+  const aiConfigured = aiMode === 'managed'
+    ? isAuthenticated
+    : aiMode === 'byo' && isConfigured();
   // 阶段累积：每次发送前重置，onPhase 调用时追加
   const phasesRef = useRef<Array<{ key: string; detail?: string; level?: number; failed?: boolean; debugInfo?: string }>>([]);
+  const handleOpenServices = useCallback(() => {
+    navigateToTab('services');
+  }, []);
 
   // 自动滚动到底部
   const scrollToBottom = useCallback(() => {
@@ -150,9 +160,7 @@ export const AIAssistant: React.FC = () => {
   // 发送消息
   const handleSend = useCallback(async (text?: string) => {
     const query = (text || input).trim();
-    if (!query || sending) return;
-
-    if (!isConfigured()) {
+    if (!query || sending || !aiConfigured) {
       return;
     }
 
@@ -179,6 +187,7 @@ export const AIAssistant: React.FC = () => {
     const aiMsgId = addMessage({ role: 'assistant', content: '', loading: true });
     // 每次发送前重置阶段列表
     phasesRef.current = [];
+    confirmCountRef.current = 0;
 
     const abort = new AbortController();
     abortRef.current = abort;
@@ -189,7 +198,6 @@ export const AIAssistant: React.FC = () => {
       let thinkingAccum = '';
 
       const { content, thinking } = await runToolCallLoop(
-        { baseURL: config.baseURL, apiKey: config.apiKey, model: config.model },
         query,
         recentHistory,
         {
@@ -216,6 +224,12 @@ export const AIAssistant: React.FC = () => {
           onToolCall: () => {
             // 工具调用信息已通过 onPhase 显示
           },
+          onConfirmRequired: (card) => {
+            return new Promise<boolean>((resolve) => {
+              confirmCountRef.current++;
+              setPendingConfirmation({ card, resolve });
+            });
+          },
         },
         abort.signal,
       );
@@ -225,23 +239,37 @@ export const AIAssistant: React.FC = () => {
         thinking: thinking || thinkingAccum || undefined,
         loading: false,
       });
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'AbortError') {
         updateMessage(aiMsgId, { loading: false });
       } else {
-        const errorMsg = err.message || '请求失败';
+        const errorMsg = error instanceof Error ? error.message : '请求失败';
         updateMessage(aiMsgId, { content: `❌ ${errorMsg}`, loading: false, error: true });
       }
     } finally {
       setSending(false);
       abortRef.current = null;
     }
-  }, [input, sending, config, addMessage, updateMessage, isConfigured]);
+  }, [input, sending, aiConfigured, addMessage, updateMessage]);
 
   // 中断生成
   const handleStop = () => {
     abortRef.current?.abort();
   };
+
+  const handleConfirm = useCallback(() => {
+    if (!pendingConfirmation || pendingConfirmation.resolved) return;
+    pendingConfirmation.resolve(true);
+    setPendingConfirmation(prev => prev ? { ...prev, resolved: 'confirmed' } : null);
+    setTimeout(() => setPendingConfirmation(null), 1500);
+  }, [pendingConfirmation]);
+
+  const handleCancelConfirm = useCallback(() => {
+    if (!pendingConfirmation || pendingConfirmation.resolved) return;
+    pendingConfirmation.resolve(false);
+    setPendingConfirmation(prev => prev ? { ...prev, resolved: 'cancelled' } : null);
+    setTimeout(() => setPendingConfirmation(null), 1500);
+  }, [pendingConfirmation]);
 
   // 键盘快捷键
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -291,172 +319,92 @@ export const AIAssistant: React.FC = () => {
     setTimeout(() => setCopiedMsgId(prev => (prev === msgId ? null : prev)), 1500);
   }, [buildAssistantCopyText]);
 
+  const welcomeTitle = aiConfigured ? '你好！' : '先配置 AI 服务';
+  const welcomeDescription = aiMode === 'disabled'
+    ? 'AI 助手当前已关闭，请先在「服务」页面启用。'
+    : aiMode === 'managed' && !isAuthenticated
+      ? '请先在「服务」页面登录 Chrono 账号。'
+      : aiConfigured
+        ? '向我提问关于你的时间记录的任何问题'
+        : '供应商凭据现在在「服务」页面配置。';
+  const serviceBannerText = aiConfigured
+    ? aiMode === 'managed'
+      ? '当前使用 Chrono 托管 AI。'
+      : '供应商凭据现在在「服务」页面配置。'
+    : aiMode === 'disabled'
+      ? 'AI 助手当前处于关闭模式。'
+      : aiMode === 'managed'
+        ? '请先在「服务」页面登录 Chrono 账号。'
+        : '请先在「服务」页面填写 provider / API Key / model。';
+  const inputPlaceholder = aiMode === 'disabled'
+    ? 'AI 助手已关闭，请先在服务页面启用 →'
+    : aiMode === 'managed' && !isAuthenticated
+      ? '请先登录 Chrono 账号 →'
+      : aiConfigured
+        ? '问我任何关于你时间的问题...'
+        : '请先在服务页面配置 AI 凭据 →';
+
   return (
     <div className="ai-assistant">
-      {/* 头部：内联 API 配置 */}
       <div className="ai-header">
-        <div className="ai-header-config">
-          <select
-            className="ai-config-select ai-config-provider"
-            value={config.providerId}
-            onChange={e => { setProvider(e.target.value); setCustomModelInput(false); setCustomModelDraft(''); }}
-            title="选择服务商"
-          >
-            {AI_PROVIDERS.map(p => (
-              <option key={p.id} value={p.id}>
-                {p.name}{providerConfigs[p.id]?.apiKey ? ' ✓' : ''}
-              </option>
-            ))}
-          </select>
-          <input
-            className="ai-config-input ai-config-key"
-            type="password"
-            value={config.apiKey}
-            onChange={e => updateConfig({ apiKey: e.target.value })}
-            placeholder={currentProvider?.placeholder || 'API Key'}
-            title="API Key（仅存储在本地）"
-          />
-          {/* 模型选择：预设 + 用户添加，所有服务商通用 */}
-          {!customModelInput ? (
-            <div className="ai-custom-model-group">
-              <select
-                className="ai-config-select ai-config-model"
-                value={config.model}
-                onChange={e => {
-                  if (e.target.value === '__new__') {
-                    setCustomModelInput(true);
-                    setCustomModelDraft('');
-                  } else {
-                    updateConfig({ model: e.target.value });
-                  }
-                }}
-                title="选择模型"
-              >
-                {/* 当前值不在列表中时也要显示 */}
-                {!allModels.includes(config.model) && config.model && (
-                  <option value={config.model}>{config.model}</option>
-                )}
-                {allModels.map(m => (
-                  <option key={m} value={m}>
-                    {m}{providerCustomModels.includes(m) ? ' ★' : ''}
-                  </option>
-                ))}
-                <option value="__new__">+ 输入新模型</option>
-              </select>
-              {/* 仅用户添加的模型可删除 */}
-              {providerCustomModels.includes(config.model) && (
-                <button
-                  className="ai-icon-btn ai-custom-model-del"
-                  title="删除当前自定义模型"
-                  onClick={() => {
-                    removeCustomModel(config.model);
-                    const fallback = presetModels[0] || providerCustomModels.filter(m => m !== config.model)[0] || '';
-                    updateConfig({ model: fallback });
-                  }}
-                  style={{ width: 26, height: 26, fontSize: 14 }}
-                >
-                  <IonIcon icon={closeCircleOutline} />
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="ai-custom-model-group">
-              <input
-                className="ai-config-input ai-config-model"
-                type="text"
-                value={customModelDraft}
-                onChange={e => setCustomModelDraft(e.target.value)}
-                placeholder="输入模型名称，回车保存"
-                title="模型"
-                autoFocus
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && customModelDraft.trim()) {
-                    addCustomModel(customModelDraft.trim());
-                    updateConfig({ model: customModelDraft.trim() });
-                    setCustomModelInput(false);
-                    setCustomModelDraft('');
-                  } else if (e.key === 'Escape') {
-                    setCustomModelInput(false);
-                    setCustomModelDraft('');
-                  }
-                }}
-              />
-              <button
-                className="ai-icon-btn ai-custom-model-save"
-                title="保存模型"
-                onClick={() => {
-                  if (customModelDraft.trim()) {
-                    addCustomModel(customModelDraft.trim());
-                    updateConfig({ model: customModelDraft.trim() });
-                    setCustomModelInput(false);
-                    setCustomModelDraft('');
-                  }
-                }}
-                style={{ width: 26, height: 26, fontSize: 14 }}
-              >
-                <IonIcon icon={addOutline} />
-              </button>
-              <button
-                className="ai-icon-btn"
-                title="取消"
-                onClick={() => { setCustomModelInput(false); setCustomModelDraft(''); }}
-                style={{ width: 26, height: 26, fontSize: 14 }}
-              >
-                <IonIcon icon={closeCircleOutline} />
-              </button>
-            </div>
-          )}
+        <div className="ai-header-summary">
+          <div className="ai-header-title">AI 助手</div>
+          <div className="ai-header-subtitle">
+            {aiMode === 'disabled'
+              ? '当前已关闭，请前往「服务」页面启用。'
+              : aiMode === 'managed'
+                ? aiConfigured
+                  ? '当前使用 Chrono 托管 AI'
+                  : '请先登录 Chrono 账号。'
+                : aiConfigured
+                  ? `当前使用 ${currentProvider?.name || config.providerId} · ${config.model}`
+                  : 'BYO 已启用，但尚未填写完整凭据。'}
+          </div>
         </div>
         <div className="ai-header-actions">
+          <button className="ai-service-link" onClick={handleOpenServices} title="前往服务页面">
+            服务
+          </button>
           {messages.length > 0 && (
             <button className="ai-icon-btn" onClick={clearMessages} title="清空对话">
               <IonIcon icon={trashOutline} />
             </button>
           )}
-          <button
-            className={`ai-icon-btn ${showAdvanced ? 'ai-icon-btn-active' : ''}`}
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            title="高级设置"
-          >
-            <IonIcon icon={settingsOutline} />
-          </button>
         </div>
       </div>
 
-      {/* 高级设置：Base URL */}
-      {showAdvanced && (
-        <div className="ai-advanced-bar">
-          <label className="ai-advanced-label">Base URL</label>
-          <input
-            className="ai-config-input ai-config-baseurl"
-            type="text"
-            value={config.baseURL}
-            onChange={e => updateConfig({ baseURL: e.target.value })}
-            placeholder="https://..."
-          />
-          <span className="ai-advanced-hint">可接入 Ollama 本地模型或 OpenAI 兼容代理</span>
-        </div>
-      )}
+      <div className="ai-service-banner">
+        <span className="ai-service-banner-text">{serviceBannerText}</span>
+        <button className="ai-service-link ai-service-link-inline" onClick={handleOpenServices}>
+          打开服务页面
+        </button>
+      </div>
 
       {/* 消息区 */}
       <div className="ai-messages">
         {messages.length === 0 ? (
           <div className="ai-welcome">
             <div className="ai-welcome-icon">✨</div>
-            <h2>你好！</h2>
-            <p>向我提问关于你的时间记录的任何问题</p>
-            <div className="ai-quick-prompts">
-              {QUICK_PROMPTS.map((prompt, i) => (
-                <button
-                  key={i}
-                  className="ai-quick-btn"
-                  onClick={() => handleSend(prompt)}
-                  disabled={sending}
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
+            <h2>{welcomeTitle}</h2>
+            <p>{welcomeDescription}</p>
+            {aiConfigured ? (
+              <div className="ai-quick-prompts">
+                {QUICK_PROMPTS.map((prompt, i) => (
+                  <button
+                    key={i}
+                    className="ai-quick-btn"
+                    onClick={() => handleSend(prompt)}
+                    disabled={sending || !aiConfigured}
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <button className="ai-quick-btn" onClick={handleOpenServices}>
+                打开服务页面
+              </button>
+            )}
           </div>
         ) : (
           <>
@@ -503,13 +451,25 @@ export const AIAssistant: React.FC = () => {
                 </div>
               </div>
             ))}
+            {pendingConfirmation && (
+              <div className="ai-msg ai-msg-assistant">
+                <div className="ai-msg-bubble">
+                  <ConfirmationCard
+                    card={pendingConfirmation.card}
+                    onConfirm={handleConfirm}
+                    onCancel={handleCancelConfirm}
+                    resolved={pendingConfirmation.resolved}
+                  />
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </>
         )}
       </div>
 
       {/* 快捷问题（对话中也显示） */}
-      {messages.length > 0 && !sending && (
+      {messages.length > 0 && !sending && aiConfigured && (
         <div className="ai-quick-bar">
           {QUICK_PROMPTS.map((prompt, i) => (
             <button
@@ -528,12 +488,12 @@ export const AIAssistant: React.FC = () => {
         <textarea
           ref={inputRef}
           className="ai-input"
-          placeholder={isConfigured() ? '问我任何关于你时间的问题...' : '请先配置 AI 服务商 →'}
+          placeholder={inputPlaceholder}
           value={input}
           onChange={(e) => { setInput(e.target.value); adjustTextareaHeight(); }}
           onKeyDown={handleKeyDown}
           rows={1}
-          disabled={sending}
+          disabled={sending || !aiConfigured}
         />
         {sending ? (
           <button className="ai-send-btn ai-stop-btn" onClick={handleStop} title="停止生成">
@@ -543,7 +503,7 @@ export const AIAssistant: React.FC = () => {
           <button
             className="ai-send-btn"
             onClick={() => handleSend()}
-            disabled={!input.trim()}
+            disabled={!input.trim() || !aiConfigured}
             title="发送"
           >
             <IonIcon icon={sendOutline} />

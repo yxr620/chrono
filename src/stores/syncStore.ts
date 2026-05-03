@@ -5,11 +5,11 @@
 
 import { create } from 'zustand';
 import { syncEngine, type SyncStatus, type SyncResult, startAutoSync } from '../services/syncEngine';
-import { isOSSConfigured } from '../services/oss';
 import {
   isAutoSyncEnabled as getAutoSyncEnabled,
   setAutoSyncEnabled as persistAutoSyncEnabled,
 } from '../services/syncConfig';
+import { isSyncConfigured } from '../services/syncAvailability';
 
 interface SyncStore {
   status: SyncStatus;
@@ -36,7 +36,7 @@ export const useSyncStore = create<SyncStore>((set, get) => ({
   lastSyncTime: null,
   pushedCount: 0,
   pulledCount: 0,
-  isConfigured: isOSSConfigured(),
+  isConfigured: isSyncConfigured(),
   autoSyncEnabled: getAutoSyncEnabled(),
 
   sync: async () => {
@@ -71,7 +71,7 @@ export const useSyncStore = create<SyncStore>((set, get) => ({
   checkConfig: () => {
     try {
       set({
-        isConfigured: isOSSConfigured(),
+        isConfigured: isSyncConfigured(),
         autoSyncEnabled: getAutoSyncEnabled(),
       });
     } catch (error) {

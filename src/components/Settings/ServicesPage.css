@@ -1,0 +1,134 @@
+.services-page {
+  padding: 16px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+.services-page__title {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 600;
+}
+.services-page__hint {
+  margin: 0 0 24px;
+  color: var(--ion-color-medium);
+  font-size: 14px;
+}
+.services-page__first-run {
+  margin-bottom: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--ion-color-primary-tint);
+  color: var(--ion-color-primary-contrast);
+}
+.service-section {
+  border: 1px solid var(--ion-color-step-150, #e0e0e0);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: var(--ion-card-background, #fff);
+}
+.service-section__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.service-section__icon { font-size: 20px; }
+.service-section__title { font-size: 16px; font-weight: 600; }
+.service-section__radios { display: flex; flex-direction: column; gap: 4px; }
+.service-section__byo-form {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--ion-color-step-150, #e0e0e0);
+}
+.services-page__account {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--ion-color-success-tint, #e6f4ea);
+  color: var(--ion-color-success-shade, #0e6027);
+  font-size: 14px;
+}
+.services-page__account button {
+  padding: 4px 10px;
+  font-size: 13px;
+  border-radius: 6px;
+  border: 1px solid var(--ion-color-success-shade, #0e6027);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.services-page__account button:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+.service-form__hint {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: hsl(var(--muted-foreground));
+}
+.service-form__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.service-form__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 999px;
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.service-form__chip--active {
+  border-color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.08);
+  color: hsl(var(--primary));
+}
+.service-form__chip-remove {
+  color: hsl(var(--muted-foreground));
+  font-size: 11px;
+}
+.service-form__chip-remove:hover {
+  color: hsl(var(--destructive));
+}
+.service-form__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.service-form__actions .settings-input-field {
+  flex: 1;
+}
+.service-form__button {
+  border: 1px solid hsl(var(--primary) / 0.2);
+  border-radius: 10px;
+  background: hsl(var(--primary) / 0.08);
+  color: hsl(var(--primary));
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.service-form__button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.service-form__button:hover:not(:disabled) {
+  background: hsl(var(--primary) / 0.14);
+}
+@media (max-width: 640px) {
+  .service-form__actions {
+    flex-direction: column;
+  }
+}

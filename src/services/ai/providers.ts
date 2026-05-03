@@ -14,9 +14,9 @@ export interface AIProvider {
 export const AI_PROVIDERS: AIProvider[] = [
   {
     id: 'qwen',
-    name: '阿里云',
+    name: '阿里云百炼',
     baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    models: ['qwen3.5-plus', 'qwen3.5-plus-2026-02-15', 'qwen3-max-preview'],
+    models: ['qwen3.6-max-preview', 'qwen3.6-plus', 'qwen3.6-flash'],
     placeholder: 'sk-...',
   },
   {

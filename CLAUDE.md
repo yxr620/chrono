@@ -67,11 +67,19 @@ Responsive: switches between mobile layout (bottom tabs) and desktop layout (sid
 ### Categories
 Six preset categories + user-defined custom categories. Colors are stored in the DB (`Category.color` field, added in schema v5). Preset defaults live in `src/config/categoryColors.ts`. Users manage categories via Maintenance → 类别管理 tab.
 
+### Managed Services (optional)
+
+If `VITE_AUTH_API_URL` is set, the app offers **Managed mode** for paid features (sync + AI). Users sign in with email/password; the backend (Aliyun Function Compute, source in `server/`) signs OSS STS tokens and proxies LLM calls. Without `VITE_AUTH_API_URL`, only BYO mode is available — users supply their own credentials via the **Services** page.
+
+Per-feature mode (`off` / `byo` / `managed`) is stored in `chrono_feature_modes` in localStorage. Routing happens through `src/services/gateway/` (`CompositeGateway` → `ByoGateway` or `ManagedGateway`). A one-time `MigrationPrompt` (mounted in `App.tsx`) offers existing BYO users a one-click switch on boot — opting in scrubs every provider's BYO `apiKey` from localStorage.
+
+Backend code: `server/src/`. Deploy with `server/deploy.sh` then upload the resulting zip in the Aliyun FC console. Operator runbook: `server/RUNBOOK.md`. Full design: `docs/superpowers/specs/2026-04-21-managed-services.md`.
+
 ### Multi-Device Sync
-Optional — disabled if OSS is not configured. Uses Aliyun OSS as the backend. Architecture: oplog (operation log) + snapshot (full state), LWW merge strategy. Configure via `.env` using `VITE_OSS_*` variables (see `.env.example`).
+Optional. Two modes: BYO (user-supplied OSS keys) or Managed (signed STS tokens via the Chrono backend). Architecture: oplog (operation log) + snapshot (full state), LWW merge strategy. Both modes write to the same `sync/{userId}/` prefix and converge across modes. See Managed Services section.
 
 ### AI Assistant
-Desktop-only feature. Configured via `VITE_AI_*` env variables. Uses tool/function calling to query time entry data. Multiple providers supported.
+Desktop-only feature. Two modes: BYO (`VITE_AI_*` env vars + per-provider settings UI) or Managed (`/v1/chat/completions` proxy on the Chrono backend, requires sign-in and email allowlist). Uses tool/function calling to query time entry data. BYO supports Qwen, Gemini, GLM, Kimi, MiniMax, OpenAI, and a custom OpenAI-compatible endpoint.
 
 ### Platform Data Paths
 - **Web**: IndexedDB in browser
@@ -79,4 +87,4 @@ Desktop-only feature. Configured via `VITE_AI_*` env variables. Uses tool/functi
 - **macOS (Electron)**: `~/Library/Application Support/Chrono/`
 
 ### Environment Variables
-Copy `.env.example` to `.env.local`. OSS and AI config are optional — the app functions without them.
+Copy `.env.example` to `.env.local`. All variables are optional — the app functions without them. `VITE_AUTH_API_URL` enables managed mode; `VITE_OSS_*` and `VITE_AI_*` populate BYO defaults.
