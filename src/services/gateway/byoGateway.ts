@@ -35,6 +35,7 @@ export class ByoGateway implements PaidFeatureGateway {
       bucket: c.bucket,
       accessKeyId: c.accessKeyId,
       accessKeySecret: c.accessKeySecret,
+      userId: localStorage.getItem('userId') || 'default-user',
     };
   }
 

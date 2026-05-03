@@ -20,6 +20,12 @@ export interface SyncCredentials {
   bucket: string;
   accessKeyId: string;
   accessKeySecret: string;
+  /**
+   * 用户 ID — 决定 OSS 路径前缀 sync/{userId}/...
+   * BYO: localStorage.userId 或 'default-user'。
+   * Managed: 必须等于 JWT 里的 user id（STS session policy 会强制此前缀）。
+   */
+  userId: string;
   /** Managed 模式下由 STS 返回 */
   securityToken?: string;
   /** ISO 时间戳，仅 Managed 模式 */
