@@ -49,6 +49,11 @@ npm run dev                   # http://localhost:5173
 
 ```dotenv
 # .env.local 示例
+# —— Managed Services（推荐）——
+# 设置后即可在「服务」页开启托管模式（同步 + AI）；留空则仅支持 BYO。
+VITE_AUTH_API_URL=
+
+# —— BYO（可选）——
 VITE_OSS_REGION=oss-cn-hangzhou
 VITE_OSS_BUCKET=your-bucket-name
 VITE_OSS_ACCESS_KEY_ID=your-access-key-id
@@ -58,6 +63,8 @@ VITE_AI_MODEL=qwen3.6-max-preview
 VITE_AI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 VITE_AI_API_KEY=your-api-key
 ```
+
+> 托管模式细节见 `CLAUDE.md` 的 *Managed Services* 段落以及 `docs/superpowers/specs/2026-04-21-managed-services.md`。
 
 ### Vite 加载优先级（高 → 低）
 
