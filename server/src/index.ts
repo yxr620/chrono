@@ -133,3 +133,7 @@ import './auth/register.js';
 import './auth/login.js';
 import './features/me.js';
 import './features/sts.js';
+import './userdata/syncNamespace.js';
+import './userdata/devicesEndpoints.js';
+import './userdata/storageEndpoint.js';
+import './userdata/accountEndpoint.js';
