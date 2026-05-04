@@ -13,7 +13,11 @@ const SYNC_OPTIONS: Array<{ mode: FeatureMode; label: string; hint: string }> = 
   { mode: 'managed',  label: '使用 Chrono 托管同步',     hint: '需要登录 Chrono 账号' },
 ];
 
-export const SyncServiceSection: React.FC = () => {
+interface Props {
+  onRequestSignIn?: () => void;
+}
+
+export const SyncServiceSection: React.FC<Props> = ({ onRequestSignIn }) => {
   const mode = useFeatureModeStore((s) => s.modes.sync);
   const setMode = useFeatureModeStore((s) => s.setMode);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -24,7 +28,7 @@ export const SyncServiceSection: React.FC = () => {
   const switchToManagedIfAllowed = async () => {
     const token = useAuthStore.getState().token;
     if (!token) {
-      setShowSignIn(true);
+      requestSignIn();
       return;
     }
     try {
@@ -40,10 +44,18 @@ export const SyncServiceSection: React.FC = () => {
     }
   };
 
+  const requestSignIn = () => {
+    if (onRequestSignIn) {
+      onRequestSignIn();
+    } else {
+      setShowSignIn(true);
+    }
+  };
+
   const handleSelect = (next: FeatureMode) => {
     if (next === 'managed') {
       if (!isAuthenticated) {
-        setShowSignIn(true);
+        requestSignIn();
         return;
       }
       void switchToManagedIfAllowed();
