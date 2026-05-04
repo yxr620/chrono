@@ -321,28 +321,28 @@ export const AIAssistant: React.FC = () => {
 
   const welcomeTitle = aiConfigured ? '你好！' : '先配置 AI 服务';
   const welcomeDescription = aiMode === 'disabled'
-    ? 'AI 助手当前已关闭，请先在「服务」页面启用。'
+    ? 'AI 助手当前已关闭，请先在「设置」页面启用。'
     : aiMode === 'managed' && !isAuthenticated
-      ? '请先在「服务」页面登录 Chrono 账号。'
+      ? '请先在「设置」页面登录 Chrono 账号。'
       : aiConfigured
         ? '向我提问关于你的时间记录的任何问题'
-        : '供应商凭据现在在「服务」页面配置。';
+        : '供应商凭据现在在「设置」页面配置。';
   const serviceBannerText = aiConfigured
     ? aiMode === 'managed'
       ? '当前使用 Chrono 托管 AI。'
-      : '供应商凭据现在在「服务」页面配置。'
+      : '供应商凭据现在在「设置」页面配置。'
     : aiMode === 'disabled'
       ? 'AI 助手当前处于关闭模式。'
       : aiMode === 'managed'
-        ? '请先在「服务」页面登录 Chrono 账号。'
-        : '请先在「服务」页面填写 provider / API Key / model。';
+        ? '请先在「设置」页面登录 Chrono 账号。'
+        : '请先在「设置」页面填写 provider / API Key / model。';
   const inputPlaceholder = aiMode === 'disabled'
-    ? 'AI 助手已关闭，请先在服务页面启用 →'
+    ? 'AI 助手已关闭，请先在设置页面启用 →'
     : aiMode === 'managed' && !isAuthenticated
       ? '请先登录 Chrono 账号 →'
       : aiConfigured
         ? '问我任何关于你时间的问题...'
-        : '请先在服务页面配置 AI 凭据 →';
+        : '请先在设置页面配置 AI 凭据 →';
 
   return (
     <div className="ai-assistant">
@@ -351,7 +351,7 @@ export const AIAssistant: React.FC = () => {
           <div className="ai-header-title">AI 助手</div>
           <div className="ai-header-subtitle">
             {aiMode === 'disabled'
-              ? '当前已关闭，请前往「服务」页面启用。'
+              ? '当前已关闭，请前往「设置」页面启用。'
               : aiMode === 'managed'
                 ? aiConfigured
                   ? '当前使用 Chrono 托管 AI'
@@ -362,8 +362,8 @@ export const AIAssistant: React.FC = () => {
           </div>
         </div>
         <div className="ai-header-actions">
-          <button className="ai-service-link" onClick={handleOpenServices} title="前往服务页面">
-            服务
+          <button className="ai-service-link" onClick={handleOpenServices} title="前往设置">
+            设置
           </button>
           {messages.length > 0 && (
             <button className="ai-icon-btn" onClick={clearMessages} title="清空对话">
@@ -376,7 +376,7 @@ export const AIAssistant: React.FC = () => {
       <div className="ai-service-banner">
         <span className="ai-service-banner-text">{serviceBannerText}</span>
         <button className="ai-service-link ai-service-link-inline" onClick={handleOpenServices}>
-          打开服务页面
+          打开设置
         </button>
       </div>
 
@@ -402,7 +402,7 @@ export const AIAssistant: React.FC = () => {
               </div>
             ) : (
               <button className="ai-quick-btn" onClick={handleOpenServices}>
-                打开服务页面
+                打开设置
               </button>
             )}
           </div>
