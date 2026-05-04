@@ -1,0 +1,408 @@
+/* ─── Settings page (formerly ExportPage) ─── */
+
+.settings-page {
+  padding: 16px;
+  padding-bottom: 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 100%;
+}
+
+.settings-card {
+  margin: 0;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: none;
+  border: none;
+}
+
+.settings-page-dark .settings-card {
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.settings-card-content {
+  padding: 18px 20px;
+}
+
+.settings-card-title {
+  margin: 0 0 14px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: hsl(var(--foreground));
+}
+
+/* ─── Row pattern (label + subtitle + control on right) ─── */
+
+.settings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-row + .settings-row {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid hsl(var(--border));
+}
+
+.settings-row-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-row-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.settings-row-sub {
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* ─── Button stacks ─── */
+
+.settings-button-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.settings-action-button {
+  --border-radius: 14px;
+  --box-shadow: none;
+  height: 46px;
+  margin: 0;
+  font-weight: 600;
+}
+
+.settings-button-hint {
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+  padding-left: 8px;
+  margin: 6px 0 12px 0;
+  line-height: 1.4;
+}
+
+.settings-button-hint:last-child {
+  margin-bottom: 0;
+}
+
+.settings-action-button-link {
+  height: 38px;
+  margin-top: 4px;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+/* ─── Subsection inside a card (for sync sub-blocks) ─── */
+
+.settings-subsection + .settings-subsection {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid hsl(var(--border));
+}
+
+.settings-subsection-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: hsl(var(--foreground));
+  margin: 0 0 10px 0;
+}
+
+.settings-subsection-desc {
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+  margin: 0 0 10px 0;
+  line-height: 1.4;
+}
+
+/* ─── Form inputs (OSS config) ─── */
+
+.settings-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-input-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+  display: block;
+  margin-bottom: 4px;
+}
+
+.settings-input-field {
+  width: 100%;
+  padding: 11px 14px;
+  font-size: 14px;
+  border-radius: 10px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+  font-family: inherit;
+}
+
+.settings-input-field:focus {
+  outline: none;
+  border-color: hsl(var(--primary));
+}
+
+/* ─── Banners (config-source notices) ─── */
+
+.settings-banner {
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.settings-banner-info {
+  color: hsl(210 80% 55%);
+  background: hsl(210 80% 55% / 0.1);
+  border: 1px solid hsl(210 80% 55% / 0.2);
+}
+
+.settings-banner-success {
+  color: hsl(142 76% 36%);
+  background: hsl(142 76% 36% / 0.1);
+  border: 1px solid hsl(142 76% 36% / 0.2);
+}
+
+.settings-banner-muted {
+  color: hsl(var(--muted-foreground));
+}
+
+/* ─── Stats list ─── */
+
+.settings-stat-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid hsl(var(--border));
+  font-size: 13px;
+  gap: 12px;
+}
+
+.settings-stat-row:last-child {
+  border-bottom: none;
+}
+
+.settings-stat-label {
+  color: hsl(var(--muted-foreground));
+  flex-shrink: 0;
+}
+
+.settings-stat-value {
+  font-weight: 500;
+  color: hsl(var(--foreground));
+  text-align: right;
+  word-break: break-all;
+}
+
+.settings-stat-value-link {
+  color: hsl(210 80% 55%);
+  cursor: pointer;
+}
+
+.settings-stat-value-warn {
+  color: hsl(var(--destructive));
+}
+
+.settings-stat-value-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+
+/* ─── Accordion overrides ─── */
+
+.settings-accordion-wrap {
+  margin-top: 4px;
+}
+
+.settings-accordion-wrap ion-accordion-group {
+  background: transparent;
+}
+
+.settings-accordion-wrap ion-accordion {
+  background: transparent;
+}
+
+.settings-accordion-wrap ion-accordion ion-item[slot='header'] {
+  --background: transparent;
+  --padding-start: 0;
+  --inner-padding-end: 0;
+  --border-color: transparent;
+  --min-height: 44px;
+}
+
+.settings-accordion-wrap ion-accordion ion-item[slot='header'] ion-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.settings-accordion-content {
+  display: flex;
+  flex-direction: column;
+  padding-top: 4px;
+}
+
+/* ─── Sync management top block (always visible primary controls) ─── */
+
+.sync-primary-block {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sync-primary-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ─── Sync result ─── */
+
+.settings-sync-result {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid hsl(var(--border));
+}
+
+/* ─── Service sections (sync mode picker, AI mode picker) ─── */
+
+.service-section {
+  border: 1px solid var(--ion-color-step-150, #e0e0e0);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: var(--ion-card-background, #fff);
+}
+.service-section__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.service-section__icon { font-size: 20px; }
+.service-section__title { font-size: 16px; font-weight: 600; }
+.service-section__radios { display: flex; flex-direction: column; gap: 4px; }
+.service-section__byo-form {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--ion-color-step-150, #e0e0e0);
+}
+
+.service-form__hint {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: hsl(var(--muted-foreground));
+}
+.service-form__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.service-form__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 999px;
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.service-form__chip--active {
+  border-color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.08);
+  color: hsl(var(--primary));
+}
+.service-form__chip-remove {
+  color: hsl(var(--muted-foreground));
+  font-size: 11px;
+}
+.service-form__chip-remove:hover {
+  color: hsl(var(--destructive));
+}
+.service-form__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.service-form__actions .settings-input-field {
+  flex: 1;
+}
+.service-form__button {
+  border: 1px solid hsl(var(--primary) / 0.2);
+  border-radius: 10px;
+  background: hsl(var(--primary) / 0.08);
+  color: hsl(var(--primary));
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.service-form__button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.service-form__button:hover:not(:disabled) {
+  background: hsl(var(--primary) / 0.14);
+}
+@media (max-width: 640px) {
+  .service-form__actions {
+    flex-direction: column;
+  }
+}
+
+/* ─── Account card ─── */
+
+.settings-account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.settings-account-row__email {
+  font-size: 14px;
+  color: hsl(var(--foreground));
+  word-break: break-all;
+}
+.settings-account-row__btn {
+  padding: 6px 14px;
+  font-size: 13px;
+  border-radius: 8px;
+  border: 1px solid hsl(var(--border));
+  background: transparent;
+  color: hsl(var(--foreground));
+  cursor: pointer;
+}
+.settings-account-row__btn:hover {
+  background: hsl(var(--muted));
+}
+.settings-account-row__btn--primary {
+  border-color: hsl(var(--primary));
+  color: hsl(var(--primary));
+}
