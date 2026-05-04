@@ -136,7 +136,7 @@ export const AIAssistant: React.FC = () => {
   // 阶段累积：每次发送前重置，onPhase 调用时追加
   const phasesRef = useRef<Array<{ key: string; detail?: string; level?: number; failed?: boolean; debugInfo?: string }>>([]);
   const handleOpenServices = useCallback(() => {
-    navigateToTab('services');
+    navigateToTab('export');
   }, []);
 
   // 自动滚动到底部

@@ -219,7 +219,7 @@ ${result.details.errors.length > 0 ? `\n⚠️ ${result.details.errors.length} �
             <IonButton
               expand="block"
               fill="outline"
-              onClick={() => navigateToTab('services')}
+              onClick={() => navigateToTab('export')}
               className="settings-action-button"
             >
               打开服务页面

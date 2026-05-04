@@ -14,7 +14,7 @@ export const AISettings: React.FC<AISettingsProps> = ({ onClose }) => {
   };
 
   const handleOpenServices = () => {
-    navigateToTab('services');
+    navigateToTab('export');
     onClose();
   };
 

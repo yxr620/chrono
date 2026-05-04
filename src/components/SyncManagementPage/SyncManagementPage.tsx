@@ -286,7 +286,7 @@ export const SyncManagementPage: React.FC = () => {
           <div className="sync-status-banner-title">凭据配置已移至「服务」页面</div>
           <div className="sync-status-banner-text">在服务页面切换 Off / BYO / Managed，并维护 OSS 凭据。</div>
         </div>
-        <button type="button" className="sync-status-link" onClick={() => navigateToTab('services')}>
+        <button type="button" className="sync-status-link" onClick={() => navigateToTab('export')}>
           打开服务
         </button>
       </div>
