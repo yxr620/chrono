@@ -93,6 +93,14 @@ export const GoalManager: React.FC = () => {
   const checkGoals = todayGoals.filter(g => (g.type ?? 'time') === 'check');
   const completedCheckCount = checkGoals.filter(g => g.completed).length;
 
+  // 当天的感想（带 memo 的 entry，按开始时间倒序）
+  const dayMemos = entries
+    .filter(e => {
+      if (!e.memo || !e.memo.trim()) return false;
+      return dayjs(e.startTime).format('YYYY-MM-DD') === currentDate;
+    })
+    .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+
   // 计算某个目标的花费时长（分钟）
   const calculateGoalDuration = (goalId: string) => {
     const goalEntries = entries.filter(e => e.goalId === goalId && e.endTime);
@@ -640,6 +648,58 @@ export const GoalManager: React.FC = () => {
               )}
             </IonCardContent>
           </IonCard>
+
+          {/* ── 今日感想 ── */}
+          {dayMemos.length > 0 && (
+            <IonCard style={{ ...cardStyle, marginTop: '1rem' }}>
+              <IonCardContent style={{ paddingBottom: 16 }}>
+                <div style={{ marginBottom: '12px' }}>
+                  <IonText>
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold' }}>
+                      💭 今日感想 ({dayMemos.length})
+                    </h3>
+                  </IonText>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {dayMemos.map(e => (
+                    <div
+                      key={e.id}
+                      onClick={() => {
+                        if (!e.memo) return;
+                        navigator.clipboard?.writeText(e.memo);
+                        present({ message: '已复制', duration: 1200, position: 'top', color: 'success' });
+                      }}
+                      title="点击复制"
+                      style={{
+                        cursor: 'pointer',
+                        padding: '10px 12px',
+                        borderRadius: '12px',
+                        background: isDark ? 'rgba(30, 41, 59, 0.5)' : 'rgba(248, 250, 252, 0.9)',
+                        transition: 'background 0.15s',
+                      }}
+                    >
+                      <div style={{
+                        fontSize: '14px',
+                        lineHeight: 1.5,
+                        color: isDark ? '#e2e8f0' : '#1e293b',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                      }}>
+                        {e.memo}
+                      </div>
+                      <div style={{
+                        marginTop: '4px',
+                        fontSize: '12px',
+                        color: isDark ? '#64748b' : '#94a3b8',
+                      }}>
+                        {dayjs(e.startTime).format('HH:mm')} · {e.activity}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </IonCardContent>
+            </IonCard>
+          )}
 
           {/* ── 打卡 / 提醒 (check 型) ── */}
           {checkGoals.length > 0 && (
