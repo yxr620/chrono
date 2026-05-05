@@ -34,6 +34,8 @@ import type {
   ChartDataPoint,
   DateRange,
 } from '../../types/analysis';
+import { db, type TimeEntry } from '../../services/db';
+import { useDateStore } from '../../stores/dateStore';
 import './Dashboard.css';
 
 const CHART_STYLES = {
@@ -92,6 +94,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [goalSummaryData, setGoalSummaryData] = useState<GoalDistributionItem[]>([]);
   const [categoryData, setCategoryData] = useState<ChartDataPoint[]>([]);
   const [hourData, setHourData] = useState<ChartDataPoint[]>([]);
+  const [recentMemos, setRecentMemos] = useState<TimeEntry[]>([]);
+  const setSelectedDate = useDateStore(state => state.setSelectedDate);
 
   useEffect(() => {
     if (dateRangeProp) {
@@ -129,6 +133,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    const load = async () => {
+      const sevenDaysAgo = dayjs().subtract(7, 'day').startOf('day').toDate();
+      const all = await db.entries
+        .filter(e => !e.deleted && !!e.memo && (e.memo as string).trim().length > 0)
+        .toArray();
+      const recent = all
+        .filter(e => new Date(e.startTime).getTime() >= sevenDaysAgo.getTime())
+        .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+        .slice(0, 5);
+      setRecentMemos(recent);
+    };
+    load();
+  }, [dateRange]);
 
   const handleRangeChange = (days: number) => {
     setSelectedRange(days);
@@ -239,7 +258,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <div className="dashboard-lead-value">{formatDuration(metrics?.totalTime ?? 0)}</div>
               <div className="dashboard-lead-copy">
                 <span className="dashboard-lead-label">Lead Metric</span>
-                <p>这一页是分析系统的封面，先回答“这段时间总共投入了多少”，再进入趋势与目标两个章节。</p>
+                <p>这一页是分析系统的封面，先回答"这段时间总共投入了多少"，再进入趋势与目标两个章节。</p>
               </div>
             </div>
 
@@ -281,6 +300,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </aside>
         </section>
+
+        {recentMemos.length > 0 && (
+          <div className="dashboard-section dashboard-memo-card">
+            <h3 className="dashboard-memo-title">💭 最近感想</h3>
+            <ul className="dashboard-memo-list">
+              {recentMemos.map(e => (
+                <li
+                  key={e.id}
+                  className="dashboard-memo-item"
+                  onClick={() => {
+                    setSelectedDate(dayjs(e.startTime).format('YYYY-MM-DD'));
+                  }}
+                >
+                  <div className="dashboard-memo-meta">
+                    {dayjs(e.startTime).format('MM-DD')} · {e.activity}
+                  </div>
+                  <div className="dashboard-memo-text">{e.memo}</div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );
