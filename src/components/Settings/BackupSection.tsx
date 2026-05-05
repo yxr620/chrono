@@ -101,7 +101,7 @@ export const BackupSection: React.FC = () => {
           role: 'destructive',
           handler: () => {
             presentAlert({
-              header: '⚠️ 确认替换',
+              header: '确认替换',
               message: '替换模式会清空所有现有数据！此操作无法撤销。确定要继续吗？',
               buttons: [
                 { text: '取消', role: 'cancel' },
@@ -145,16 +145,15 @@ export const BackupSection: React.FC = () => {
         showToast(result.message, 'success', 3000);
 
         setTimeout(() => {
-          const detailsMessage = `
-导入成功：
-📝 时间记录: ${result.details.entriesImported} 条
-🎯 目标: ${result.details.goalsImported} 条
-🏷️ 类别: ${result.details.categoriesImported} 条
-${result.details.entriesSkipped + result.details.goalsSkipped + result.details.categoriesSkipped > 0
-              ? `\n跳过重复数据: ${result.details.entriesSkipped + result.details.goalsSkipped + result.details.categoriesSkipped} 条`
-              : ''}
-${result.details.errors.length > 0 ? `\n⚠️ ${result.details.errors.length} 个错误` : ''}
-          `.trim();
+          const skipped = result.details.entriesSkipped + result.details.goalsSkipped + result.details.categoriesSkipped;
+          const detailsMessage = [
+            '导入成功：',
+            `时间记录: ${result.details.entriesImported} 条`,
+            `目标: ${result.details.goalsImported} 条`,
+            `类别: ${result.details.categoriesImported} 条`,
+            skipped > 0 ? `跳过重复数据: ${skipped} 条` : '',
+            result.details.errors.length > 0 ? `${result.details.errors.length} 个错误` : '',
+          ].filter(Boolean).join('\n');
 
           presentAlert({
             header: '导入完成',
@@ -202,7 +201,7 @@ ${result.details.errors.length > 0 ? `\n⚠️ ${result.details.errors.length} �
             disabled={isLoading}
             className="settings-action-button"
           >
-            {isLoading ? <IonSpinner name="dots" /> : '📥 导入数据'}
+            {isLoading ? <IonSpinner name="dots" /> : '导入数据'}
           </IonButton>
           <p className="settings-button-hint">从之前导出的 JSON 文件中恢复数据</p>
 
@@ -213,7 +212,7 @@ ${result.details.errors.length > 0 ? `\n⚠️ ${result.details.errors.length} �
             disabled={isLoading}
             className="settings-action-button"
           >
-            {isLoading ? <IonSpinner name="dots" /> : '📤 增量导出（推荐）'}
+            {isLoading ? <IonSpinner name="dots" /> : '增量导出（推荐）'}
           </IonButton>
           <p className="settings-button-hint">只导出自上次同步后的新数据</p>
 
@@ -224,7 +223,7 @@ ${result.details.errors.length > 0 ? `\n⚠️ ${result.details.errors.length} �
             disabled={isLoading}
             className="settings-action-button"
           >
-            {isLoading ? <IonSpinner name="dots" /> : '📦 全量导出'}
+            {isLoading ? <IonSpinner name="dots" /> : '全量导出'}
           </IonButton>
           <p className="settings-button-hint">导出所有记录和目标数据</p>
 
@@ -236,7 +235,7 @@ ${result.details.errors.length > 0 ? `\n⚠️ ${result.details.errors.length} �
             disabled={isLoading}
             className="settings-action-button settings-action-button-link"
           >
-            📋 复制 JSON 到剪贴板
+            复制 JSON 到剪贴板
           </IonButton>
         </div>
 

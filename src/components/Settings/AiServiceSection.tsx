@@ -1,5 +1,6 @@
 import React from 'react';
-import { IonItem, IonLabel, IonRadio, IonRadioGroup } from '@ionic/react';
+import { IonItem, IonLabel, IonRadio, IonRadioGroup, IonIcon } from '@ionic/react';
+import { sparklesOutline } from 'ionicons/icons';
 import { useFeatureModeStore } from '../../stores/featureModeStore';
 import type { FeatureMode } from '../../services/gateway/types';
 import { AiProviderForm } from './AiProviderForm';
@@ -57,7 +58,7 @@ export const AiServiceSection: React.FC<Props> = ({ onRequestSignIn }) => {
   return (
     <section className="service-section">
       <header className="service-section__header">
-        <span className="service-section__icon">🤖</span>
+        <IonIcon icon={sparklesOutline} className="service-section__icon" />
         <span className="service-section__title">AI 助手</span>
       </header>
 

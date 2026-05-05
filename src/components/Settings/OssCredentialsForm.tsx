@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { IonButton, useIonAlert } from '@ionic/react';
+import { IonButton, IonIcon, useIonAlert } from '@ionic/react';
+import { informationCircleOutline, checkmarkCircleOutline } from 'ionicons/icons';
 import { useAppToast } from '../../hooks/useAppToast';
 import { useSyncStore } from '../../stores/syncStore';
 import { getOSSConfig, isOSSConfigured } from '../../services/oss';
@@ -120,12 +121,14 @@ export const OssCredentialsForm: React.FC = () => {
     <div>
       {configSource === 'env' && (
         <div className="settings-banner settings-banner-info">
-          📋 当前使用 .env 环境变量配置，修改后将保存为应用内配置
+          <IonIcon icon={informationCircleOutline} aria-hidden="true" />
+          <span>当前使用 .env 环境变量配置，修改后将保存为应用内配置</span>
         </div>
       )}
       {configSource === 'manual' && isConfigured && (
         <div className="settings-banner settings-banner-success">
-          ✅ 当前使用应用内手动配置
+          <IonIcon icon={checkmarkCircleOutline} aria-hidden="true" />
+          <span>当前使用应用内手动配置</span>
         </div>
       )}
       {!isConfigured && configSource === 'none' && (

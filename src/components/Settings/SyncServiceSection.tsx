@@ -1,5 +1,6 @@
 import React from 'react';
-import { IonRadioGroup, IonRadio, IonItem, IonLabel } from '@ionic/react';
+import { IonRadioGroup, IonRadio, IonItem, IonLabel, IonIcon } from '@ionic/react';
+import { cloudOutline } from 'ionicons/icons';
 import { useFeatureModeStore } from '../../stores/featureModeStore';
 import type { FeatureMode } from '../../services/gateway/types';
 import { OssCredentialsForm } from './OssCredentialsForm';
@@ -57,7 +58,7 @@ export const SyncServiceSection: React.FC<Props> = ({ onRequestSignIn }) => {
   return (
     <section className="service-section">
       <header className="service-section__header">
-        <span className="service-section__icon">☁️</span>
+        <IonIcon icon={cloudOutline} className="service-section__icon" />
         <span className="service-section__title">多设备同步</span>
       </header>
 
