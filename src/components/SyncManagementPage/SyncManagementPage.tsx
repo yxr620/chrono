@@ -17,6 +17,13 @@ import { useFeatureModeStore } from '../../stores/featureModeStore';
 import { useSyncStore } from '../../stores/syncStore';
 import './SyncManagementPage.css';
 
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/zh-cn';
+
+dayjs.extend(relativeTime);
+dayjs.locale('zh-cn');
+
 interface SyncErrorLog {
   id: number;
   message: string;
@@ -44,6 +51,15 @@ const formatTimestamp = (value: Date | number | null): string => {
     minute: '2-digit',
     second: '2-digit',
   });
+};
+
+const formatRelativeTime = (value: Date | number | null): string => {
+  if (!value) return '从未同步';
+  const ts = value instanceof Date ? value.getTime() : value;
+  const diffMs = Date.now() - ts;
+  if (diffMs < 60_000) return '刚刚';
+  if (diffMs > 30 * 24 * 60 * 60 * 1000) return formatTimestamp(ts);
+  return dayjs(ts).fromNow();
 };
 
 const fetchSyncStats = async (): Promise<SyncStats | null> => {
@@ -185,7 +201,7 @@ export const SyncManagementPage: React.FC = () => {
   const handleForceFullPush = () => {
     confirmThenRun(
       '强制全量 Push',
-      '⚠️ 这将重新上传所有本地数据到云端。适用于 OSS 被清空的恢复场景。确定继续？',
+      '这将重新上传所有本地数据到云端。适用于 OSS 被清空的恢复场景。确定继续？',
       () => {
         void handleSync(() => syncEngine.forceFullPush(), '强制全量 Push', 'push');
       },
@@ -195,7 +211,7 @@ export const SyncManagementPage: React.FC = () => {
   const handleForceFullPull = () => {
     confirmThenRun(
       '强制全量 Pull',
-      '⚠️ 这将拉取并合并所有远程数据。可能会覆盖本地未同步的修改。确定继续？',
+      '这将拉取并合并所有远程数据。可能会覆盖本地未同步的修改。确定继续？',
       () => {
         void handleSync(() => syncEngine.forceFullPull(), '强制全量 Pull', 'pull');
       },
@@ -245,11 +261,6 @@ export const SyncManagementPage: React.FC = () => {
   const totalDeleted = stats
     ? stats.deletedEntries + stats.deletedGoals + stats.deletedCategories
     : 0;
-  const autoSyncDescription = syncMode === 'disabled'
-    ? '请先在下方「多设备同步」卡片启用 BYO 或 Managed，再决定是否自动同步。'
-    : !isConfigured
-      ? '自动同步偏好会保留；当前同步尚未就绪，完成登录或凭据配置后生效。'
-      : '开启后会在数据变更后自动 Push，并在应用启动时自动 Pull。';
   const statusTone = loading
     ? 'syncing'
     : syncMode === 'disabled'
@@ -278,9 +289,28 @@ export const SyncManagementPage: React.FC = () => {
         ? `当前有 ${stats.pendingOps} 条待同步操作。`
         : '当前没有待同步操作。';
 
+  const lastSyncRel = formatRelativeTime(stats?.lastSyncTime ?? null);
+  const pendingOps = stats?.pendingOps ?? 0;
+
+  // Merged status line. Tone-driven content; disabled mode skips the line entirely
+  // because the description copy already explains "已关闭".
+  const statusLine: string | null = (() => {
+    if (loading) return '同步中…';
+    if (syncMode === 'disabled') return null;
+    if (statusTone === 'success') return `最近成功 · ${lastSyncRel} · ${pendingOps} 条待同步`;
+    if (statusTone === 'error') return `最近失败 · ${lastSyncRel} · ${pendingOps} 条待同步`;
+    return `等待同步 · ${lastSyncRel}`;
+  })();
+
+  const autoSyncCaption = syncMode === 'disabled'
+    ? '先在「多设备同步」启用 BYO 或 Managed'
+    : !isConfigured
+      ? '完成凭据/登录后自动生效'
+      : '数据变更时自动 Push，启动时自动 Pull';
+
   return (
     <div className="sync-status-view">
-      <section className="sync-status-card">
+      <section className="sync-status-card sync-status-card--main">
         <div className="sync-status-header">
           <div>
             <h4 className="settings-subsection-title">同步状态</h4>
@@ -294,107 +324,114 @@ export const SyncManagementPage: React.FC = () => {
             <IonSpinner />
           </div>
         ) : (
-          <div className="settings-stat-list">
-            <div className="settings-stat-row">
-              <span className="settings-stat-label">服务模式</span>
-              <span className="settings-stat-value">{SYNC_MODE_LABEL[syncMode]}</span>
-            </div>
-            <div className="settings-stat-row">
-              <span className="settings-stat-label">最后同步</span>
-              <span className="settings-stat-value">{formatTimestamp(stats.lastSyncTime)}</span>
-            </div>
-            <div className="settings-stat-row">
-              <span className="settings-stat-label">未同步操作</span>
-              <span className={`settings-stat-value${stats.pendingOps > 0 ? ' settings-stat-value-warn' : ''}`}>
-                {stats.pendingOps} 条
-              </span>
-            </div>
-            <div className="settings-stat-row">
-              <span className="settings-stat-label">已同步操作</span>
-              <span className="settings-stat-value">{stats.syncedOps} 条</span>
-            </div>
-            <div className="settings-stat-row">
-              <span className="settings-stat-label">设备 ID</span>
-              <span className="settings-stat-value settings-stat-value-mono">{stats.deviceId.substring(0, 8)}...</span>
-            </div>
-            <div className="settings-stat-row">
-              <span className="settings-stat-label">数据概览</span>
-              <span className="settings-stat-value">
-                {stats.totalEntries} 条目 / {stats.totalGoals} 目标 / {stats.totalCategories} 分类
-              </span>
-            </div>
-            <div className="settings-stat-row">
-              <span className="settings-stat-label">已删除记录</span>
-              <span className={`settings-stat-value${totalDeleted > 0 ? ' settings-stat-value-warn' : ''}`}>
-                {totalDeleted} 条
-              </span>
-            </div>
-          </div>
-        )}
-      </section>
-
-      <section className="sync-status-card">
-        <div className="sync-status-toggle-row">
-          <div>
-            <h4 className="settings-subsection-title">自动同步</h4>
-            <p className="sync-status-subtitle">{autoSyncDescription}</p>
-          </div>
-          <IonToggle
-            checked={autoSyncEnabled}
-            disabled={syncMode === 'disabled'}
-            onIonChange={(event) => setAutoSyncEnabled(event.detail.checked)}
-            aria-label="自动同步开关"
-          />
-        </div>
-      </section>
-
-      {lastResult && (
-        <section className="sync-status-card">
-          <h4 className="settings-subsection-title">最近一次同步</h4>
-          <div className="settings-stat-list">
-            <div className="settings-stat-row">
-              <span className="settings-stat-label">状态</span>
-              <span className={`settings-stat-value${lastResult.status === 'error' ? ' settings-stat-value-warn' : ''}`}>
-                {lastResult.status === 'success' ? '成功' : '失败'}
-              </span>
-            </div>
-            <div className="settings-stat-row">
-              <span className="settings-stat-label">消息</span>
-              <span className="settings-stat-value">{lastResult.message}</span>
-            </div>
-            <div className="settings-stat-row">
-              <span className="settings-stat-label">上传</span>
-              <span className="settings-stat-value">{lastResult.pushedCount ?? 0} 条</span>
-            </div>
-            <div className="settings-stat-row">
-              <span className="settings-stat-label">下载</span>
-              <span className="settings-stat-value">{lastResult.pulledCount ?? 0} 条</span>
-            </div>
-          </div>
-        </section>
-      )}
-
-      <section className="sync-status-card">
-        <h4 className="settings-subsection-title">最近错误</h4>
-        {errorHistory.length === 0 ? (
-          <p className="sync-status-empty">本次会话暂无同步错误。</p>
-        ) : (
-          <div className="sync-status-log">
-            {errorHistory.map((entry) => (
-              <div key={entry.id} className="sync-status-log-item">
-                <span className="sync-status-log-time">{formatTimestamp(entry.time)}</span>
-                <span className="sync-status-log-message">{entry.message}</span>
+          <>
+            {statusLine && (
+              <div className="sync-status-line">
+                <span className="sync-status-line-text">{statusLine}</span>
               </div>
-            ))}
-          </div>
+            )}
+            <div className="sync-status-line sync-status-line--data">
+              <span className="sync-status-line-text">
+                {stats.totalEntries} 条目 · {stats.totalGoals} 目标 · {stats.totalCategories} 分类
+              </span>
+            </div>
+
+            <div className="sync-status-toggle-row sync-status-toggle-row--inline">
+              <div>
+                <div className="settings-row-label">自动同步</div>
+                <div className="settings-row-sub">{autoSyncCaption}</div>
+              </div>
+              <IonToggle
+                checked={autoSyncEnabled}
+                disabled={syncMode === 'disabled'}
+                onIonChange={(event) => setAutoSyncEnabled(event.detail.checked)}
+                aria-label="自动同步开关"
+              />
+            </div>
+
+            <div className="sync-status-actions">
+              <IonButton expand="block" onClick={handleSyncNow} disabled={loading} className="settings-action-button">
+                {loading ? <IonSpinner name="dots" /> : '立即同步'}
+              </IonButton>
+            </div>
+          </>
         )}
       </section>
 
-      <div className="sync-status-actions">
-        <IonButton expand="block" onClick={handleSyncNow} disabled={loading} className="settings-action-button">
-          {loading ? <IonSpinner name="dots" /> : '立即同步'}
-        </IonButton>
-        <p className="settings-button-hint">会按照当前服务模式执行同步；若功能已关闭，将返回配置错误但不会导致页面崩溃。</p>
+      <div className="settings-accordion-wrap">
+        <IonAccordionGroup>
+          <IonAccordion value="sync-details">
+            <IonItem slot="header" lines="none">
+              <IonLabel>详情</IonLabel>
+            </IonItem>
+            <div className="settings-accordion-content" slot="content">
+              {stats && (
+                <div className="settings-stat-list">
+                  <div className="settings-stat-row">
+                    <span className="settings-stat-label">服务模式</span>
+                    <span className="settings-stat-value">{SYNC_MODE_LABEL[syncMode]}</span>
+                  </div>
+                  <div className="settings-stat-row">
+                    <span className="settings-stat-label">设备 ID</span>
+                    <span className="settings-stat-value settings-stat-value-mono">{stats.deviceId.substring(0, 8)}...</span>
+                  </div>
+                  <div className="settings-stat-row">
+                    <span className="settings-stat-label">已同步操作</span>
+                    <span className="settings-stat-value">{stats.syncedOps} 条</span>
+                  </div>
+                  <div className="settings-stat-row">
+                    <span className="settings-stat-label">已删除记录</span>
+                    <span className={`settings-stat-value${totalDeleted > 0 ? ' settings-stat-value-warn' : ''}`}>
+                      {totalDeleted} 条
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {lastResult && (
+                <div className="settings-subsection">
+                  <h4 className="settings-subsection-title">最近一次同步</h4>
+                  <div className="settings-stat-list">
+                    <div className="settings-stat-row">
+                      <span className="settings-stat-label">状态</span>
+                      <span className={`settings-stat-value${lastResult.status === 'error' ? ' settings-stat-value-warn' : ''}`}>
+                        {lastResult.status === 'success' ? '成功' : '失败'}
+                      </span>
+                    </div>
+                    <div className="settings-stat-row">
+                      <span className="settings-stat-label">消息</span>
+                      <span className="settings-stat-value">{lastResult.message}</span>
+                    </div>
+                    <div className="settings-stat-row">
+                      <span className="settings-stat-label">上传</span>
+                      <span className="settings-stat-value">{lastResult.pushedCount ?? 0} 条</span>
+                    </div>
+                    <div className="settings-stat-row">
+                      <span className="settings-stat-label">下载</span>
+                      <span className="settings-stat-value">{lastResult.pulledCount ?? 0} 条</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="settings-subsection">
+                <h4 className="settings-subsection-title">最近错误</h4>
+                {errorHistory.length === 0 ? (
+                  <p className="sync-status-empty">本次会话暂无同步错误。</p>
+                ) : (
+                  <div className="sync-status-log">
+                    {errorHistory.map((entry) => (
+                      <div key={entry.id} className="sync-status-log-item">
+                        <span className="sync-status-log-time">{formatTimestamp(entry.time)}</span>
+                        <span className="sync-status-log-message">{entry.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </IonAccordion>
+        </IonAccordionGroup>
       </div>
 
       <div className="settings-accordion-wrap">
