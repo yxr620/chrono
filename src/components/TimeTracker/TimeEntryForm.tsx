@@ -140,6 +140,8 @@ export const TimeEntryForm: React.FC = () => {
   const [elapsed, setElapsed] = useState('00:00:00');
   const [present] = useAppToast();
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
+  const [memo, setMemo] = useState('');
+  const [memoExpanded, setMemoExpanded] = useState(false);
 
   // 智能预选：追踪用户是否手动选过（手动选过就不再覆盖）
   const userPickedCategoryRef = useRef(false);
@@ -296,6 +298,8 @@ export const TimeEntryForm: React.FC = () => {
     setSelectedCategoryId('');
     setSelectedGoalId(null);
     setEndTime(new Date());
+    setMemo('');
+    setMemoExpanded(false);
     userPickedCategoryRef.current = false;
     userPickedGoalRef.current = false;
     invalidatePredictionCache();
@@ -358,7 +362,8 @@ export const TimeEntryForm: React.FC = () => {
       endTime,
       activity,
       categoryId: selectedCategoryId || null,
-      goalId: selectedGoalId
+      goalId: selectedGoalId,
+      memo: memo.trim() || undefined,
     });
     showToast('记录已保存', 'success');
 
@@ -744,6 +749,62 @@ export const TimeEntryForm: React.FC = () => {
               </>
             );
           })()}
+        </IonCardContent>
+      </IonCard>
+
+      {/* Memo 感想（可选，默认折叠）*/}
+      <IonCard style={getCardStyle(isDark)}>
+        <IonCardContent style={{ padding: memoExpanded ? '12px 16px' : '8px 16px' }}>
+          {memoExpanded ? (
+            <>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '6px',
+                fontSize: '13px',
+                color: isDark ? '#94a3b8' : '#6b7280',
+              }}>
+                <span>💭 感想（可选）</span>
+                <span
+                  onClick={() => setMemoExpanded(false)}
+                  style={{ cursor: 'pointer', fontSize: '18px', lineHeight: 1, padding: '0 4px' }}
+                  aria-label="收起感想"
+                >×</span>
+              </div>
+              <textarea
+                placeholder="想到了什么？"
+                value={memo}
+                onChange={e => setMemo(e.target.value)}
+                rows={2}
+                style={{
+                  width: '100%',
+                  minHeight: '48px',
+                  maxHeight: '160px',
+                  resize: 'vertical',
+                  background: 'transparent',
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: '15px',
+                  fontFamily: 'inherit',
+                  color: isDark ? '#f1f5f9' : '#333',
+                  padding: 0,
+                }}
+              />
+            </>
+          ) : (
+            <span
+              onClick={() => setMemoExpanded(true)}
+              style={{
+                cursor: 'pointer',
+                fontSize: '13px',
+                color: isDark ? '#94a3b8' : '#6b7280',
+                userSelect: 'none',
+              }}
+            >
+              💭 加感想
+            </span>
+          )}
         </IonCardContent>
       </IonCard>
 
