@@ -55,6 +55,7 @@
   border-radius: 6px;
   border: 1px solid var(--ion-color-step-200, #ccc);
   background: var(--ion-card-background, #fff);
+  color: var(--ion-text-color, #1f2937);
   cursor: pointer;
 }
 

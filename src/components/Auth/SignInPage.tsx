@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuthStore } from '../../stores/authStore';
 import './SignInPage.css';
 
@@ -33,7 +34,7 @@ export const SignInPage: React.FC<Props> = ({ onClose, onSuccess }) => {
     }
   };
 
-  return (
+  return createPortal(
     <div className="signin-overlay" onClick={onClose}>
       <form className="signin-modal" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
         <h3>{mode === 'login' ? '登录 Chrono' : '注册 Chrono'}</h3>
@@ -75,6 +76,7 @@ export const SignInPage: React.FC<Props> = ({ onClose, onSuccess }) => {
           </button>
         </p>
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 };
