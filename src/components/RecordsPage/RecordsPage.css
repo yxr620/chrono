@@ -64,30 +64,3 @@
   }
 }
 
-.records-entry-list-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.records-memo-toggle-bar {
-  display: flex;
-  justify-content: flex-end;
-  padding: 4px 12px 0;
-}
-
-.records-memo-toggle {
-  cursor: pointer;
-  font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 12px;
-  background: var(--ion-color-light);
-  color: var(--ion-color-medium);
-  user-select: none;
-  transition: background 0.2s, color 0.2s;
-}
-
-.records-memo-toggle.active {
-  background: var(--ion-color-primary);
-  color: var(--ion-color-primary-contrast);
-}

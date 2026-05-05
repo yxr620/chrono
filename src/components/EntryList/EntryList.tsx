@@ -13,10 +13,9 @@ import './EntryList.css';
 
 interface EntryListProps {
   selectedDate?: Date;
-  memoOnly?: boolean;
 }
 
-export const EntryList: React.FC<EntryListProps> = ({ selectedDate, memoOnly = false }) => {
+export const EntryList: React.FC<EntryListProps> = ({ selectedDate }) => {
   const { entries, loadEntries, deleteEntry, updateEntry, setNextStartTime } = useEntryStore();
   const { goals, loadGoals } = useGoalStore();
   const { loadCategories, getCategoryColor } = useCategoryStore();
@@ -30,24 +29,16 @@ export const EntryList: React.FC<EntryListProps> = ({ selectedDate, memoOnly = f
 
   // 按选定日期筛选记录，保留跨天记录
   const displayEntries = useMemo(() => {
-    let result = entries;
+    if (!selectedDate) return entries;
 
-    if (selectedDate) {
-      const dayStart = dayjs(selectedDate).startOf('day');
-      const dayEnd = dayjs(selectedDate).endOf('day');
-      result = result.filter(entry => {
-        const entryStart = dayjs(entry.startTime);
-        const entryEnd = entry.endTime ? dayjs(entry.endTime) : dayjs();
-        return entryStart.isBefore(dayEnd) && entryEnd.isAfter(dayStart);
-      });
-    }
-
-    if (memoOnly) {
-      result = result.filter(e => !!e.memo && e.memo.trim().length > 0);
-    }
-
-    return result;
-  }, [entries, selectedDate, memoOnly]);
+    const dayStart = dayjs(selectedDate).startOf('day');
+    const dayEnd = dayjs(selectedDate).endOf('day');
+    return entries.filter(entry => {
+      const entryStart = dayjs(entry.startTime);
+      const entryEnd = entry.endTime ? dayjs(entry.endTime) : dayjs();
+      return entryStart.isBefore(dayEnd) && entryEnd.isAfter(dayStart);
+    });
+  }, [entries, selectedDate]);
 
   const formatDuration = (start: Date, end: Date | null) => {
     if (!end) return '进行中';
@@ -73,9 +64,7 @@ export const EntryList: React.FC<EntryListProps> = ({ selectedDate, memoOnly = f
   return (
     <div className="entry-list-container">
       {displayEntries.length === 0 ? (
-        <div className="entry-list-empty">
-          {memoOnly ? '该日期没有带感想的记录' : '暂无记录'}
-        </div>
+        <div className="entry-list-empty">暂无记录</div>
       ) : (
         <IonList>
           {displayEntries.map(entry => (
