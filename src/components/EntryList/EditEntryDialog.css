@@ -210,3 +210,46 @@
   --background: hsl(var(--card));
   color: hsl(var(--foreground));
 }
+
+.edit-dialog-memo-body {
+  padding: 12px 20px;
+}
+
+.edit-dialog-memo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: var(--ion-color-medium);
+}
+
+.edit-dialog-memo-close {
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 4px;
+}
+
+.edit-dialog-memo-textarea {
+  width: 100%;
+  min-height: 48px;
+  max-height: 160px;
+  resize: vertical;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--ion-text-color);
+  padding: 0;
+}
+
+.edit-dialog-memo-toggle {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--ion-color-medium);
+  user-select: none;
+  display: inline-block;
+  padding: 4px 0;
+}

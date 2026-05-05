@@ -45,6 +45,8 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
   const [endTime, setEndTime] = useState<Date | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+  const [memo, setMemo] = useState('');
+  const [memoExpanded, setMemoExpanded] = useState(false);
   const [startPickerVisible, setStartPickerVisible] = useState(false);
   const [endPickerVisible, setEndPickerVisible] = useState(false);
   const [startDraftValue, setStartDraftValue] = useState<Date>(() => new Date());
@@ -71,6 +73,8 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
       setEndTime(entry.endTime ? (entry.endTime instanceof Date ? entry.endTime : new Date(entry.endTime)) : null);
       setSelectedCategoryId(entry.categoryId || '');
       setSelectedGoalId(entry.goalId || null);
+      setMemo(entry.memo || '');
+      setMemoExpanded(!!entry.memo);
     }
   }, [entry]);
 
@@ -121,7 +125,8 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
       startTime,
       endTime,
       categoryId: selectedCategoryId || null,
-      goalId: selectedGoalId
+      goalId: selectedGoalId,
+      memo: memo.trim() || undefined,
     });
 
     onClose();
@@ -294,6 +299,38 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Memo 感想（可选）*/}
+            <IonCard className="edit-dialog-card">
+              <IonCardContent className="edit-dialog-memo-body">
+                {memoExpanded ? (
+                  <>
+                    <div className="edit-dialog-memo-header">
+                      <span>💭 感想（可选）</span>
+                      <span
+                        onClick={() => setMemoExpanded(false)}
+                        className="edit-dialog-memo-close"
+                        aria-label="收起感想"
+                      >×</span>
+                    </div>
+                    <textarea
+                      placeholder="想到了什么？"
+                      value={memo}
+                      onChange={e => setMemo(e.target.value)}
+                      rows={2}
+                      className="edit-dialog-memo-textarea"
+                    />
+                  </>
+                ) : (
+                  <span
+                    onClick={() => setMemoExpanded(true)}
+                    className="edit-dialog-memo-toggle"
+                  >
+                    💭 加感想
+                  </span>
+                )}
+              </IonCardContent>
+            </IonCard>
           </div>
 
           {/* 底部按钮 */}
