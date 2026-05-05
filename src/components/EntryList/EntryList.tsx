@@ -13,9 +13,10 @@ import './EntryList.css';
 
 interface EntryListProps {
   selectedDate?: Date;
+  memoOnly?: boolean;
 }
 
-export const EntryList: React.FC<EntryListProps> = ({ selectedDate }) => {
+export const EntryList: React.FC<EntryListProps> = ({ selectedDate, memoOnly = false }) => {
   const { entries, loadEntries, deleteEntry, updateEntry, setNextStartTime } = useEntryStore();
   const { goals, loadGoals } = useGoalStore();
   const { loadCategories, getCategoryColor } = useCategoryStore();
@@ -29,22 +30,24 @@ export const EntryList: React.FC<EntryListProps> = ({ selectedDate }) => {
 
   // 按选定日期筛选记录，保留跨天记录
   const displayEntries = useMemo(() => {
-    if (!selectedDate) {
-      return entries;
+    let result = entries;
+
+    if (selectedDate) {
+      const dayStart = dayjs(selectedDate).startOf('day');
+      const dayEnd = dayjs(selectedDate).endOf('day');
+      result = result.filter(entry => {
+        const entryStart = dayjs(entry.startTime);
+        const entryEnd = entry.endTime ? dayjs(entry.endTime) : dayjs();
+        return entryStart.isBefore(dayEnd) && entryEnd.isAfter(dayStart);
+      });
     }
 
-    // 获取选定日期的开始和结束时间
-    const dayStart = dayjs(selectedDate).startOf('day');
-    const dayEnd = dayjs(selectedDate).endOf('day');
+    if (memoOnly) {
+      result = result.filter(e => !!e.memo && e.memo.trim().length > 0);
+    }
 
-    // 只显示选定日期的记录（包括跨天的记录）
-    return entries.filter(entry => {
-      const entryStart = dayjs(entry.startTime);
-      const entryEnd = entry.endTime ? dayjs(entry.endTime) : dayjs();
-
-      return entryStart.isBefore(dayEnd) && entryEnd.isAfter(dayStart);
-    });
-  }, [entries, selectedDate]);
+    return result;
+  }, [entries, selectedDate, memoOnly]);
 
   const formatDuration = (start: Date, end: Date | null) => {
     if (!end) return '进行中';
@@ -71,7 +74,7 @@ export const EntryList: React.FC<EntryListProps> = ({ selectedDate }) => {
     <div className="entry-list-container">
       {displayEntries.length === 0 ? (
         <div className="entry-list-empty">
-          暂无记录
+          {memoOnly ? '该日期没有带感想的记录' : '暂无记录'}
         </div>
       ) : (
         <IonList>

@@ -13,6 +13,7 @@ export const RecordsPage: React.FC = () => {
   const selectedDate = useMemo(() => dayjs(selectedDateStr).toDate(), [selectedDateStr]);
 
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
+  const [memoOnly, setMemoOnly] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
@@ -37,7 +38,19 @@ export const RecordsPage: React.FC = () => {
           </div>
           <div className="records-col-right">
             <div className="records-section">
-              <EntryList selectedDate={selectedDate} />
+              <div className="records-entry-list-wrap">
+                <div className="records-memo-toggle-bar">
+                  <span
+                    onClick={() => setMemoOnly(v => !v)}
+                    className={`records-memo-toggle ${memoOnly ? 'active' : ''}`}
+                    role="button"
+                    aria-pressed={memoOnly}
+                  >
+                    💭 {memoOnly ? '仅看感想 ✓' : '仅看感想'}
+                  </span>
+                </div>
+                <EntryList selectedDate={selectedDate} memoOnly={memoOnly} />
+              </div>
             </div>
           </div>
         </div>
@@ -59,7 +72,19 @@ export const RecordsPage: React.FC = () => {
 
       {/* 当日记录列表 */}
       <div className="records-section">
-        <EntryList selectedDate={selectedDate} />
+        <div className="records-entry-list-wrap">
+          <div className="records-memo-toggle-bar">
+            <span
+              onClick={() => setMemoOnly(v => !v)}
+              className={`records-memo-toggle ${memoOnly ? 'active' : ''}`}
+              role="button"
+              aria-pressed={memoOnly}
+            >
+              💭 {memoOnly ? '仅看感想 ✓' : '仅看感想'}
+            </span>
+          </div>
+          <EntryList selectedDate={selectedDate} memoOnly={memoOnly} />
+        </div>
       </div>
     </div>
   );
