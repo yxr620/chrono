@@ -109,9 +109,27 @@ export const EntryList: React.FC<EntryListProps> = ({ selectedDate }) => {
                   className="entry-color-dot"
                   style={{ backgroundColor: getCategoryColor(entry.categoryId) }}
                 />
-                <span className="entry-item-title">
-                  {entry.activity}
-                </span>
+                <div className="entry-item-content">
+                  <span className="entry-item-title">
+                    {entry.activity}
+                  </span>
+                  {entry.memo && (
+                    <span
+                      className="entry-item-memo"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigator.clipboard?.writeText(entry.memo!);
+                      }}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        navigator.clipboard?.writeText(entry.memo!);
+                      }}
+                      title="点击/右键复制"
+                    >
+                      💭 {entry.memo}
+                    </span>
+                  )}
+                </div>
                 <div className="entry-item-meta">
                   {getGoalName(entry.goalId) && (
                     <span className="entry-goal-badge">
