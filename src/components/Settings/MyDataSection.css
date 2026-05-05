@@ -1,4 +1,4 @@
-.my-data { padding: 12px; }
+.my-data { padding: 0; }
 .my-data__hint { color: var(--ion-color-medium); }
 .my-data__error { color: var(--ion-color-danger); }
 .my-data__row {
@@ -25,7 +25,6 @@
   color: var(--ion-color-warning-contrast);
   font-size: 11px;
 }
-.my-data__danger { color: var(--ion-color-danger); margin-top: 24px; }
 .my-data__danger-btn {
   background: var(--ion-color-danger);
   color: #fff;

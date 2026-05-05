@@ -135,7 +135,7 @@ OSS Bucket/
             └── {deviceId2}.json
 ```
 
-    在 Managed 模式下，这里的 `{userId}` 是 Chrono 账号的 user id；后续 Plan 5 的用户数据管理平面也将基于这一前缀枚举设备和统计存储量。
+    在 Managed 模式下，这里的 `{userId}` 是 Chrono 账号的 user id。后端的「我的数据」管理面（`/me/devices`、`/me/storage`、`/me/account`）按这一前缀枚举设备、统计存储量并支持按设备或整账号清理。客户端入口在「维护 → 我的数据」（仅登录后可见）。
 
 ### Oplog 文件格式
 

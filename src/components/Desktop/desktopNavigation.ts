@@ -2,13 +2,12 @@ import {
   barChartOutline,
   checkmarkDoneOutline,
   constructOutline,
-  serverOutline,
   settingsOutline,
   sparklesOutline,
 } from 'ionicons/icons';
 import recordsIcon from '../../assets/recordsIcon.png';
 
-export type DesktopPrimaryTab = 'dashboard' | 'records' | 'goals' | 'ai' | 'maintenance' | 'services' | 'export';
+export type DesktopPrimaryTab = 'dashboard' | 'records' | 'goals' | 'ai' | 'maintenance' | 'export';
 export type DesktopTab = DesktopPrimaryTab | 'trend' | 'goalAnalysis';
 export type DesktopShellTheme = 'analysis' | 'records' | 'goals' | 'utility';
 
@@ -65,19 +64,11 @@ export const DESKTOP_NAV_ITEMS: DesktopNavItem[] = [
     theme: 'utility',
   },
   {
-    key: 'services',
-    label: '服务',
-    icon: serverOutline,
-    tabs: ['services'],
-    description: '管理同步、AI 助手等服务的开关与凭据。',
-    theme: 'utility',
-  },
-  {
     key: 'export',
     label: '设置',
     icon: settingsOutline,
     tabs: ['export'],
-    description: '导出数据和桌面设置入口。',
+    description: '账号、同步、AI、备份等所有设置。',
     theme: 'utility',
   },
 ];

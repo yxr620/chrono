@@ -284,3 +284,125 @@
   padding-top: 12px;
   border-top: 1px solid hsl(var(--border));
 }
+
+/* ─── Service sections (sync mode picker, AI mode picker) ─── */
+
+.service-section {
+  border: 1px solid var(--ion-color-step-150, #e0e0e0);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: var(--ion-card-background, #fff);
+}
+.service-section__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.service-section__icon { font-size: 20px; }
+.service-section__title { font-size: 16px; font-weight: 600; }
+.service-section__radios { display: flex; flex-direction: column; gap: 4px; }
+.service-section__byo-form {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--ion-color-step-150, #e0e0e0);
+}
+
+.service-form__hint {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: hsl(var(--muted-foreground));
+}
+.service-form__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.service-form__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 999px;
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.service-form__chip--active {
+  border-color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.08);
+  color: hsl(var(--primary));
+}
+.service-form__chip-remove {
+  color: hsl(var(--muted-foreground));
+  font-size: 11px;
+}
+.service-form__chip-remove:hover {
+  color: hsl(var(--destructive));
+}
+.service-form__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.service-form__actions .settings-input-field {
+  flex: 1;
+}
+.service-form__button {
+  border: 1px solid hsl(var(--primary) / 0.2);
+  border-radius: 10px;
+  background: hsl(var(--primary) / 0.08);
+  color: hsl(var(--primary));
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.service-form__button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.service-form__button:hover:not(:disabled) {
+  background: hsl(var(--primary) / 0.14);
+}
+@media (max-width: 640px) {
+  .service-form__actions {
+    flex-direction: column;
+  }
+}
+
+/* ─── Account card ─── */
+
+.settings-account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.settings-account-row__email {
+  font-size: 14px;
+  color: hsl(var(--foreground));
+  word-break: break-all;
+}
+.settings-account-row__btn {
+  padding: 6px 14px;
+  font-size: 13px;
+  border-radius: 8px;
+  border: 1px solid hsl(var(--border));
+  background: transparent;
+  color: hsl(var(--foreground));
+  cursor: pointer;
+}
+.settings-account-row__btn:hover {
+  background: hsl(var(--muted));
+}
+.settings-account-row__btn--primary {
+  border-color: hsl(var(--primary));
+  color: hsl(var(--primary));
+}

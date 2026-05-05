@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { IonItem, IonLabel, IonRadio, IonRadioGroup } from '@ionic/react';
 import { useFeatureModeStore } from '../../stores/featureModeStore';
 import type { FeatureMode } from '../../services/gateway/types';
 import { AiProviderForm } from './AiProviderForm';
-import { SignInPage } from '../Auth/SignInPage';
 import { useAuthStore } from '../../stores/authStore';
 import { authService } from '../../services/authService';
 
@@ -13,18 +12,21 @@ const AI_OPTIONS: Array<{ mode: FeatureMode; label: string; hint: string }> = [
   { mode: 'managed',  label: '使用 Chrono 托管 AI',         hint: '需要登录 Chrono 账号' },
 ];
 
-export const AiServiceSection: React.FC = () => {
+interface Props {
+  onRequestSignIn: () => void;
+}
+
+export const AiServiceSection: React.FC<Props> = ({ onRequestSignIn }) => {
   const mode = useFeatureModeStore((s) => s.modes.ai);
   const setMode = useFeatureModeStore((s) => s.setMode);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const [showSignIn, setShowSignIn] = useState(false);
 
   const managedAvailable = !!import.meta.env.VITE_AUTH_API_URL;
 
   const switchToManagedIfAllowed = async () => {
     const token = useAuthStore.getState().token;
     if (!token) {
-      setShowSignIn(true);
+      onRequestSignIn();
       return;
     }
     try {
@@ -43,7 +45,7 @@ export const AiServiceSection: React.FC = () => {
   const handleSelect = (next: FeatureMode) => {
     if (next === 'managed') {
       if (!isAuthenticated) {
-        setShowSignIn(true);
+        onRequestSignIn();
         return;
       }
       void switchToManagedIfAllowed();
@@ -83,15 +85,6 @@ export const AiServiceSection: React.FC = () => {
         <div className="service-section__byo-form">
           <AiProviderForm />
         </div>
-      )}
-
-      {showSignIn && (
-        <SignInPage
-          onClose={() => setShowSignIn(false)}
-          onSuccess={() => {
-            void switchToManagedIfAllowed();
-          }}
-        />
       )}
     </section>
   );

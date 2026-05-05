@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { IonRadioGroup, IonRadio, IonItem, IonLabel } from '@ionic/react';
 import { useFeatureModeStore } from '../../stores/featureModeStore';
 import type { FeatureMode } from '../../services/gateway/types';
 import { OssCredentialsForm } from './OssCredentialsForm';
-import { SignInPage } from '../Auth/SignInPage';
 import { useAuthStore } from '../../stores/authStore';
 import { authService } from '../../services/authService';
 
@@ -13,18 +12,21 @@ const SYNC_OPTIONS: Array<{ mode: FeatureMode; label: string; hint: string }> = 
   { mode: 'managed',  label: '使用 Chrono 托管同步',     hint: '需要登录 Chrono 账号' },
 ];
 
-export const SyncServiceSection: React.FC = () => {
+interface Props {
+  onRequestSignIn: () => void;
+}
+
+export const SyncServiceSection: React.FC<Props> = ({ onRequestSignIn }) => {
   const mode = useFeatureModeStore((s) => s.modes.sync);
   const setMode = useFeatureModeStore((s) => s.setMode);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const [showSignIn, setShowSignIn] = useState(false);
 
   const managedAvailable = !!import.meta.env.VITE_AUTH_API_URL;
 
   const switchToManagedIfAllowed = async () => {
     const token = useAuthStore.getState().token;
     if (!token) {
-      setShowSignIn(true);
+      onRequestSignIn();
       return;
     }
     try {
@@ -43,7 +45,7 @@ export const SyncServiceSection: React.FC = () => {
   const handleSelect = (next: FeatureMode) => {
     if (next === 'managed') {
       if (!isAuthenticated) {
-        setShowSignIn(true);
+        onRequestSignIn();
         return;
       }
       void switchToManagedIfAllowed();
@@ -83,15 +85,6 @@ export const SyncServiceSection: React.FC = () => {
         <div className="service-section__byo-form">
           <OssCredentialsForm />
         </div>
-      )}
-
-      {showSignIn && (
-        <SignInPage
-          onClose={() => setShowSignIn(false)}
-          onSuccess={() => {
-            void switchToManagedIfAllowed();
-          }}
-        />
       )}
     </section>
   );

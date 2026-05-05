@@ -14,7 +14,7 @@ export const AISettings: React.FC<AISettingsProps> = ({ onClose }) => {
   };
 
   const handleOpenServices = () => {
-    navigateToTab('services');
+    navigateToTab('export');
     onClose();
   };
 
@@ -30,11 +30,11 @@ export const AISettings: React.FC<AISettingsProps> = ({ onClose }) => {
 
         <div className="ai-field">
           <label className="ai-field-label">服务商凭据</label>
-          <div className="ai-field-hint">供应商凭据现在统一在「服务」页面配置，这里仅保留偏好说明入口。</div>
+          <div className="ai-field-hint">供应商凭据现在统一在「设置」页面配置，这里仅保留偏好说明入口。</div>
         </div>
 
         <button className="ai-save-btn" onClick={handleOpenServices}>
-          打开服务页面
+          打开设置
         </button>
       </div>
     </div>

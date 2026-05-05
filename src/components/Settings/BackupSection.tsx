@@ -1,25 +1,19 @@
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
 import {
   IonButton,
-  IonSpinner,
-  useIonAlert,
-  IonToggle,
   IonCard,
   IonCardContent,
+  IonSpinner,
+  useIonAlert,
 } from '@ionic/react';
-import { SyncManagementPage } from '../SyncManagementPage/SyncManagementPage';
-import { navigateToTab } from '../../services/appNavigation';
 import { exportFullJSON, exportIncrementalJSON, importFromJSON, ImportStrategy } from '../../services/export';
 import { db } from '../../services/db';
 import { useEntryStore } from '../../stores/entryStore';
 import { useGoalStore } from '../../stores/goalStore';
 import { useCategoryStore } from '../../stores/categoryStore';
 import { useAppToast } from '../../hooks/useAppToast';
-import { useDarkMode } from '../../hooks/useDarkMode';
-import './ExportPage.css';
 
-export const ExportPage: React.FC = () => {
-  const { isDark, setDark } = useDarkMode();
+export const BackupSection: React.FC = () => {
   const [importStrategy, setImportStrategy] = useState<typeof ImportStrategy.MERGE | typeof ImportStrategy.REPLACE>(ImportStrategy.MERGE);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [presentToast, dismissToast] = useAppToast();
@@ -127,7 +121,6 @@ export const ExportPage: React.FC = () => {
     });
   };
 
-  /** 导入完成后通过 store 刷新数据，避免 window.location.reload() */
   const refreshAllStores = async () => {
     await Promise.all([
       loadEntries(),
@@ -198,102 +191,63 @@ ${result.details.errors.length > 0 ? `\n⚠️ ${result.details.errors.length} �
   };
 
   return (
-    <div className={`settings-page${isDark ? ' settings-page-dark' : ''}`}>
-      <IonCard className="settings-card">
-        <IonCardContent className="settings-card-content">
-          <h3 className="settings-card-title">通用设置</h3>
-          <div className="settings-row">
-            <div className="settings-row-text">
-              <div className="settings-row-label">深色模式</div>
-              <div className="settings-row-sub">切换应用主题外观</div>
-            </div>
-            <IonToggle checked={isDark} onIonChange={(e) => setDark(e.detail.checked)} />
-          </div>
-        </IonCardContent>
-      </IonCard>
+    <IonCard className="settings-card">
+      <IonCardContent className="settings-card-content">
+        <h3 className="settings-card-title">数据备份</h3>
+        <div className="settings-button-stack">
+          <IonButton
+            expand="block"
+            color="success"
+            onClick={handleImportClick}
+            disabled={isLoading}
+            className="settings-action-button"
+          >
+            {isLoading ? <IonSpinner name="dots" /> : '📥 导入数据'}
+          </IonButton>
+          <p className="settings-button-hint">从之前导出的 JSON 文件中恢复数据</p>
 
-      <IonCard className="settings-card">
-        <IonCardContent className="settings-card-content">
-          <h3 className="settings-card-title">服务</h3>
-          <div className="settings-button-stack">
-            <IonButton
-              expand="block"
-              fill="outline"
-              onClick={() => navigateToTab('services')}
-              className="settings-action-button"
-            >
-              打开服务页面
-            </IonButton>
-            <p className="settings-button-hint">统一配置多设备同步与 AI 助手的 Off / BYO / Managed 模式。</p>
-          </div>
-        </IonCardContent>
-      </IonCard>
+          <IonButton
+            expand="block"
+            color="primary"
+            onClick={handleExportIncrementalJSON}
+            disabled={isLoading}
+            className="settings-action-button"
+          >
+            {isLoading ? <IonSpinner name="dots" /> : '📤 增量导出（推荐）'}
+          </IonButton>
+          <p className="settings-button-hint">只导出自上次同步后的新数据</p>
 
-      <IonCard className="settings-card">
-        <IonCardContent className="settings-card-content">
-          <h3 className="settings-card-title">云端同步</h3>
-          <SyncManagementPage />
-        </IonCardContent>
-      </IonCard>
+          <IonButton
+            expand="block"
+            fill="outline"
+            onClick={handleExportFullJSON}
+            disabled={isLoading}
+            className="settings-action-button"
+          >
+            {isLoading ? <IonSpinner name="dots" /> : '📦 全量导出'}
+          </IonButton>
+          <p className="settings-button-hint">导出所有记录和目标数据</p>
 
-      <IonCard className="settings-card">
-        <IonCardContent className="settings-card-content">
-          <h3 className="settings-card-title">数据备份</h3>
-          <div className="settings-button-stack">
-            <IonButton
-              expand="block"
-              color="success"
-              onClick={handleImportClick}
-              disabled={isLoading}
-              className="settings-action-button"
-            >
-              {isLoading ? <IonSpinner name="dots" /> : '📥 导入数据'}
-            </IonButton>
-            <p className="settings-button-hint">从之前导出的 JSON 文件中恢复数据</p>
+          <IonButton
+            expand="block"
+            fill="clear"
+            color="medium"
+            onClick={handleCopyJSON}
+            disabled={isLoading}
+            className="settings-action-button settings-action-button-link"
+          >
+            📋 复制 JSON 到剪贴板
+          </IonButton>
+        </div>
 
-            <IonButton
-              expand="block"
-              color="primary"
-              onClick={handleExportIncrementalJSON}
-              disabled={isLoading}
-              className="settings-action-button"
-            >
-              {isLoading ? <IonSpinner name="dots" /> : '📤 增量导出（推荐）'}
-            </IonButton>
-            <p className="settings-button-hint">只导出自上次同步后的新数据</p>
-
-            <IonButton
-              expand="block"
-              fill="outline"
-              onClick={handleExportFullJSON}
-              disabled={isLoading}
-              className="settings-action-button"
-            >
-              {isLoading ? <IonSpinner name="dots" /> : '📦 全量导出'}
-            </IonButton>
-            <p className="settings-button-hint">导出所有记录和目标数据</p>
-
-            <IonButton
-              expand="block"
-              fill="clear"
-              color="medium"
-              onClick={handleCopyJSON}
-              disabled={isLoading}
-              className="settings-action-button settings-action-button-link"
-            >
-              📋 复制 JSON 到剪贴板
-            </IonButton>
-          </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            style={{ display: 'none' }}
-            onChange={handleFileChange}
-          />
-        </IonCardContent>
-      </IonCard>
-    </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          style={{ display: 'none' }}
+          onChange={handleFileChange}
+        />
+      </IonCardContent>
+    </IonCard>
   );
 };

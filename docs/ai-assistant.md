@@ -2,9 +2,20 @@
 
 AI 助手是**仅桌面端**的功能，通过自然语言查询本地时间数据。
 
-## 配置
+## 两种模式
 
-通过 `.env` 文件或应用内设置（ExportPage → AI 设置）配置：
+在「服务」页选择：
+
+| 模式 | 凭据来源 | 适用 |
+|---|---|---|
+| **BYO**（自带） | 用户在应用内填入 LLM API Key | 自部署 / 不愿登录 |
+| **Managed**（托管） | 登录 Chrono 后端，由后端代理 `/v1/chat/completions` | 需要 `VITE_AUTH_API_URL` 与白名单 |
+
+模式存在 `localStorage.chrono_feature_modes`。两种模式都走同一份 OpenAI 兼容协议，`toolCallEngine` / `chatStream` 对模式无感——这是 `gateway/managedGateway.ts` 把 `baseURL` 切到 `<FC>/v1` 并把 `apiKey` 换成 JWT 的结果。
+
+## BYO 配置
+
+通过 `.env` 文件或应用内设置（ExportPage → AI 设置 / 服务页）配置：
 
 ```env
 VITE_AI_PROVIDER_ID=qwen
@@ -13,7 +24,17 @@ VITE_AI_API_KEY=sk-...
 VITE_AI_MODEL=qwen3.6-max-preview
 ```
 
-所有 Provider 均使用 OpenAI 兼容的 `/v1/chat/completions` 协议。阿里云百炼在北京地域的兼容入口仍然是 `https://dashscope.aliyuncs.com/compatible-mode/v1`；如果使用新加坡或美国地域，请改成对应的 regional endpoint。
+所有 Provider 均使用 OpenAI 兼容的 `/v1/chat/completions` 协议。阿里云百炼在北京地域的兼容入口是 `https://dashscope.aliyuncs.com/compatible-mode/v1`；新加坡或美国地域请改成对应的 regional endpoint。
+
+## Managed 配置
+
+只需要前端 `.env` 设置 `VITE_AUTH_API_URL=https://chrono-api.fcv3.<region>.fcapp.run`，剩下都在后端：
+
+- FC 环境变量：`AI_API_KEY`、`AI_BASE_URL`、`AI_MODEL`、`ALLOWED_AI_EMAILS`
+- 用户在「服务」页选 Managed → 触发登录弹窗 → 后端检查 `/me/features.ai` 是否在白名单
+- 后端默认采用**缓冲式中继**（buffer-then-relay）；如需真流式，参见 `docs/superpowers/plans/2026-05-01-managed-services-6-managed-ai.md` 的 Task 4
+
+后端实现：`server/src/features/ai.ts`（路径 `POST /v1/chat/completions`）。运维操作：`server/RUNBOOK.md`。
 
 ## 支持的 LLM Provider
 

@@ -84,7 +84,9 @@ src/
 │   ├── categoryStore.ts       # 分类（6 个预设 + 自定义类别 CRUD）
 │   ├── dateStore.ts           # 全局选中日期
 │   ├── syncStore.ts           # 同步状态 + 自动同步开关
-│   └── aiStore.ts             # AI 配置 + 对话历史
+│   ├── aiStore.ts             # AI 配置 + 对话历史
+│   ├── authStore.ts           # Managed 模式登录态、JWT
+│   └── featureModeStore.ts    # 每个付费功能的模式（off / byo / managed）
 │
 ├── services/                  # 数据层与业务逻辑
 │   ├── db.ts                  # Dexie Schema、Syncable 接口、辅助函数
@@ -99,6 +101,9 @@ src/
 │   ├── goalSuggester.ts       # 晨间目标智能建议（未完成 + 高频目标，Top 5）
 │   ├── metadataPredictor.ts   # 录入时自动预测类别和目标（精确/子串匹配，纯本地）
 │   ├── autoPush.ts            # 数据变更后自动触发增量 Push（封装 sync 协调逻辑）
+│   ├── authService.ts         # Managed 模式 HTTP 客户端（注册/登录/STS/AI 代理）
+│   ├── userDataService.ts     # 设备/存储/账号管理 API 客户端
+│   ├── gateway/               # PaidFeatureGateway 抽象（BYO ↔ Managed 路由）
 │   ├── ai/                    # AI 助手（见 ai-assistant.md）
 │   └── analysis/              # 数据分析处理器
 │       ├── processor.ts       # 数据加载 + 转换管道
@@ -118,6 +123,9 @@ src/
 │   ├── MaintenancePage/       # 数据维护（睡觉补录 + 数据校验）
 │   ├── ExportPage/            # 导出 / 设置
 │   ├── SyncManagementPage/    # 同步管理界面
+│   ├── Settings/              # 「服务」页（ServicesPage + OSS/AI 凭据子表单）
+│   ├── Auth/                  # SignInPage（Managed 模式登录弹窗）
+│   ├── Migration/             # 一次性 BYO → Managed 迁移弹窗
 │   ├── Desktop/               # DesktopSidebar
 │   ├── SyncButton/            # SyncButton（手动同步按钮，桌面/导出页）
 │   └── common/                # SyncIndicator、SyncToastListener、WheelTimePicker
@@ -136,23 +144,48 @@ src/
 
 ## 环境变量
 
-复制 `.env.example` 为 `.env.local`，OSS 和 AI 配置均为可选：
+复制 `.env.example` 为 `.env.local`，所有变量均可选：
 
 ```env
-# 同步（可选）
+# Managed Services（推荐）—— 配置后启用「服务」页的 Managed 模式
+VITE_AUTH_API_URL=
+
+# BYO（可选）—— 用户自带凭据
 VITE_OSS_REGION=oss-cn-hangzhou
 VITE_OSS_BUCKET=your-bucket-name
 VITE_OSS_ACCESS_KEY_ID=your-access-key-id
 VITE_OSS_ACCESS_KEY_SECRET=your-access-key-secret
 
-# AI 助手（可选）
-VITE_AI_PROVIDER=qwen
-VITE_AI_BASE_URL=https://...
+VITE_AI_PROVIDER_ID=qwen
+VITE_AI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 VITE_AI_API_KEY=your-api-key
 VITE_AI_MODEL=qwen3.6-max-preview
 ```
 
 > **优先级**：应用内配置（localStorage）> .env 环境变量。两项均未配置时，对应功能不可用，但应用正常运行。
+
+## Managed Services（可选托管模式）
+
+如果设置了 `VITE_AUTH_API_URL`，应用会在「服务」页提供 **Managed 模式**：用户用邮箱密码登录，由 Chrono 后端（Aliyun Function Compute）签发 OSS STS token、代理 LLM 调用，不再需要把 AccessKey / API Key 存在 localStorage。BYO 模式始终保留。
+
+- **每功能独立模式**：`sync` 和 `ai` 各自可选 `disabled` / `byo` / `managed`，存在 `localStorage.chrono_feature_modes`
+- **路由**：`src/services/gateway/`（`CompositeGateway` → `ByoGateway` 或 `ManagedGateway`），上层调用方对模式无感
+- **登录态**：`authStore` 持久化 JWT 与当前用户；7 天过期自动清理
+- **首次启动**：`MigrationPrompt`（在 `App.tsx` 挂载）会向已有 BYO 凭据的用户提示一键切换；切换后 BYO 凭据从 localStorage 清空
+- **设备/存储/账号管理**：登录后在「维护 → 我的数据」中查看
+- **后端代码**：`server/`（FC HTTP trigger，TypeScript Node 18），部署见 `server/RUNBOOK.md`
+- **完整设计**：`docs/superpowers/specs/2026-04-21-managed-services.md`
+
+### 关键 localStorage 键
+
+| Key | 内容 |
+|---|---|
+| `chrono_feature_modes` | 每个付费功能的模式（off/byo/managed） |
+| `auth_token` / `auth_user` | Managed 登录态 |
+| `chrono_migration_seen` | 迁移弹窗已展示标记 |
+| `ossConfig` | BYO OSS 凭据 |
+| `ai-config` | BYO AI 凭据 |
+| `autoSyncEnabled` | 自动同步开关 |
 
 ## 开发命令
 

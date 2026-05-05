@@ -10,9 +10,8 @@ import { RecordsPage } from './components/RecordsPage/RecordsPage';
 import { Dashboard } from './components/Dashboard/Dashboard';
 import { TrendPage } from './components/TrendPage/TrendPage';
 import { GoalAnalysisPage } from './components/GoalAnalysisPage/GoalAnalysisPage';
-import { ExportPage } from './components/ExportPage/ExportPage';
+import { SettingsPage } from './components/Settings/SettingsPage';
 import { MaintenancePage } from './components/MaintenancePage/MaintenancePage';
-import { ServicesPage } from './components/Settings/ServicesPage';
 import { AIAssistant } from './components/AIAssistant/AIAssistant';
 import recordsIcon from './assets/recordsIcon.png';
 import { GoalManager } from './components/GoalManager/GoalManager';
@@ -348,10 +347,8 @@ function App() {
         return <AIAssistant />;
       case 'maintenance':
         return <MaintenancePage />;
-      case 'services':
-        return <ServicesPage />;
       case 'export':
-        return <ExportPage />;
+        return <SettingsPage />;
       default:
         return null;
     }
