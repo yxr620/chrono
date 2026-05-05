@@ -27,7 +27,7 @@
 
 .settings-card-title {
   margin: 0 0 14px 0;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   color: hsl(var(--foreground));
 }
@@ -54,12 +54,12 @@
 
 .settings-row-label {
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 500;
   color: hsl(var(--foreground));
 }
 
 .settings-row-sub {
-  font-size: 12px;
+  font-size: 13px;
   color: hsl(var(--muted-foreground));
   margin-top: 4px;
   line-height: 1.4;
@@ -82,7 +82,7 @@
 }
 
 .settings-button-hint {
-  font-size: 12px;
+  font-size: 13px;
   color: hsl(var(--muted-foreground));
   padding-left: 8px;
   margin: 6px 0 12px 0;
@@ -109,8 +109,8 @@
 }
 
 .settings-subsection-title {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 600;
   color: hsl(var(--foreground));
   margin: 0 0 10px 0;
 }
@@ -131,8 +131,8 @@
 }
 
 .settings-input-label {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 400;
   color: hsl(var(--muted-foreground));
   display: block;
   margin-bottom: 4px;
@@ -159,11 +159,14 @@
 /* ─── Banners (config-source notices) ─── */
 
 .settings-banner {
-  font-size: 12px;
+  font-size: 13px;
   padding: 8px 12px;
   border-radius: 10px;
   margin-bottom: 10px;
   line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .settings-banner-info {
@@ -195,7 +198,7 @@
   align-items: center;
   padding: 8px 0;
   border-bottom: 1px solid hsl(var(--border));
-  font-size: 13px;
+  font-size: 15px;
   gap: 12px;
 }
 
@@ -205,6 +208,8 @@
 
 .settings-stat-label {
   color: hsl(var(--muted-foreground));
+  font-size: 13px;
+  font-weight: 400;
   flex-shrink: 0;
 }
 
@@ -226,7 +231,7 @@
 
 .settings-stat-value-mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* ─── Accordion overrides ─── */
@@ -252,7 +257,7 @@
 }
 
 .settings-accordion-wrap ion-accordion ion-item[slot='header'] ion-label {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: hsl(var(--foreground));
 }
@@ -300,9 +305,34 @@
   gap: 8px;
   margin-bottom: 12px;
 }
-.service-section__icon { font-size: 20px; }
-.service-section__title { font-size: 16px; font-weight: 600; }
-.service-section__radios { display: flex; flex-direction: column; gap: 4px; }
+.service-section__icon {
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  color: hsl(var(--foreground));
+}
+.service-section__title {
+  font-size: 17px;
+  font-weight: 700;
+}
+.service-section__radios {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.service-section__radios ion-label h3 {
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.service-section__radios ion-label p {
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  color: hsl(var(--muted-foreground)) !important;
+}
+
 .service-section__byo-form {
   margin-top: 12px;
   padding-top: 12px;
@@ -311,7 +341,7 @@
 
 .service-form__hint {
   margin-top: 6px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.4;
   color: hsl(var(--muted-foreground));
 }
@@ -386,7 +416,7 @@
   gap: 12px;
 }
 .settings-account-row__email {
-  font-size: 14px;
+  font-size: 15px;
   color: hsl(var(--foreground));
   word-break: break-all;
 }
