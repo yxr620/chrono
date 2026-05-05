@@ -14,6 +14,7 @@ export interface TimeEntry extends Syncable {
   startTime: Date;
   endTime: Date | null;
   activity: string;
+  memo?: string;                  // 可选感想/备注，与 activity 分离
   categoryId: string | null;  // 活动类别（可选，兼容旧数据）
   goalId: string | null;
   customFields?: Record<string, any>;
@@ -222,6 +223,15 @@ export class TimeTrackerDB extends Dexie {
           await tx.table('goals').update(goal.id!, { type: 'time' as const });
         }
       }
+    });
+
+    // memo 字段：纯增字段，无需回填——旧 entry 读出来 memo === undefined 即可
+    this.version(7).stores({
+      entries: 'id, startTime, endTime, activity, categoryId, goalId, createdAt',
+      goals: 'id, name, date, createdAt',
+      categories: 'id, name, order',
+      syncMetadata: 'key, updatedAt',
+      syncOperations: 'id, timestamp, deviceId, tableName, synced'
     });
   }
 }
