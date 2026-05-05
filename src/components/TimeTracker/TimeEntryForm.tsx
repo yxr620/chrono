@@ -10,7 +10,7 @@ import {
   IonModal
 } from '@ionic/react';
 import { Capacitor } from '@capacitor/core';
-import { playOutline, stopOutline, saveOutline, chatbubbleOutline, chatbubbleEllipsesOutline, pricetagOutline, flagOutline, refreshOutline } from 'ionicons/icons';
+import { playOutline, stopOutline, saveOutline, chatbubbleEllipsesOutline, documentTextOutline, pricetagOutline, flagOutline, refreshOutline } from 'ionicons/icons';
 import { useEntryStore } from '../../stores/entryStore';
 import { useGoalStore } from '../../stores/goalStore';
 import { useCategoryStore } from '../../stores/categoryStore';
@@ -552,12 +552,12 @@ export const TimeEntryForm: React.FC = () => {
             style={{ '--background': 'transparent', '--padding-start': '20px', '--padding-end': '12px' }}
           >
             <IonIcon
-              icon={chatbubbleOutline}
+              icon={documentTextOutline}
               slot="start"
               style={{ color: isDark ? '#64748b' : '#bbb', fontSize: '20px', marginRight: '8px' }}
             />
             <IonInput
-              placeholder="准备做什么？"
+              placeholder="做了什么？"
               value={activity}
               onIonInput={e => setActivity(e.detail.value!)}
               clearInput
