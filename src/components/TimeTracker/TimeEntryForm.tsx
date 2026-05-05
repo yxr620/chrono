@@ -10,7 +10,7 @@ import {
   IonModal
 } from '@ionic/react';
 import { Capacitor } from '@capacitor/core';
-import { playOutline, stopOutline, saveOutline, chatbubbleOutline, pricetagOutline, flagOutline, refreshOutline } from 'ionicons/icons';
+import { playOutline, stopOutline, saveOutline, chatbubbleOutline, chatbubbleEllipsesOutline, pricetagOutline, flagOutline, refreshOutline } from 'ionicons/icons';
 import { useEntryStore } from '../../stores/entryStore';
 import { useGoalStore } from '../../stores/goalStore';
 import { useCategoryStore } from '../../stores/categoryStore';
@@ -549,7 +549,7 @@ export const TimeEntryForm: React.FC = () => {
         <IonCardContent style={{ padding: 0 }}>
           <IonItem
             lines="none"
-            style={{ '--background': 'transparent', '--padding-start': '20px', '--padding-end': '0px' }}
+            style={{ '--background': 'transparent', '--padding-start': '20px', '--padding-end': '12px' }}
           >
             <IonIcon
               icon={chatbubbleOutline}
@@ -570,7 +570,49 @@ export const TimeEntryForm: React.FC = () => {
                 paddingBottom: '16px'
               }}
             />
+            <IonIcon
+              slot="end"
+              icon={chatbubbleEllipsesOutline}
+              onClick={() => setMemoExpanded(v => !v)}
+              role="button"
+              aria-label={memoExpanded ? '收起感想' : (memo.trim() ? '编辑感想' : '加感想')}
+              title={memoExpanded ? '收起感想' : (memo.trim() ? '编辑感想' : '加感想')}
+              style={{
+                fontSize: '20px',
+                marginLeft: '4px',
+                padding: '6px',
+                cursor: 'pointer',
+                color: memo.trim()
+                  ? '#3b82f6'
+                  : (memoExpanded ? (isDark ? '#cbd5e1' : '#64748b') : (isDark ? '#475569' : '#cbd5e1')),
+                transition: 'color 0.15s',
+              }}
+            />
           </IonItem>
+          {memoExpanded && (
+            <div style={{ padding: '0 20px 12px' }}>
+              <textarea
+                autoFocus
+                placeholder="想到了什么？"
+                value={memo}
+                onChange={e => setMemo(e.target.value)}
+                rows={2}
+                style={{
+                  width: '100%',
+                  minHeight: '40px',
+                  maxHeight: '160px',
+                  resize: 'vertical',
+                  background: 'transparent',
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: '14px',
+                  fontFamily: 'inherit',
+                  color: isDark ? '#f1f5f9' : '#333',
+                  padding: 0,
+                }}
+              />
+            </div>
+          )}
         </IonCardContent>
       </IonCard>
 
@@ -749,62 +791,6 @@ export const TimeEntryForm: React.FC = () => {
               </>
             );
           })()}
-        </IonCardContent>
-      </IonCard>
-
-      {/* Memo 感想（可选，默认折叠）*/}
-      <IonCard style={getCardStyle(isDark)}>
-        <IonCardContent style={{ padding: memoExpanded ? '12px 16px' : '8px 16px' }}>
-          {memoExpanded ? (
-            <>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '6px',
-                fontSize: '13px',
-                color: isDark ? '#94a3b8' : '#6b7280',
-              }}>
-                <span>💭 感想（可选）</span>
-                <span
-                  onClick={() => setMemoExpanded(false)}
-                  style={{ cursor: 'pointer', fontSize: '18px', lineHeight: 1, padding: '0 4px' }}
-                  aria-label="收起感想"
-                >×</span>
-              </div>
-              <textarea
-                placeholder="想到了什么？"
-                value={memo}
-                onChange={e => setMemo(e.target.value)}
-                rows={2}
-                style={{
-                  width: '100%',
-                  minHeight: '48px',
-                  maxHeight: '160px',
-                  resize: 'vertical',
-                  background: 'transparent',
-                  border: 'none',
-                  outline: 'none',
-                  fontSize: '15px',
-                  fontFamily: 'inherit',
-                  color: isDark ? '#f1f5f9' : '#333',
-                  padding: 0,
-                }}
-              />
-            </>
-          ) : (
-            <span
-              onClick={() => setMemoExpanded(true)}
-              style={{
-                cursor: 'pointer',
-                fontSize: '13px',
-                color: isDark ? '#94a3b8' : '#6b7280',
-                userSelect: 'none',
-              }}
-            >
-              💭 加感想
-            </span>
-          )}
         </IonCardContent>
       </IonCard>
 
