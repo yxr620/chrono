@@ -261,23 +261,24 @@ export const SyncManagementPage: React.FC = () => {
   const totalDeleted = stats
     ? stats.deletedEntries + stats.deletedGoals + stats.deletedCategories
     : 0;
+  const hasPersistedSync = !!stats?.lastSyncTime;
   const statusTone = loading
     ? 'syncing'
     : syncMode === 'disabled'
       ? 'disabled'
-      : lastResult?.status === 'success'
-        ? 'success'
-        : lastResult?.status === 'error'
-          ? 'error'
+      : lastResult?.status === 'error'
+        ? 'error'
+        : lastResult?.status === 'success' || hasPersistedSync
+          ? 'success'
           : 'idle';
   const statusLabel = loading
     ? '同步中'
     : syncMode === 'disabled'
       ? '已关闭'
-      : lastResult?.status === 'success'
-        ? '最近成功'
-        : lastResult?.status === 'error'
-          ? '最近失败'
+      : lastResult?.status === 'error'
+        ? '最近失败'
+        : lastResult?.status === 'success' || hasPersistedSync
+          ? '最近成功'
           : '等待同步';
   const statusDescription = syncMode === 'disabled'
     ? '多设备同步当前已关闭，可在下方「多设备同步」卡片重新启用。'
@@ -336,8 +337,8 @@ export const SyncManagementPage: React.FC = () => {
               </span>
             </div>
 
-            <div className="sync-status-toggle-row sync-status-toggle-row--inline">
-              <div>
+            <div className="settings-row sync-status-auto-row">
+              <div className="settings-row-text">
                 <div className="settings-row-label">自动同步</div>
                 <div className="settings-row-sub">{autoSyncCaption}</div>
               </div>

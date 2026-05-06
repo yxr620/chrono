@@ -177,7 +177,7 @@ export class SyncEngine {
       db.syncOperations.filter(op => !op.synced).count(),
       db.syncOperations.filter(op => op.synced).count(),
       getDeviceId(),
-      db.syncMetadata.get('lastSyncTime'),
+      db.syncMetadata.get('lastCloudSyncAt'),
       db.syncMetadata.get('lastProcessedTimestamp'),
     ]);
 
@@ -268,6 +268,11 @@ export class SyncEngine {
       console.log(`[Sync] 开始${name}...`);
       const partial = await fn();
       console.log(`[Sync] ${name}完成`);
+      await db.syncMetadata.put({
+        key: 'lastCloudSyncAt',
+        value: new Date(),
+        updatedAt: new Date(),
+      });
       return { status: 'success', ...partial };
     } catch (error) {
       console.error(`[Sync] ${name}失败:`, error);
