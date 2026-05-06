@@ -65,7 +65,9 @@ const MobileLayout: React.FC<LayoutProps> = ({ activeTab, onTabChange, children 
       <SyncIndicator />
     </div>
     <div className="app-body">
-      {children}
+      <div key={activeTab} className="mobile-page-stage" data-mobile-page={activeTab}>
+        {children}
+      </div>
     </div>
     <div className="app-footer">
       <IonTabBar

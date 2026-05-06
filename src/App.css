@@ -83,6 +83,11 @@ html {
   padding-bottom: calc(70px + env(safe-area-inset-bottom));
 }
 
+.mobile-page-stage {
+  min-height: 100%;
+  animation: mobile-page-enter 320ms ease-out;
+}
+
 .app-footer {
   flex-shrink: 0;
   position: absolute;
@@ -141,6 +146,24 @@ html {
 .mobile-layout .mobile-tab-button-active ion-icon,
 .mobile-layout .mobile-tab-button-active img {
   opacity: 1;
+}
+
+@keyframes mobile-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-page-stage {
+    animation: none !important;
+  }
 }
 
 /* 页面内容包装器 - 用于同步/导出页面 */
