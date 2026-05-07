@@ -3,14 +3,13 @@ import type { WheelTimePickerHandle } from '../common/WheelTimePicker';
 import {
   IonCard,
   IonCardContent,
-  IonItem,
   IonIcon,
-  IonInput,
   IonModal,
   IonButton,
+  IonTextarea,
 } from '@ionic/react';
 import { Capacitor } from '@capacitor/core';
-import { chatbubbleOutline, pricetagOutline, flagOutline } from 'ionicons/icons';
+import { chatbubbleEllipsesOutline, chatbubbleOutline, pricetagOutline, flagOutline } from 'ionicons/icons';
 import { useGoalStore } from '../../stores/goalStore';
 import { useCategoryStore } from '../../stores/categoryStore';
 import { useEntryStore } from '../../stores/entryStore';
@@ -174,10 +173,10 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
   return (
     <>
       <IonModal
+        className="edit-entry-modal"
         isOpen={visible}
         onDidDismiss={onClose}
-        initialBreakpoint={0.7}
-        breakpoints={[0, 0.7, 1]}
+        handle={false}
       >
         <div className="edit-dialog-content">
           <h3 className="edit-dialog-title">编辑记录</h3>
@@ -186,16 +185,38 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
             {/* 活动名称 */}
             <IonCard className="edit-dialog-card">
               <IonCardContent style={{ padding: 0 }}>
-                <IonItem lines="none" style={{ '--background': 'transparent', '--padding-start': '20px', '--padding-end': '20px' }}>
-                  <IonIcon icon={chatbubbleOutline} slot="start" style={{ color: '#bbb', fontSize: '20px', marginRight: '8px' }} />
-                  <IonInput
+                <div className="edit-dialog-activity-row">
+                  <IonIcon icon={chatbubbleOutline} className="edit-dialog-activity-icon" aria-hidden="true" />
+                  <IonTextarea
                     placeholder="输入活动名称"
                     value={activity}
-                    onIonInput={e => setActivity(e.detail.value!)}
-                    clearInput
+                    onIonInput={e => setActivity(e.detail.value ?? '')}
+                    autoGrow
+                    rows={1}
                     className="edit-dialog-input"
                   />
-                </IonItem>
+                  <button
+                    type="button"
+                    onClick={() => setMemoExpanded(v => !v)}
+                    aria-label={memoExpanded ? '收起感想' : (memo.trim() ? '编辑感想' : '加感想')}
+                    title={memoExpanded ? '收起感想' : (memo.trim() ? '编辑感想' : '加感想')}
+                    className={`edit-dialog-memo-button${memo.trim() ? ' has-memo' : ''}${memoExpanded ? ' expanded' : ''}`}
+                  >
+                    <IonIcon icon={chatbubbleEllipsesOutline} aria-hidden="true" />
+                  </button>
+                </div>
+                {memoExpanded && (
+                  <div className="edit-dialog-memo-area">
+                    <textarea
+                      autoFocus
+                      placeholder="想到了什么？"
+                      value={memo}
+                      onChange={e => setMemo(e.target.value)}
+                      rows={2}
+                      className="edit-dialog-memo-textarea"
+                    />
+                  </div>
+                )}
               </IonCardContent>
             </IonCard>
 
@@ -299,38 +320,6 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
                 </div>
               </div>
             </div>
-
-            {/* Memo 感想（可选）*/}
-            <IonCard className="edit-dialog-card">
-              <IonCardContent className="edit-dialog-memo-body">
-                {memoExpanded ? (
-                  <>
-                    <div className="edit-dialog-memo-header">
-                      <span>💭 感想（可选）</span>
-                      <span
-                        onClick={() => setMemoExpanded(false)}
-                        className="edit-dialog-memo-close"
-                        aria-label="收起感想"
-                      >×</span>
-                    </div>
-                    <textarea
-                      placeholder="想到了什么？"
-                      value={memo}
-                      onChange={e => setMemo(e.target.value)}
-                      rows={2}
-                      className="edit-dialog-memo-textarea"
-                    />
-                  </>
-                ) : (
-                  <span
-                    onClick={() => setMemoExpanded(true)}
-                    className="edit-dialog-memo-toggle"
-                  >
-                    💭 加感想
-                  </span>
-                )}
-              </IonCardContent>
-            </IonCard>
           </div>
 
           {/* 底部按钮 */}

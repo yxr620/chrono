@@ -1,12 +1,57 @@
 /* EditEntryDialog styles */
 
 /* ── Modal 容器 ── */
+.edit-entry-modal {
+  /* 微调编辑记录弹窗高度：主要改下面几个变量。 */
+  --edit-entry-modal-mobile-height: 78vh;
+  --edit-entry-modal-mobile-max-height: 620px;
+  --edit-entry-modal-desktop-height: 680px;
+  --edit-entry-modal-screen-gap: 48px;
+  --height: min(var(--edit-entry-modal-mobile-height), var(--edit-entry-modal-mobile-max-height));
+  --width: 100%;
+  --max-width: 640px;
+  --border-radius: 24px 24px 0 0;
+  --background: hsl(var(--card));
+  --box-shadow: 0 -18px 40px -28px rgba(15, 23, 42, 0.38);
+  align-items: flex-end;
+}
+
+.edit-entry-modal::part(content) {
+  overflow: hidden;
+}
+
+@supports (height: 100dvh) {
+  .edit-entry-modal {
+    --edit-entry-modal-mobile-height: 78dvh;
+  }
+}
+
+@media (min-width: 1024px) {
+  .edit-entry-modal {
+    --height: min(var(--edit-entry-modal-desktop-height), calc(100vh - var(--edit-entry-modal-screen-gap)));
+    --width: min(560px, calc(100vw - 48px));
+    --border-radius: 24px;
+    align-items: center;
+  }
+}
+
+@supports (height: 100dvh) {
+  @media (min-width: 1024px) {
+    .edit-entry-modal {
+      --height: min(var(--edit-entry-modal-desktop-height), calc(100dvh - var(--edit-entry-modal-screen-gap)));
+    }
+  }
+}
+
 .edit-dialog-content {
   display: flex;
   flex-direction: column;
-  padding: 16px;
+  height: 100%;
+  min-height: 0;
+  padding: 16px 16px 0;
   color: hsl(var(--foreground));
-  overflow-y: auto;
+  background: hsl(var(--card));
+  overflow: hidden;
 }
 
 .edit-dialog-title {
@@ -19,8 +64,12 @@
 .edit-dialog-body {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   gap: 8px;
+  min-height: 0;
+  padding-bottom: 12px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ── 卡片 ── */
@@ -47,13 +96,80 @@
 }
 
 /* ── 活动名称输入 ── */
+.edit-dialog-activity-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 0 18px 0 20px;
+}
+
+.edit-dialog-activity-icon {
+  flex: 0 0 auto;
+  margin-top: 16px;
+  color: hsl(var(--muted-foreground) / 0.55);
+  font-size: 20px;
+}
+
 .edit-dialog-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  max-height: 132px;
   font-size: 17px;
   font-weight: 500;
   --placeholder-color: hsl(var(--muted-foreground));
   --color: hsl(var(--foreground));
-  padding-top: 14px;
-  padding-bottom: 14px;
+  --padding-top: 14px;
+  --padding-bottom: 14px;
+  --padding-start: 0;
+  --padding-end: 0;
+  overflow-y: auto;
+}
+
+.edit-dialog-input::part(native) {
+  line-height: 1.35;
+  resize: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.edit-dialog-memo-button {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-top: 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: hsl(var(--muted-foreground) / 0.45);
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.edit-dialog-memo-button ion-icon {
+  font-size: 20px;
+}
+
+.edit-dialog-memo-button:hover,
+.edit-dialog-memo-button:focus-visible {
+  background: hsl(var(--muted) / 0.45);
+}
+
+.edit-dialog-memo-button.expanded {
+  color: hsl(var(--muted-foreground));
+}
+
+.edit-dialog-memo-button.has-memo {
+  color: #3b82f6;
+}
+
+.edit-dialog-memo-area {
+  margin: 0 20px 0 54px;
+  padding: 10px 0 12px;
+  border-top: 1px solid hsl(var(--border));
 }
 
 /* ── 区块标签 ── */
@@ -164,10 +280,20 @@
 
 /* ── 底部按钮 ── */
 .edit-dialog-footer {
+  flex: 0 0 auto;
+  margin: 0 -16px;
   padding-top: 12px;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-right: 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  padding-left: 16px;
   border-top: 1px solid hsl(var(--border));
-  margin-top: 12px;
+  background: hsl(var(--card));
+}
+
+@media (min-width: 1024px) {
+  .edit-dialog-footer {
+    padding-bottom: 16px;
+  }
 }
 
 .edit-dialog-footer-buttons {
@@ -211,29 +337,9 @@
   color: hsl(var(--foreground));
 }
 
-.edit-dialog-memo-body {
-  padding: 12px 20px;
-}
-
-.edit-dialog-memo-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
-  font-size: 13px;
-  color: var(--ion-color-medium);
-}
-
-.edit-dialog-memo-close {
-  cursor: pointer;
-  font-size: 18px;
-  line-height: 1;
-  padding: 0 4px;
-}
-
 .edit-dialog-memo-textarea {
   width: 100%;
-  min-height: 48px;
+  min-height: 40px;
   max-height: 160px;
   resize: vertical;
   background: transparent;
@@ -243,13 +349,4 @@
   font-family: inherit;
   color: var(--ion-text-color);
   padding: 0;
-}
-
-.edit-dialog-memo-toggle {
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--ion-color-medium);
-  user-select: none;
-  display: inline-block;
-  padding: 4px 0;
 }

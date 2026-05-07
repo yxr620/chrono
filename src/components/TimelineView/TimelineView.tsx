@@ -5,7 +5,7 @@ import { useCategoryStore } from '../../stores/categoryStore';
 import { useGoalStore } from '../../stores/goalStore';
 import type { TimeEntry } from '../../services/db';
 import dayjs from 'dayjs';
-import { IonDatetime, IonModal, IonContent } from '@ionic/react';
+import { IonDatetime, IonModal } from '@ionic/react';
 import { WheelMonthYearPicker } from '../common/WheelTimePicker';
 import { useDarkMode } from '../../hooks/useDarkMode';
 import './TimelineView.css';
@@ -33,6 +33,23 @@ interface TimelineViewProps {
 }
 
 const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日'];
+
+const getDatePickerModalStyle = (isIOS: boolean): React.CSSProperties => ({
+  '--height': 'auto',
+  '--width': '100%',
+  '--border-radius': isIOS ? '28px 28px 0 0' : '16px 16px 0 0',
+  '--background': 'hsl(var(--card))',
+  '--box-shadow': 'none',
+  alignItems: 'flex-end',
+} as React.CSSProperties);
+
+const getDatePickerContentStyle = (): React.CSSProperties => ({
+  display: 'flex',
+  flexDirection: 'column',
+  padding: '16px',
+  background: 'hsl(var(--card))',
+  color: 'hsl(var(--foreground))',
+});
 
 
 export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDateChange }) => {
@@ -387,13 +404,12 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
       </div>
 
       <IonModal
+        className="timeline-date-modal"
         isOpen={datePickerVisible}
         onDidDismiss={closeDatePicker}
-        initialBreakpoint={0.55}
-        breakpoints={isIOS ? [0, 0.55] : [0, 0.55, 0.7]}
-        style={isIOS ? ({ '--border-radius': '28px' } as React.CSSProperties) : undefined}
+        style={getDatePickerModalStyle(isIOS)}
       >
-        <IonContent className="ion-padding">
+        <div style={getDatePickerContentStyle()}>
           {isIOS ? (
             <div style={{ maxWidth: '380px', margin: '0 auto', paddingBottom: '8px' }}>
               <div
@@ -417,9 +433,6 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
                 >
                   取消
                 </button>
-                <span style={{ fontSize: '15px', fontWeight: 700, color: isDark ? '#e2e8f0' : '#334155' }}>
-                  快速选择日期
-                </span>
                 <button
                   onClick={goToToday}
                   disabled={isToday}
@@ -547,7 +560,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
             </div>
           ) : showMonthWheel ? (
             /* ── Year / Month wheel view ── */
-            <div>
+            <div style={{ minHeight: '344px', display: 'flex', flexDirection: 'column' }}>
               {/* Back → calendar button */}
               <button
                 onClick={() => {
@@ -593,7 +606,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
               style={{ width: '100%', margin: '0 auto' }}
             />
           )}
-        </IonContent>
+        </div>
       </IonModal>
 
       {/* 时间轴 */}

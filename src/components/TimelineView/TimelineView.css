@@ -377,7 +377,7 @@
 }
 
 /* ── Date picker modal ── */
-ion-modal ion-datetime {
-  --background: var(--ion-background-color);
+.timeline-date-modal ion-datetime {
+  --background: hsl(var(--card));
   max-width: 400px;
 }
