@@ -28,11 +28,17 @@ export interface PendingEntry {
 }
 
 export interface ParseContext {
+  /** 真实当前时刻 */
   now: Date;
+  /** 真实今天的日期 'YYYY-MM-DD' */
   todayDate: string;
+  /** 用户当前在 RecordsPage 上选中的日期 'YYYY-MM-DD'（可能 ≠ 今天） */
+  pageDate: string;
   categories: Category[];
-  todayGoals: Goal[];
-  recentEntries: TimeEntry[];
+  /** pageDate 对应的 time 型目标 */
+  pageDateGoals: Goal[];
+  /** pageDate 当天的所有 entries（按时间升序，仅含已完成的） */
+  pageDateEntries: TimeEntry[];
 }
 
 let counter = 0;
@@ -41,10 +47,17 @@ function genId(): string {
   return `pending-${Date.now()}-${counter}`;
 }
 
-/** 加载 prompt 上下文（今天日期 / 类别 / 今日目标 / 最近 24h entries） */
-export async function loadParseContext(now: Date = new Date()): Promise<ParseContext> {
+/**
+ * 加载 prompt 上下文
+ * @param now 真实当前时刻
+ * @param pageDate 用户在浏览的日期；缺省时按今天
+ */
+export async function loadParseContext(
+  now: Date = new Date(),
+  pageDate?: string,
+): Promise<ParseContext> {
   const todayDate = dayjs(now).format('YYYY-MM-DD');
-  const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const targetDate = pageDate || todayDate;
 
   const [categories, allGoals, allEntries] = await Promise.all([
     db.categories.toArray(),
@@ -52,55 +65,119 @@ export async function loadParseContext(now: Date = new Date()): Promise<ParseCon
     db.entries.toArray(),
   ]);
 
-  const todayGoals = allGoals.filter(
-    g => !g.deleted && (g.type ?? 'time') !== 'check' && g.date === todayDate,
+  const pageDateGoals = allGoals.filter(
+    g => !g.deleted && (g.type ?? 'time') !== 'check' && g.date === targetDate,
   );
 
-  const recentEntries = allEntries
-    .filter(e => !e.deleted && e.endTime && new Date(e.startTime) >= dayAgo)
+  const pageDateEntries = allEntries
+    .filter(
+      e =>
+        !e.deleted &&
+        e.endTime &&
+        dayjs(e.startTime).format('YYYY-MM-DD') === targetDate,
+    )
     .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
-  return { now, todayDate, categories: categories.filter(c => !c.deleted), todayGoals, recentEntries };
+  return {
+    now,
+    todayDate,
+    pageDate: targetDate,
+    categories: categories.filter(c => !c.deleted),
+    pageDateGoals,
+    pageDateEntries,
+  };
+}
+
+interface DaySlot {
+  type: 'existing' | 'gap';
+  start: string;  // 'HH:mm'
+  end: string;    // 'HH:mm'
+  activity?: string;
+}
+
+/**
+ * 把 pageDate 当天的已有 entries 编织成"已有 + 空隙"的完整时间表
+ * 让 AI 一眼看到哪段可填、哪段不能动
+ */
+function computeDaySchedule(
+  pageDateEntries: TimeEntry[],
+  pageDate: string,
+  now: Date,
+  todayDate: string,
+): DaySlot[] {
+  const slots: DaySlot[] = [];
+  let cursor = '00:00';
+
+  for (const e of pageDateEntries) {
+    const s = dayjs(e.startTime).format('HH:mm');
+    const en = dayjs(e.endTime!).format('HH:mm');
+    if (cursor < s) {
+      slots.push({ type: 'gap', start: cursor, end: s });
+    }
+    slots.push({ type: 'existing', start: s, end: en, activity: e.activity });
+    cursor = en > cursor ? en : cursor;
+  }
+
+  // 当日尾部空隙：今天截到当前时刻，过去的日期截到 24:00
+  const tail = pageDate === todayDate ? dayjs(now).format('HH:mm') : '24:00';
+  if (cursor < tail) {
+    slots.push({ type: 'gap', start: cursor, end: tail });
+  }
+
+  return slots;
+}
+
+function formatSchedule(slots: DaySlot[]): string {
+  if (slots.length === 0) return '（当日无任何记录，全天可补录）';
+  return slots
+    .map(s =>
+      s.type === 'existing'
+        ? `${s.start}-${s.end}  ${s.activity}  [已存在]`
+        : `${s.start}-${s.end}  ★可补录空隙`,
+    )
+    .join('\n');
 }
 
 function buildSystemPrompt(ctx: ParseContext): string {
-  const dow = dayjs(ctx.now).format('dddd');
+  const dowToday = dayjs(ctx.todayDate).format('dddd');
+  const dowPage = dayjs(ctx.pageDate).format('dddd');
   const nowHM = dayjs(ctx.now).format('HH:mm');
   const cats = ctx.categories.map(c => c.name).join('、') || '（无）';
-  const goals = ctx.todayGoals.map(g => g.name).join('、') || '（无）';
+  const goals = ctx.pageDateGoals.map(g => g.name).join('、') || '（无）';
+  const schedule = formatSchedule(
+    computeDaySchedule(ctx.pageDateEntries, ctx.pageDate, ctx.now, ctx.todayDate),
+  );
 
-  const recentLines = ctx.recentEntries
-    .slice(-30)
-    .map(e => {
-      const d = dayjs(e.startTime).format('MM-DD');
-      const s = dayjs(e.startTime).format('HH:mm');
-      const en = dayjs(e.endTime!).format('HH:mm');
-      return `- ${d} ${s}-${en} ${e.activity}`;
-    })
-    .join('\n') || '（无）';
+  const isPastDay = ctx.pageDate !== ctx.todayDate;
 
-  return `你是时间记录解析助手。用户会用自然语言描述过去几小时的活动，你必须把它拆成多个独立的时间段，每个时间段调用一次 add_entry 工具。
+  return `你是时间记录解析助手。用户会用自然语言描述某天发生的活动，你必须把它拆成多个独立的时间段，每个时间段调用一次 add_entry 工具。
 
-## 当前时间
-今天是 ${ctx.todayDate}（${dow}），现在 ${nowHM}。
+## 时间锚点
+- 今天的真实日期：${ctx.todayDate}（${dowToday}），实际当前时间 ${nowHM}
+- 用户当前正在浏览：${ctx.pageDate}（${dowPage}）${isPastDay ? '  ← 用户在补录过去的某天' : ''}
+
+## ${ctx.pageDate} 的时间表（含已有记录与可填空隙）
+${schedule}
 
 ## 可用类别
 ${cats}
 
-## 今天的目标
+## ${ctx.pageDate} 的目标
 ${goals}
-
-## 最近 24 小时已存在的记录（请避开这些时间段）
-${recentLines}
 
 ## 严格规则
 1. 必须使用 parallel tool calls，每个时间段调用一次 add_entry，不要在一次调用里塞多条。
-2. date 字段格式 YYYY-MM-DD。如果用户没明确日期，按今天。如果"今天 HH:mm"在未来，回退为昨天。
-3. start_time/end_time 格式 HH:mm（24 小时制）。
-4. category 必须从"可用类别"里选，不要新建；不确定就留空。
-5. goal 必须从"今天的目标"里选，不要新建；不确定就留空。
-6. 没有明确结束时间的活动，根据下一段活动的开始时间推断；都无法确定时跳过该段（不调用工具）。
-7. 用户描述里出现的相对表达（"昨晚"、"上午"、"刚才"）按当前时间推断。
+2. **date 字段必须等于 ${ctx.pageDate}**，除非用户在文本里明确说了别的日期、或用了"昨晚"、"前天"等指向其他日的相对表达。
+3. start_time / end_time 格式 HH:mm（24 小时制）。
+4. **时间边界硬规则（极其重要）**：
+   - 上面"[已存在]"的时间段是不可侵犯的硬边界。
+   - 用户口述的时间（如"11 点"）必须 clamp 到所在的"★可补录空隙"内。例如空隙是 11:19-13:26，"11 点开始"应解读为 11:19 开始（不是 11:00）。
+   - 用户描述的某段如果整段落在已有记录内，跳过该段，不要生成 entry。
+   - 新建的 entry 必须严格落在某个空隙的 [start, end] 范围内，绝不可越界。
+   - 用户如果没说结束时间，根据下一段活动的开始或所在空隙的右边界推断；都无法确定时跳过该段。
+5. category 必须从"可用类别"里选，不要新建；不确定就留空。
+6. goal 必须从"${ctx.pageDate} 的目标"里选，不要新建；不确定就留空。
+7. 用户描述里"刚才"、"现在"按"实际当前时间 ${nowHM}"推断；其他无具体日期的时间默认归到 ${ctx.pageDate}。
 8. 不要做任何文字解释，只输出 tool_calls。`;
 }
 
@@ -143,7 +220,7 @@ export async function parseTranscript(
     const conflicts =
       isNaN(startDate.getTime()) || isNaN(endDate.getTime()) || endDate <= startDate
         ? []
-        : detectConflicts(startDate, endDate, ctx.recentEntries);
+        : detectConflicts(startDate, endDate, ctx.pageDateEntries);
 
     entries.push({
       id: genId(),

@@ -14,7 +14,7 @@ import './ReviewSequence.css';
 interface Props {
   initialEntries: PendingEntry[];
   rawTranscript: string;
-  recentEntries: TimeEntry[];
+  pageDateEntries: TimeEntry[];
   onBackToInput: () => void;
   onAllDone: (savedCount: number, skippedCount: number, failedCount: number) => void;
 }
@@ -22,7 +22,7 @@ interface Props {
 export const ReviewSequence: React.FC<Props> = ({
   initialEntries,
   rawTranscript,
-  recentEntries,
+  pageDateEntries,
   onBackToInput,
   onAllDone,
 }) => {
@@ -102,7 +102,7 @@ export const ReviewSequence: React.FC<Props> = ({
     const conflicts =
       isNaN(startDate.getTime()) || isNaN(endDate.getTime()) || endDate <= startDate
         ? []
-        : detectConflicts(startDate, endDate, recentEntries);
+        : detectConflicts(startDate, endDate, pageDateEntries);
 
     setEntries(prev =>
       prev.map(e => (e.id === id ? { ...e, params: next, conflicts, status: 'pending', error: undefined } : e)),

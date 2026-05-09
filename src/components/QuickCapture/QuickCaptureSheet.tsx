@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { IonModal, IonIcon, IonButton } from '@ionic/react';
 import { closeOutline } from 'ionicons/icons';
 import { useAppToast } from '../../hooks/useAppToast';
+import { useDateStore } from '../../stores/dateStore';
 import { TranscriptInput } from './TranscriptInput';
 import { ParsingView } from './ParsingView';
 import { ReviewSequence } from './ReviewSequence';
@@ -24,14 +25,15 @@ export const QuickCaptureSheet: React.FC<Props> = ({ isOpen, onDismiss }) => {
   const [phase, setPhase] = useState<Phase>('input');
   const [transcript, setTranscript] = useState('');
   const [entries, setEntries] = useState<PendingEntry[]>([]);
-  const [recentEntries, setRecentEntries] = useState<TimeEntry[]>([]);
+  const [pageDateEntries, setPageDateEntries] = useState<TimeEntry[]>([]);
   const [present] = useAppToast();
+  const selectedDate = useDateStore(s => s.selectedDate);
 
   const reset = useCallback(() => {
     setPhase('input');
     setTranscript('');
     setEntries([]);
-    setRecentEntries([]);
+    setPageDateEntries([]);
   }, []);
 
   const handleClose = () => {
@@ -44,9 +46,9 @@ export const QuickCaptureSheet: React.FC<Props> = ({ isOpen, onDismiss }) => {
     if (!text) return;
     setPhase('parsing');
     try {
-      const ctx = await loadParseContext(new Date());
+      const ctx = await loadParseContext(new Date(), selectedDate);
       const result = await parseTranscript(text, ctx);
-      setRecentEntries(ctx.recentEntries);
+      setPageDateEntries(ctx.pageDateEntries);
       setEntries(result.entries);
       setPhase('reviewing');
     } catch (err) {
@@ -110,7 +112,7 @@ export const QuickCaptureSheet: React.FC<Props> = ({ isOpen, onDismiss }) => {
             <ReviewSequence
               initialEntries={entries}
               rawTranscript={transcript}
-              recentEntries={recentEntries}
+              pageDateEntries={pageDateEntries}
               onBackToInput={() => setPhase('input')}
               onAllDone={handleAllDone}
             />
