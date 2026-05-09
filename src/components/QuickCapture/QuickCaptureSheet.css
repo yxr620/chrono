@@ -1,11 +1,11 @@
 .quick-capture-sheet {
-  --height: 80vh;
+  --height: 50vh;
   --border-radius: 16px 16px 0 0;
 }
 
 @media (min-width: 1024px) {
   .quick-capture-sheet {
-    --height: 600px;
+    --height: 520px;
     --width: 600px;
     --border-radius: 16px;
   }
