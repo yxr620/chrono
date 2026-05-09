@@ -18,15 +18,25 @@ export const TranscriptInput: React.FC<Props> = ({ value, onChange, onSubmit }) 
   }, []);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16 }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+        padding: 16,
+        flex: 1,
+        minHeight: 0,
+      }}
+    >
       <textarea
         ref={ref}
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder="过去几小时干啥了？随便说，比如：9 点半到 11 写代码，开会到 11 半，然后吃饭到 12 点"
         style={{
+          flex: 1,
           width: '100%',
-          minHeight: 160,
+          minHeight: 0,
           padding: 12,
           fontSize: 16,
           lineHeight: 1.5,
@@ -34,7 +44,7 @@ export const TranscriptInput: React.FC<Props> = ({ value, onChange, onSubmit }) 
           border: '1px solid rgba(148, 163, 184, 0.3)',
           background: 'transparent',
           color: 'inherit',
-          resize: 'vertical',
+          resize: 'none',
           fontFamily: 'inherit',
         }}
       />
