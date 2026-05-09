@@ -16,7 +16,6 @@
   flex-direction: column;
   height: 100%;
   background: var(--ion-background-color, #fff);
-  padding-top: env(safe-area-inset-top);
 }
 
 .quick-capture-sheet-header {
