@@ -5,12 +5,15 @@
   --color: #475569;
   --box-shadow: none;
   --border-radius: 26px;
-  --padding-start: 18px;
-  --padding-end: 18px;
+  --padding-start: 16px;
+  --padding-end: 16px;
   height: 52px;
-  font-size: 16px;
-  font-weight: 600;
+  width: 56px;
   margin: 0;
+}
+
+.quick-capture-btn ion-icon {
+  font-size: 22px;
 }
 
 @media (prefers-color-scheme: dark) {

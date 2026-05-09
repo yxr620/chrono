@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { IonButton, IonAlert } from '@ionic/react';
+import { IonButton, IonIcon, IonAlert } from '@ionic/react';
+import { micOutline } from 'ionicons/icons';
 import { useFeatureModeStore } from '../../stores/featureModeStore';
 import { useAIStore } from '../../stores/aiStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -33,7 +34,7 @@ export const QuickCaptureButton: React.FC = () => {
         onClick={handleClick}
         aria-label="快速补录"
       >
-        快录
+        <IonIcon icon={micOutline} />
       </IonButton>
 
       <QuickCaptureSheet isOpen={sheetOpen} onDismiss={() => setSheetOpen(false)} />
