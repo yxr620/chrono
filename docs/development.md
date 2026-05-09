@@ -64,7 +64,7 @@ VITE_AI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 VITE_AI_API_KEY=your-api-key
 ```
 
-> 托管模式细节见 `CLAUDE.md` 的 *Managed Services* 段落以及 `docs/superpowers/specs/2026-04-21-managed-services.md`。
+> 托管模式细节见 `CLAUDE.md` 的 *Managed Services* 段落以及 `docs/superpowers/archive/2026-04-21-managed-services.md`（设计文档已归档）。
 
 ### Vite 加载优先级（高 → 低）
 

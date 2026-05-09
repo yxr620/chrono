@@ -1,8 +1,7 @@
 # Action Registry — AI-First 操作注册表
 
-> **实现日期：** 2026-04-02 ~ 2026-04-03  
-> **变更规模：** 32 文件，+3721 / -63 行  
-> **设计与实施记录：** 原始 design spec 与 plan 文档仅保留在本地工作区（`docs/superpowers/`，未入库）。最初版本可见 git 历史：`3a966e3`（设计）、`6bbe4c0`（计划）。
+> **实现日期：** 2026-04-02 起，已合并到 main。
+> **设计文档（已归档）：** `docs/superpowers/archive/2026-04-02-ai-first-action-registry-design.md`（本地，未入库）。
 
 ## 概述
 
@@ -13,13 +12,7 @@ Action Registry 是 AI 助手从"只读分析工具"升级为"可读可写智能
 3. 写入操作带有**风险分级 + 用户确认流程**，防止误操作
 4. 架构上与 AI 框架解耦——未来加 MCP/REST adapter 零重构核心
 
-### 与合并前 main 分支的关系
-
-这个功能在 `feat/ai` 分支上独立开发。`main` 分支会继续正常维护 UI 和基础功能。等功能稳定后再合并。合并时需注意：
-
-- `src/services/ai/toolCallEngine.ts` 有较大改动（导入来源从 `toolDefinitions` 变为 `actionRegistry`，新增确认流程）
-- `src/components/AIAssistant/AIAssistant.tsx` 新增了确认状态管理
-- `src/services/ai/toolDefinitions.ts` 已标记为 deprecated，但仍保留（提供 `ToolDefinition` 类型导出）
+> 旧文件 `src/services/ai/toolDefinitions.ts` 已标记为 deprecated，仅保留 `ToolDefinition` 类型导出，不再被 toolCallEngine 使用。
 
 ---
 
@@ -36,11 +29,11 @@ Action Registry 是 AI 助手从"只读分析工具"升级为"可读可写智能
 │         └──────────────────┼───────────────┘       │
 │                    ┌───────▼────────┐              │
 │                    │ Action Registry │              │
-│                    │  (16 actions)  │              │
+│                    │  (17 actions)  │              │
 │                    └───────┬────────┘              │
 │              ┌─────────────┼─────────────┐        │
 │              ▼             ▼             ▼         │
-│          read (3)     write (8)   maintenance (5) │
+│          read (4)     write (8)   maintenance (5) │
 │                    ┌───────┴────────┐              │
 │                    │ dataService /  │              │
 │                    │ stores / syncDb│              │
@@ -70,7 +63,8 @@ src/services/actions/
 ├── read/
 │   ├── queryTimeEntries.ts  # 查询时间记录（从旧 toolDefinitions 迁移）
 │   ├── listCategories.ts    # 列出分类
-│   └── listGoals.ts         # 列出目标
+│   ├── listGoals.ts         # 列出目标
+│   └── searchMemos.ts       # 检索 entry memo（按时间范围/关键字）
 ├── write/
 │   ├── addEntry.ts          # 新增时间记录
 │   ├── updateEntry.ts       # 修改时间记录
@@ -134,15 +128,16 @@ interface ConfirmationCard {
 
 ---
 
-## 16 个 Action 一览
+## 17 个 Action 一览
 
-### 读取（3 个，risk: none）
+### 读取（4 个，risk: none）
 
 | Action | 说明 | 参数 |
 |---|---|---|
 | `query_time_entries` | 查询时间记录 + 统计 | `start_date`, `end_date`, `category?`, `goal?` |
 | `list_categories` | 列出全部分类 | 无 |
 | `list_goals` | 列出日期范围内目标 | `start_date`, `end_date` |
+| `search_memos` | 检索带 memo 的 entry（按时间范围/关键字） | `start_date?`, `end_date?`, `query?`, `limit?` |
 
 ### 写入（8 个）
 
@@ -224,50 +219,6 @@ await useEntryStore.getState().loadEntries();
 // 3. 触发同步
 autoPush('action: add_entry');
 ```
-
----
-
-## Git 提交历史
-
-| 提交 | 说明 |
-|---|---|
-| `3a966e3` | docs: 设计方案文档 |
-| `6bbe4c0` | docs: 实施计划 |
-| `6762029` | feat: Action Registry 核心类型和注册表 |
-| `2a716b3` | feat: 迁移 3 个只读工具到 Action Registry |
-| `ee7e969` | refactor: toolCallEngine 使用 Action Registry |
-| `df13889` | feat: 确认卡片 UI 组件 |
-| `a15aff1` | feat: 时间记录 CRUD 写操作 |
-| `bad1808` | feat: 合并与拆分操作 |
-| `fc14750` | feat: 目标 CRUD 写操作 |
-| `e07fba0` | feat: 维护操作（重叠、空隙、异常、自动分类、批量更新） |
-| `0d0e87e` | chore: 标记旧 toolDefinitions 为 deprecated |
-| `a6150cd` | fix: 确认卡片已解决状态显示 + listGoals 错误一致性 |
-
----
-
-## 合并注意事项
-
-当你准备将 `feat/ai` 合并到 `main` 时：
-
-1. **冲突风险文件：**
-   - `src/services/ai/toolCallEngine.ts` — 最大改动，如果 main 也修改了此文件需仔细合并
-   - `src/components/AIAssistant/AIAssistant.tsx` — 新增了状态和 handler
-   - `src/App.css` 和 `src/App.tsx` — 有小幅 UI 调整（同步指示器等），可能与 main 的 UI 更新冲突
-
-2. **无需担心的文件：**
-   - `src/services/actions/` 整个目录是新增的，不会有冲突
-   - `src/components/AIAssistant/ConfirmationCard.tsx` + `.css` 是新增文件
-
-3. **合并后验证：**
-   - `npm run build` 确认编译通过
-   - 手动测试 AI 助手的只读查询（回归测试）
-   - 手动测试写操作的确认流程
-   - 检查 `autoPush` 是否正常触发同步
-
-4. **旧代码清理（合并后可选）：**
-   - `src/services/ai/toolDefinitions.ts` 中的 `TOOL_DEFINITIONS` 数组和 `executeTool` 函数已不再被调用，可以删除，仅保留 `ToolDefinition` 类型
-   - 或将 `ToolDefinition` 类型移到 `actions/types.ts`，彻底移除 `toolDefinitions.ts`
 
 ---
 

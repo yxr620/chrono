@@ -32,7 +32,7 @@ VITE_AI_MODEL=qwen3.6-max-preview
 
 - FC 环境变量：`AI_API_KEY`、`AI_BASE_URL`、`AI_MODEL`、`ALLOWED_AI_EMAILS`
 - 用户在「服务」页选 Managed → 触发登录弹窗 → 后端检查 `/me/features.ai` 是否在白名单
-- 后端默认采用**缓冲式中继**（buffer-then-relay）；如需真流式，参见 `docs/superpowers/plans/2026-05-01-managed-services-6-managed-ai.md` 的 Task 4
+- 后端默认采用**缓冲式中继**（buffer-then-relay）；如需真流式，参见 `docs/superpowers/archive/2026-05-01-managed-services-6-managed-ai.md` 的 Task 4
 
 后端实现：`server/src/features/ai.ts`（路径 `POST /v1/chat/completions`）。运维操作：`server/RUNBOOK.md`。
 
@@ -52,30 +52,7 @@ VITE_AI_MODEL=qwen3.6-max-preview
 
 ## Tool Calling 系统
 
-AI 通过 Function Calling 查询本地 IndexedDB 数据，不上传任何数据到 LLM。
-
-### 三个内置工具
-
-**`query_time_entries`**
-```
-参数：start_date, end_date, category, goal（均可选）
-返回：统计摘要（总时长、按分类/目标分布）+ 最多 200 条详细记录
-底层：dataService.entries.query()
-```
-
-**`list_categories`**
-```
-参数：无
-返回：全部分类列表（id + 名称）
-底层：dataService.categories.list()
-```
-
-**`list_goals`**
-```
-参数：start_date, end_date（可选）
-返回：指定时间范围内的目标列表
-底层：dataService.goals.query()
-```
+AI 通过 Function Calling 查询并修改本地 IndexedDB 数据，不上传任何数据到 LLM。所有可调用工具由 **Action Registry**（`src/services/actions/`）统一注册，`toolCallEngine` 自动生成 OpenAI tool schema——参见 [Action Registry 文档](action-registry.md) 获取完整 action 列表（4 个 read / 8 个 write / 5 个 maintenance）。写入操作走「建议 → 用户确认 → 执行」流程。
 
 ### 调用引擎（toolCallEngine.ts）
 
@@ -93,18 +70,13 @@ AI 通过 Function Calling 查询本地 IndexedDB 数据，不上传任何数据
 
 ### 添加新工具
 
-> **注意：** `feat/ai` 分支引入了 Action Registry 架构，取代了下面描述的手动方式。详见 [Action Registry 文档](action-registry.md)。
+通过 Action Registry：
 
-**(旧方式 — main 分支)** 在 `src/services/ai/toolDefinitions.ts` 中：
-
-1. 在 `toolDefinitions` 数组中添加工具描述（JSON Schema 格式）
-2. 在 `executeToolCall(name, args)` 的 switch 中添加对应处理逻辑，调用 `dataService` 获取数据并格式化为字符串
-
-**(新方式 — feat/ai 分支)** 通过 Action Registry：
-
-1. 在 `src/services/actions/` 对应分类目录下创建 action 文件
-2. 在 `src/services/actions/index.ts` 中注册
+1. 在 `src/services/actions/{read,write,maintenance}/` 对应目录下创建 action 文件
+2. 在 `src/services/actions/index.ts` 中 `actionRegistry.register(...)`
 3. toolCallEngine 自动发现并生成 AI tool definition
+
+详见 [Action Registry 文档](action-registry.md)。
 
 ## 消息格式（aiStore）
 

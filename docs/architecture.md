@@ -174,7 +174,7 @@ VITE_AI_MODEL=qwen3.6-max-preview
 - **首次启动**：`MigrationPrompt`（在 `App.tsx` 挂载）会向已有 BYO 凭据的用户提示一键切换；切换后 BYO 凭据从 localStorage 清空
 - **设备/存储/账号管理**：登录后在「维护 → 我的数据」中查看
 - **后端代码**：`server/`（FC HTTP trigger，TypeScript Node 18），部署见 `server/RUNBOOK.md`
-- **完整设计**：`docs/superpowers/specs/2026-04-21-managed-services.md`
+- **完整设计（已归档）**：`docs/superpowers/archive/2026-04-21-managed-services.md`
 
 ### 关键 localStorage 键
 
@@ -235,6 +235,7 @@ interface TimeEntry extends Syncable {
   startTime: Date;
   endTime: Date | null;    // null 表示当前正在计时
   activity: string;        // 活动描述（用户输入）
+  memo?: string;           // 可选感想/备注，与 activity 分离（v7+）
   categoryId: string | null;  // 关联分类 ID
   goalId: string | null;      // 关联目标 ID
   createdAt: Date;

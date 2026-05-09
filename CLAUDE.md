@@ -73,7 +73,7 @@ If `VITE_AUTH_API_URL` is set, the app offers **Managed mode** for paid features
 
 Per-feature mode (`off` / `byo` / `managed`) is stored in `chrono_feature_modes` in localStorage. Routing happens through `src/services/gateway/` (`CompositeGateway` → `ByoGateway` or `ManagedGateway`). A one-time `MigrationPrompt` (mounted in `App.tsx`) offers existing BYO users a one-click switch on boot — opting in scrubs every provider's BYO `apiKey` from localStorage.
 
-Backend code: `server/src/`. Deploy with `server/deploy.sh` then upload the resulting zip in the Aliyun FC console. Operator runbook: `server/RUNBOOK.md`. Full design: `docs/superpowers/specs/2026-04-21-managed-services.md`.
+Backend code: `server/src/`. Deploy with `server/deploy.sh` then upload the resulting zip in the Aliyun FC console. Operator runbook: `server/RUNBOOK.md`. Full design (archived): `docs/superpowers/archive/2026-04-21-managed-services.md`.
 
 ### Multi-Device Sync
 Optional. Two modes: BYO (user-supplied OSS keys) or Managed (signed STS tokens via the Chrono backend). Architecture: oplog (operation log) + snapshot (full state), LWW merge strategy. Both modes write to the same `sync/{userId}/` prefix and converge across modes. See Managed Services section.
