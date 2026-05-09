@@ -21,6 +21,7 @@ import dayjs from 'dayjs';
 import { WheelTimePicker } from '../common/WheelTimePicker';
 import { useIOSTimePicker } from '../../hooks/useIOSTimePicker';
 import { predictMetadata, invalidatePredictionCache } from '../../services/metadataPredictor';
+import { QuickCaptureButton } from '../QuickCapture/QuickCaptureButton';
 
 // ============ 工具函数 ============
 
@@ -794,21 +795,23 @@ export const TimeEntryForm: React.FC = () => {
         </IonCardContent>
       </IonCard>
 
-      {/* 操作按钮 */}
-      <IonButton
-        expand="block"
-        color="primary"
-        onClick={endTime === null ? handleStartTracking : handleSaveManualEntry}
-        disabled={!activity.trim()}
-        style={ACTION_BUTTON_STYLE}
-      >
-        {endTime === null ? '开始计时' : '保存记录'}
-        <IonIcon
-          slot="end"
-          icon={endTime === null ? playOutline : saveOutline}
-          style={{ fontSize: '20px' }}
-        />
-      </IonButton>
+      {/* 操作按钮：左侧主按钮 + 右侧快速补录 */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+        <IonButton
+          color="primary"
+          onClick={endTime === null ? handleStartTracking : handleSaveManualEntry}
+          disabled={!activity.trim()}
+          style={{ ...ACTION_BUTTON_STYLE, flex: 1 }}
+        >
+          {endTime === null ? '开始计时' : '保存记录'}
+          <IonIcon
+            slot="end"
+            icon={endTime === null ? playOutline : saveOutline}
+            style={{ fontSize: '20px' }}
+          />
+        </IonButton>
+        <QuickCaptureButton />
+      </div>
 
       {/* 开始时间选择器 Modal */}
       {!isIOS && (
