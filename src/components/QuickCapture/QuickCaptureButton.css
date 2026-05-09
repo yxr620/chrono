@@ -1,0 +1,12 @@
+.quick-capture-btn {
+  --background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  --box-shadow: none;
+  --border-radius: 26px;
+  height: 52px;
+  width: 56px;
+  margin: 0;
+}
+
+.quick-capture-btn ion-icon {
+  font-size: 22px;
+}
