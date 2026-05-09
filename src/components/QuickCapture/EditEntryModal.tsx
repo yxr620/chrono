@@ -1,8 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { IonModal, IonInput, IonButton } from '@ionic/react';
+import React, { useState, useEffect, useRef } from 'react';
+import { IonModal, IonButton } from '@ionic/react';
+import { Capacitor } from '@capacitor/core';
 import dayjs from 'dayjs';
 import { useCategoryStore } from '../../stores/categoryStore';
 import { useGoalStore } from '../../stores/goalStore';
+import { useDarkMode } from '../../hooks/useDarkMode';
+import { useIOSTimePicker } from '../../hooks/useIOSTimePicker';
+import { useAppToast } from '../../hooks/useAppToast';
+import { ActivityInput, CategoryPicker, GoalPicker } from '../common/EntryFields';
+import { WheelTimePicker, type WheelTimePickerHandle } from '../common/WheelTimePicker';
 import type { AddEntryParams } from '../../services/quickCapture/quickCaptureParse';
 import './EditEntryModal.css';
 
@@ -14,135 +20,144 @@ interface Props {
   onCancel: () => void;
 }
 
+const hmToDate = (date: string, hm: string): Date => dayjs(`${date} ${hm}`).toDate();
+const dateToHm = (d: Date): string => dayjs(d).format('HH:mm');
+
+const getPickerModalStyle = (isDark: boolean): React.CSSProperties => ({
+  '--height': 'auto',
+  '--width': '100%',
+  '--border-radius': '16px 16px 0 0',
+  '--background': isDark ? 'hsl(222.2, 84%, 4.9%)' : '#fff',
+  '--box-shadow': 'none',
+  alignItems: 'flex-end',
+} as React.CSSProperties);
+
+const getPickerContentStyle = (isDark: boolean): React.CSSProperties => ({
+  display: 'flex',
+  flexDirection: 'column',
+  padding: '16px',
+  background: isDark ? 'hsl(222.2, 84%, 4.9%)' : '#fff',
+});
+
 export const EditEntryModal: React.FC<Props> = ({ isOpen, initial, onSave, onDelete, onCancel }) => {
   const { categories } = useCategoryStore();
   const { goals } = useGoalStore();
+  const { isDark } = useDarkMode();
+  const isIOS = Capacitor.getPlatform() === 'ios';
+  const { openIOSTimePicker } = useIOSTimePicker();
+  const [present] = useAppToast();
 
-  const [activity, setActivity] = useState(initial.activity);
-  const [date, setDate] = useState(initial.date);
-  const [startTime, setStartTime] = useState(initial.start_time);
-  const [endTime, setEndTime] = useState(initial.end_time);
-  const [categoryName, setCategoryName] = useState(initial.category ?? '');
-  const [goalName, setGoalName] = useState(initial.goal ?? '');
+  // 表单状态（categoryId/goalId 为内部表示；提交时映射回 name）
+  const [activity, setActivity] = useState('');
+  const [date, setDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [goalId, setGoalId] = useState<string | null>(null);
 
+  // 时间选择器状态（仅非 iOS）
+  const [startPickerOpen, setStartPickerOpen] = useState(false);
+  const [endPickerOpen, setEndPickerOpen] = useState(false);
+  const [startDraft, setStartDraft] = useState<Date>(() => new Date());
+  const [endDraft, setEndDraft] = useState<Date>(() => new Date());
+  const startPickerRef = useRef<WheelTimePickerHandle>(null);
+  const endPickerRef = useRef<WheelTimePickerHandle>(null);
+
+  // Modal 打开时把 initial 注入表单（initial.category/goal 是 name，需转 id）
   useEffect(() => {
-    if (isOpen) {
-      setActivity(initial.activity);
-      setDate(initial.date);
-      setStartTime(initial.start_time);
-      setEndTime(initial.end_time);
-      setCategoryName(initial.category ?? '');
-      setGoalName(initial.goal ?? '');
-    }
-  }, [isOpen, initial]);
+    if (!isOpen) return;
+    setActivity(initial.activity);
+    setDate(initial.date);
+    setStartTime(initial.start_time);
+    setEndTime(initial.end_time);
+    setCategoryId(categories.find(c => c.name === initial.category)?.id ?? '');
+    setGoalId(goals.find(g => g.name === initial.goal)?.id ?? null);
+  }, [isOpen, initial, categories, goals]);
 
-  const dateGoals = goals.filter(
-    g => !g.deleted && (g.type ?? 'time') !== 'check' && g.date === date,
-  );
+  const showError = (msg: string) => {
+    present({ message: msg, duration: 1500, position: 'top', color: 'danger' });
+  };
+
+  const openStartPicker = () => {
+    if (!date || !startTime) return;
+    const cur = hmToDate(date, startTime);
+    if (isIOS) {
+      void openIOSTimePicker(cur, picked => setStartTime(dateToHm(picked)));
+      return;
+    }
+    setStartDraft(cur);
+    setStartPickerOpen(true);
+  };
+
+  const openEndPicker = () => {
+    if (!date || !endTime) return;
+    const cur = hmToDate(date, endTime);
+    if (isIOS) {
+      void openIOSTimePicker(cur, picked => {
+        const next = dateToHm(picked);
+        if (next <= startTime) {
+          showError('结束时间须晚于开始');
+          return;
+        }
+        setEndTime(next);
+      });
+      return;
+    }
+    setEndDraft(cur);
+    setEndPickerOpen(true);
+  };
 
   const handleSave = () => {
-    if (!activity.trim()) return;
-    if (!startTime || !endTime) return;
-    const startDate = dayjs(`${date} ${startTime}`);
-    const endDate = dayjs(`${date} ${endTime}`);
-    if (!startDate.isValid() || !endDate.isValid()) return;
-    if (!endDate.isAfter(startDate)) return;
-
+    if (!activity.trim()) {
+      showError('请输入活动');
+      return;
+    }
+    if (!startTime || !endTime) {
+      showError('请设置时间');
+      return;
+    }
+    if (endTime <= startTime) {
+      showError('结束时间须晚于开始');
+      return;
+    }
     onSave({
       date,
       start_time: startTime,
       end_time: endTime,
       activity: activity.trim(),
-      category: categoryName || undefined,
-      goal: goalName || undefined,
+      category: categories.find(c => c.id === categoryId)?.name || undefined,
+      goal: goals.find(g => g.id === goalId)?.name || undefined,
     });
   };
 
   return (
     <IonModal isOpen={isOpen} onDidDismiss={onCancel}>
       <div className="edit-entry-modal-content">
-        <div className="edit-entry-row">
-          <span className="edit-entry-label">活动</span>
-          <IonInput
-            value={activity}
-            onIonInput={e => setActivity(e.detail.value ?? '')}
-            placeholder="活动名称"
-            style={{ flex: 1 }}
-          />
-        </div>
+        <ActivityInput value={activity} onChange={setActivity} placeholder="活动名称" />
 
         <div className="edit-entry-row">
           <span className="edit-entry-label">日期</span>
           <input
             type="date"
+            className="edit-entry-date-input"
             value={date}
             onChange={e => setDate(e.target.value)}
-            style={{ flex: 1, padding: '6px 8px' }}
           />
         </div>
 
         <div className="edit-entry-time-row">
-          <input
-            type="time"
-            className="edit-entry-time"
-            value={startTime}
-            onChange={e => setStartTime(e.target.value)}
-          />
+          <div className="edit-entry-time" onClick={openStartPicker}>
+            {startTime || '--:--'}
+          </div>
           <span style={{ color: '#94a3b8' }}>→</span>
-          <input
-            type="time"
-            className="edit-entry-time"
-            value={endTime}
-            onChange={e => setEndTime(e.target.value)}
-          />
-        </div>
-
-        <div>
-          <div className="edit-entry-label" style={{ marginBottom: 4 }}>类别</div>
-          <div>
-            <span
-              className={`edit-entry-pill ${!categoryName ? 'selected' : ''}`}
-              onClick={() => setCategoryName('')}
-            >
-              无
-            </span>
-            {categories.map(c => (
-              <span
-                key={c.id}
-                className={`edit-entry-pill ${categoryName === c.name ? 'selected' : ''}`}
-                onClick={() => setCategoryName(c.name)}
-              >
-                {c.name}
-              </span>
-            ))}
+          <div className="edit-entry-time" onClick={openEndPicker}>
+            {endTime || '--:--'}
           </div>
         </div>
 
-        <div>
-          <div className="edit-entry-label" style={{ marginBottom: 4 }}>目标</div>
-          <div>
-            <span
-              className={`edit-entry-pill goal ${!goalName ? 'selected' : ''}`}
-              onClick={() => setGoalName('')}
-            >
-              无
-            </span>
-            {dateGoals.map(g => (
-              <span
-                key={g.id}
-                className={`edit-entry-pill goal ${goalName === g.name ? 'selected' : ''}`}
-                onClick={() => setGoalName(g.name)}
-              >
-                {g.name}
-              </span>
-            ))}
-            {dateGoals.length === 0 && (
-              <span style={{ fontSize: 12, color: '#94a3b8', marginLeft: 8 }}>
-                该日期暂无目标
-              </span>
-            )}
-          </div>
-        </div>
+        <CategoryPicker selectedId={categoryId} onChange={setCategoryId} />
+
+        <GoalPicker dateContext={date} selectedId={goalId} onChange={setGoalId} />
 
         <div className="edit-entry-actions">
           <IonButton fill="clear" className="edit-entry-delete" onClick={onDelete}>
@@ -154,6 +169,73 @@ export const EditEntryModal: React.FC<Props> = ({ isOpen, initial, onSave, onDel
           </div>
         </div>
       </div>
+
+      {/* 开始时间选择器（非 iOS） */}
+      {!isIOS && (
+        <IonModal
+          isOpen={startPickerOpen}
+          onDidDismiss={() => setStartPickerOpen(false)}
+          style={getPickerModalStyle(isDark)}
+        >
+          <div style={getPickerContentStyle(isDark)}>
+            <div className="edit-entry-picker-buttons">
+              <IonButton fill="clear" onClick={() => setStartPickerOpen(false)}>取消</IonButton>
+              <IonButton
+                fill="clear"
+                onClick={() => {
+                  const live = startPickerRef.current?.getCurrentValue() ?? startDraft;
+                  setStartTime(dateToHm(live));
+                  setStartPickerOpen(false);
+                }}
+              >
+                确定
+              </IonButton>
+            </div>
+            <WheelTimePicker
+              ref={startPickerRef}
+              value={startDraft}
+              onChange={setStartDraft}
+              isDark={isDark}
+            />
+          </div>
+        </IonModal>
+      )}
+
+      {/* 结束时间选择器（非 iOS） */}
+      {!isIOS && (
+        <IonModal
+          isOpen={endPickerOpen}
+          onDidDismiss={() => setEndPickerOpen(false)}
+          style={getPickerModalStyle(isDark)}
+        >
+          <div style={getPickerContentStyle(isDark)}>
+            <div className="edit-entry-picker-buttons">
+              <IonButton fill="clear" onClick={() => setEndPickerOpen(false)}>取消</IonButton>
+              <IonButton
+                fill="clear"
+                onClick={() => {
+                  const live = endPickerRef.current?.getCurrentValue() ?? endDraft;
+                  const liveHm = dateToHm(live);
+                  if (liveHm <= startTime) {
+                    showError('结束时间须晚于开始');
+                    return;
+                  }
+                  setEndTime(liveHm);
+                  setEndPickerOpen(false);
+                }}
+              >
+                确定
+              </IonButton>
+            </div>
+            <WheelTimePicker
+              ref={endPickerRef}
+              value={endDraft}
+              onChange={setEndDraft}
+              isDark={isDark}
+            />
+          </div>
+        </IonModal>
+      )}
     </IonModal>
   );
 };

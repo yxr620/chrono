@@ -21,6 +21,17 @@
   min-width: 48px;
 }
 
+.edit-entry-date-input {
+  flex: 1;
+  padding: 6px 8px;
+  background: transparent;
+  color: inherit;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+}
+
 .edit-entry-time-row {
   display: flex;
   gap: 12px;
@@ -36,29 +47,8 @@
   border-radius: 8px;
   background: rgba(148, 163, 184, 0.1);
   cursor: pointer;
-}
-
-.edit-entry-pill {
-  display: inline-block;
-  padding: 4px 10px;
-  margin: 2px;
-  border-radius: 12px;
-  font-size: 13px;
-  cursor: pointer;
+  text-align: center;
   user-select: none;
-  background: rgba(148, 163, 184, 0.15);
-  color: #64748b;
-}
-
-.edit-entry-pill.selected {
-  background: rgba(59, 130, 246, 0.15);
-  color: #3b82f6;
-  font-weight: 600;
-}
-
-.edit-entry-pill.goal.selected {
-  background: rgba(245, 158, 11, 0.15);
-  color: #f59e0b;
 }
 
 .edit-entry-actions {
@@ -70,4 +60,11 @@
 
 .edit-entry-delete {
   --color: #ef4444;
+}
+
+.edit-entry-picker-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 100px;
+  padding: 0 0 16px 0;
 }
