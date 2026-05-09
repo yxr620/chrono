@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { IonButton, IonIcon } from '@ionic/react';
 import { closeOutline, createOutline } from 'ionicons/icons';
 import dayjs from 'dayjs';
@@ -29,6 +29,8 @@ export const ReviewSequence: React.FC<Props> = ({
   const [entries, setEntries] = useState<PendingEntry[]>(initialEntries);
   const [confirmCards, setConfirmCards] = useState<Record<string, ConfirmCardType>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
+  // 同步追踪进行中的保存，防止"全部确认"和单条确认并发触发同一条 entry 的双重保存
+  const inflightRef = useRef<Set<string>>(new Set());
 
   React.useEffect(() => {
     // 预生成所有 confirm 卡，便于渲染
@@ -59,6 +61,8 @@ export const ReviewSequence: React.FC<Props> = ({
   };
 
   const runAdd = async (entry: PendingEntry) => {
+    if (inflightRef.current.has(entry.id)) return;
+    inflightRef.current.add(entry.id);
     updateEntry(entry.id, { status: 'saving', error: undefined });
     try {
       const result = await addEntryAction.handler(entry.params as unknown as Record<string, unknown>);
@@ -72,6 +76,8 @@ export const ReviewSequence: React.FC<Props> = ({
         status: 'failed',
         error: err instanceof Error ? err.message : String(err),
       });
+    } finally {
+      inflightRef.current.delete(entry.id);
     }
   };
 
@@ -84,11 +90,9 @@ export const ReviewSequence: React.FC<Props> = ({
   };
 
   const handleConfirmAll = async () => {
+    // runAdd 自身用 inflightRef 防止重入；这里只需把当前可保存的条目串行跑一遍
     for (const { e } of pendingIndexes) {
-      // 重新读取最新状态（runAdd 中可能已经更新）
-      const fresh = entries.find(x => x.id === e.id);
-      if (!fresh || (fresh.status !== 'pending' && fresh.status !== 'failed')) continue;
-      await runAdd(fresh);
+      await runAdd(e);
     }
   };
 
@@ -154,7 +158,7 @@ export const ReviewSequence: React.FC<Props> = ({
 
       <div className="review-body">
         {entries.map(entry => {
-          if (entry.status === 'saved' || entry.status === 'skipped') return null;
+          if (entry.status === 'saved' || entry.status === 'skipped' || entry.status === 'saving') return null;
           const card = confirmCards[entry.id];
           if (!card) return null;
 

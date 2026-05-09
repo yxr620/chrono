@@ -23,7 +23,7 @@ export interface PendingEntry {
   id: string;
   params: AddEntryParams;
   conflicts: ConflictInfo[];
-  status: 'pending' | 'confirming' | 'saving' | 'saved' | 'skipped' | 'failed';
+  status: 'pending' | 'saving' | 'saved' | 'skipped' | 'failed';
   error?: string;
 }
 
