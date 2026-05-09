@@ -22,6 +22,7 @@ interface Props {
 
 const hmToDate = (date: string, hm: string): Date => dayjs(`${date} ${hm}`).toDate();
 const dateToHm = (d: Date): string => dayjs(d).format('HH:mm');
+const dateToYmd = (d: Date): string => dayjs(d).format('YYYY-MM-DD');
 
 const getPickerModalStyle = (isDark: boolean): React.CSSProperties => ({
   '--height': 'auto',
@@ -78,11 +79,26 @@ export const EditEntryModal: React.FC<Props> = ({ isOpen, initial, onSave, onDel
     present({ message: msg, duration: 1500, position: 'top', color: 'danger' });
   };
 
+  // 起始 picker 同时决定日期；终止 picker 只取时间，沿用当前 date
+  const applyStart = (picked: Date) => {
+    setDate(dateToYmd(picked));
+    setStartTime(dateToHm(picked));
+  };
+
+  const applyEnd = (picked: Date) => {
+    const nextHm = dateToHm(picked);
+    if (nextHm <= startTime) {
+      showError('结束时间须晚于开始');
+      return;
+    }
+    setEndTime(nextHm);
+  };
+
   const openStartPicker = () => {
     if (!date || !startTime) return;
     const cur = hmToDate(date, startTime);
     if (isIOS) {
-      void openIOSTimePicker(cur, picked => setStartTime(dateToHm(picked)));
+      void openIOSTimePicker(cur, applyStart);
       return;
     }
     setStartDraft(cur);
@@ -93,14 +109,7 @@ export const EditEntryModal: React.FC<Props> = ({ isOpen, initial, onSave, onDel
     if (!date || !endTime) return;
     const cur = hmToDate(date, endTime);
     if (isIOS) {
-      void openIOSTimePicker(cur, picked => {
-        const next = dateToHm(picked);
-        if (next <= startTime) {
-          showError('结束时间须晚于开始');
-          return;
-        }
-        setEndTime(next);
-      });
+      void openIOSTimePicker(cur, applyEnd);
       return;
     }
     setEndDraft(cur);
@@ -134,16 +143,6 @@ export const EditEntryModal: React.FC<Props> = ({ isOpen, initial, onSave, onDel
     <IonModal isOpen={isOpen} onDidDismiss={onCancel}>
       <div className="edit-entry-modal-content">
         <ActivityInput value={activity} onChange={setActivity} placeholder="活动名称" />
-
-        <div className="edit-entry-row">
-          <span className="edit-entry-label">日期</span>
-          <input
-            type="date"
-            className="edit-entry-date-input"
-            value={date}
-            onChange={e => setDate(e.target.value)}
-          />
-        </div>
 
         <div className="edit-entry-time-row">
           <div className="edit-entry-time" onClick={openStartPicker}>
@@ -184,7 +183,7 @@ export const EditEntryModal: React.FC<Props> = ({ isOpen, initial, onSave, onDel
                 fill="clear"
                 onClick={() => {
                   const live = startPickerRef.current?.getCurrentValue() ?? startDraft;
-                  setStartTime(dateToHm(live));
+                  applyStart(live);
                   setStartPickerOpen(false);
                 }}
               >

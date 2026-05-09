@@ -21,17 +21,6 @@
   min-width: 48px;
 }
 
-.edit-entry-date-input {
-  flex: 1;
-  padding: 6px 8px;
-  background: transparent;
-  color: inherit;
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  border-radius: 6px;
-  font-family: inherit;
-  font-size: 14px;
-}
-
 .edit-entry-time-row {
   display: flex;
   gap: 12px;
