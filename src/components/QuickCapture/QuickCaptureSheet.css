@@ -1,0 +1,39 @@
+.quick-capture-sheet {
+  --height: 80vh;
+  --border-radius: 16px 16px 0 0;
+}
+
+@media (min-width: 1024px) {
+  .quick-capture-sheet {
+    --height: 600px;
+    --width: 600px;
+    --border-radius: 16px;
+  }
+}
+
+.quick-capture-sheet-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--ion-background-color, #fff);
+}
+
+.quick-capture-sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.quick-capture-sheet-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.quick-capture-sheet-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
