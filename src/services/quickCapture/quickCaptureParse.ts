@@ -8,6 +8,7 @@ import { db, type TimeEntry, type Category, type Goal } from '../db';
 import { gateway } from '../gateway';
 import { chatWithTools, type ChatMessage } from '../ai/llmClient';
 import { actionRegistry } from '../actions';
+import { predictMetadata } from '../metadataPredictor';
 import { detectConflicts, type ConflictInfo } from './conflictDetection';
 
 export interface AddEntryParams {
@@ -229,6 +230,27 @@ export async function parseTranscript(
       status: 'pending',
     });
   }
+
+  // 本地 predictMetadata 基于用户历史（活动名 → 类别频率 + 目标 token 匹配），
+  // 个人化准确度优于 LLM 的常识推断，所以让它覆盖 AI 给出的 category/goal。
+  // AI 的建议仅在本地预测返回 null 时保留作为 fallback。
+  await Promise.all(
+    entries.map(async entry => {
+      try {
+        const local = await predictMetadata(entry.params.activity, ctx.pageDateGoals);
+        if (local.categoryId) {
+          const cat = ctx.categories.find(c => c.id === local.categoryId);
+          if (cat) entry.params.category = cat.name;
+        }
+        if (local.goalId) {
+          const goal = ctx.pageDateGoals.find(g => g.id === local.goalId);
+          if (goal) entry.params.goal = goal.name;
+        }
+      } catch {
+        // 预测失败不阻塞解析；AI 的字段原样保留
+      }
+    }),
+  );
 
   return { entries, rawTranscript: transcript };
 }
