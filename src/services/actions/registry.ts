@@ -37,6 +37,11 @@ class ActionRegistry {
       },
     }));
   }
+
+  toToolDefinitionsFor(names: string[]): ToolDefinition[] {
+    const wanted = new Set(names);
+    return this.toToolDefinitions().filter(t => wanted.has(t.function.name));
+  }
 }
 
 export const actionRegistry = new ActionRegistry();
