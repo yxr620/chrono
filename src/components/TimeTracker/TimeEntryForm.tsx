@@ -10,7 +10,7 @@ import {
   IonModal
 } from '@ionic/react';
 import { Capacitor } from '@capacitor/core';
-import { playOutline, stopOutline, saveOutline, chatbubbleEllipsesOutline, documentTextOutline, pricetagOutline, flagOutline, refreshOutline } from 'ionicons/icons';
+import { playOutline, stopOutline, saveOutline, chatbubbleEllipsesOutline, documentTextOutline, refreshOutline } from 'ionicons/icons';
 import { useEntryStore } from '../../stores/entryStore';
 import { useGoalStore } from '../../stores/goalStore';
 import { useCategoryStore } from '../../stores/categoryStore';
@@ -22,6 +22,7 @@ import { WheelTimePicker } from '../common/WheelTimePicker';
 import { useIOSTimePicker } from '../../hooks/useIOSTimePicker';
 import { predictMetadata, invalidatePredictionCache } from '../../services/metadataPredictor';
 import { QuickCaptureButton } from '../QuickCapture/QuickCaptureButton';
+import { CategoryPicker, GoalPicker } from '../common/EntryFields';
 
 // ============ 工具函数 ============
 
@@ -119,7 +120,7 @@ export const TimeEntryForm: React.FC = () => {
     loadEntries
   } = useEntryStore();
   const { goals, loadGoals } = useGoalStore();
-  const { categories, loadCategories } = useCategoryStore();
+  const { loadCategories } = useCategoryStore();
   const selectedDate = useDateStore(state => state.selectedDate);
   const setSelectedDate = useDateStore(state => state.setSelectedDate);
   const { isDark } = useDarkMode();
@@ -258,17 +259,12 @@ export const TimeEntryForm: React.FC = () => {
   // ============ 计算属性 ============
 
   const currentDateStr = selectedDate;
-  const prevDateStr = dayjs(selectedDate).subtract(1, 'day').format('YYYY-MM-DD');
   // 时间记录只能关联 time 型目标；check 型（如"吃药""早休息"）不参与时长统计
-  const trackableGoals = goals.filter(g => (g.type ?? 'time') !== 'check');
-  const currentGoals = trackableGoals.filter(g => g.date === currentDateStr);
-  currentGoalsRef.current = currentGoals;
-  const prevGoals = trackableGoals.filter(g => g.date === prevDateStr);
-  const currentGoalNamesLower = currentGoals.map(g => g.name.toLowerCase().trim());
-  const filteredPrevGoals = prevGoals.filter(
-    g => !currentGoalNamesLower.includes(g.name.toLowerCase().trim())
+  // currentGoals 仅供 predictMetadata 使用；GoalPicker 内部独立处理 current + prev 的合并
+  const currentGoals = goals.filter(
+    g => (g.type ?? 'time') !== 'check' && g.date === currentDateStr,
   );
-  const availableGoals = [...currentGoals, ...filteredPrevGoals];
+  currentGoalsRef.current = currentGoals;
 
   // ============ 事件处理 ============
 
@@ -373,104 +369,28 @@ export const TimeEntryForm: React.FC = () => {
     setStartTime(alignDateWithTime(savedEndTime, selectedDate));
   };
 
-  // ============ 渲染辅助函数 ============
+  // ============ 渲染辅助 ============
 
-  const renderSelectableItem = (
-    _id: string,
-    name: string,
-    isSelected: boolean,
-    activeColor: string,
-    inactiveColor: string,
-    onClick: () => void,
-    suffix?: string
-  ) => (
-    <span
-      onClick={onClick}
-      style={{
-        fontSize: '15px',
-        fontWeight: isSelected ? '600' : '400',
-        color: isSelected ? activeColor : (isDark ? '#94a3b8' : inactiveColor),
-        cursor: 'pointer',
-        transition: 'all 0.2s',
-        userSelect: 'none'
+  // 类别/目标选择器抽到 common/EntryFields，主表单在此包一层注入"用户已手动选择过"的副作用
+  const categoryRow = (
+    <CategoryPicker
+      selectedId={selectedCategoryId}
+      onChange={(id) => {
+        userPickedCategoryRef.current = true;
+        setSelectedCategoryId(id);
       }}
-    >
-      {name}{suffix}
-    </span>
+    />
   );
 
-  const renderSeparator = () => (
-    <span style={{ color: isDark ? '#475569' : '#cbd5e1', fontSize: '14px', margin: '0 1px' }}>|</span>
-  );
-
-  const renderCategoryRow = () => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, color: isDark ? '#94a3b8' : '#999', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>
-        <IonIcon icon={pricetagOutline} style={{ fontSize: '13px' }} />
-      </div>
-      <div style={{ flex: 1, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-        <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '6px', alignItems: 'center', whiteSpace: 'nowrap', paddingRight: '4px' }}>
-          {categories.map((c, index) => (
-            <React.Fragment key={c.id}>
-              {index > 0 && renderSeparator()}
-              {renderSelectableItem(
-                c.id,
-                c.name,
-                c.id === selectedCategoryId,
-                '#3b82f6',
-                '#666',
-                () => { userPickedCategoryRef.current = true; setSelectedCategoryId(c.id === selectedCategoryId ? '' : c.id); }
-              )}
-            </React.Fragment>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderGoalRow = () => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, color: isDark ? '#94a3b8' : '#999', fontSize: '12px', fontWeight: '600' }}>
-        <IonIcon icon={flagOutline} style={{ fontSize: '13px' }} />
-      </div>
-      <div style={{ height: '56px', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
-        {availableGoals.length > 0 ? (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center', paddingRight: '4px' }}>
-            {currentGoals.map((g, index) => (
-              <React.Fragment key={g.id}>
-                {index > 0 && renderSeparator()}
-                {renderSelectableItem(
-                  g.id!,
-                  g.name,
-                  g.id === selectedGoalId,
-                  '#f59e0b',
-                  '#666',
-                  () => { userPickedGoalRef.current = true; setSelectedGoalId(g.id === selectedGoalId ? null : g.id!); }
-                )}
-              </React.Fragment>
-            ))}
-            {currentGoals.length > 0 && filteredPrevGoals.length > 0 && renderSeparator()}
-            {filteredPrevGoals.map((g, index) => (
-              <React.Fragment key={g.id}>
-                {index > 0 && renderSeparator()}
-                {renderSelectableItem(
-                  g.id!,
-                  g.name,
-                  g.id === selectedGoalId,
-                  '#f59e0b',
-                  '#999',
-                  () => { userPickedGoalRef.current = true; setSelectedGoalId(g.id === selectedGoalId ? null : g.id!); }
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-        ) : (
-          <div style={{ color: isDark ? '#475569' : '#bbb', fontSize: '14px' }}>
-            该日期暂无目标
-          </div>
-        )}
-      </div>
-    </div>
+  const goalRow = (
+    <GoalPicker
+      dateContext={currentDateStr}
+      selectedId={selectedGoalId}
+      onChange={(id) => {
+        userPickedGoalRef.current = true;
+        setSelectedGoalId(id);
+      }}
+    />
   );
 
   // ============ 渲染 ============
@@ -623,12 +543,12 @@ export const TimeEntryForm: React.FC = () => {
           {/* 桌面端：类别和目标分开显示 */}
           <IonCard style={getCardStyle(isDark)}>
             <IonCardContent style={{ padding: '10px 16px' }}>
-              {renderCategoryRow()}
+              {categoryRow}
             </IonCardContent>
           </IonCard>
           <IonCard style={getCardStyle(isDark)}>
             <IonCardContent style={{ padding: '10px 16px' }}>
-              {renderGoalRow()}
+              {goalRow}
             </IonCardContent>
           </IonCard>
         </>
@@ -636,10 +556,10 @@ export const TimeEntryForm: React.FC = () => {
         /* 移动端：类别和目标合并为一个卡片 */
         <IonCard style={getCardStyle(isDark)}>
           <IonCardContent style={{ padding: '10px 16px' }}>
-            {renderCategoryRow()}
+            {categoryRow}
             {/* 分隔线 */}
             <div style={{ height: '1px', background: isDark ? 'rgba(71, 85, 105, 0.3)' : 'rgba(148, 163, 184, 0.2)', margin: '8px 0' }} />
-            {renderGoalRow()}
+            {goalRow}
           </IonCardContent>
         </IonCard>
       )}
