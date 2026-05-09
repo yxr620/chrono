@@ -1,12 +1,20 @@
 .quick-capture-btn {
-  --background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  --background: rgba(148, 163, 184, 0.18);
+  --background-hover: rgba(148, 163, 184, 0.28);
+  --background-activated: rgba(148, 163, 184, 0.32);
+  --color: #475569;
   --box-shadow: none;
   --border-radius: 26px;
+  --padding-start: 18px;
+  --padding-end: 18px;
   height: 52px;
-  width: 56px;
+  font-size: 16px;
+  font-weight: 600;
   margin: 0;
 }
 
-.quick-capture-btn ion-icon {
-  font-size: 22px;
+@media (prefers-color-scheme: dark) {
+  .quick-capture-btn {
+    --color: #cbd5e1;
+  }
 }
