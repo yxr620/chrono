@@ -351,3 +351,22 @@ dataService.categories.list()
 ### 数据维护页面（MaintenancePage）
 
 仅桌面端可见。**睡觉补录 Tab**：配置 → 扫描 → 预览/勾选 → 确认补录。**数据校验 Tab**：扫描重叠和异常 → 逐条截断或删除。
+
+## TimeEntryForm 开始时间自动同步
+
+主界面（`TimeEntryForm`）顶部显示的「开始时间」是组件本地 state，不是 store 字段。它会在以下时机被自动覆盖（无手动覆盖时）；其中的 **lastEndTime** 指 `getLastEntryEndTimeForDate(selectedDate)`——当天所有 `endTime` 不为 null 的记录中**结束时间最晚**那条的 `endTime`。
+
+| 触发时机 | 设成什么值 |
+|---------|-----------|
+| 组件挂载 | 今天的 lastEndTime；无则 `now` |
+| `selectedDate` 切换 | 该日 lastEndTime；无则该日 00:00（同时清空结束时间） |
+| 在记录列表 / 时间轴点击某条记录 | 该条记录的 `endTime`（经 `nextStartTime` 中转） |
+| 点「上次结束」/「现在」徽章 | lastEndTime / `now` |
+| 开始计时、停止计时、保存手动记录后 | lastEndTime 或刚保存条目的 `endTime` |
+| `entries` 数据变化（例如编辑/删除最后一条记录） | 若 startTime 仍锚定旧 lastEndTime（5 秒内），跟随到新 lastEndTime；若已被手动改过则保持不动 |
+
+**锚点机制**：通过 `lastEndAnchorRef` 记录"上次同步到的 lastEndTime 时间戳"，每次 `entries` 变化时对比当前 startTime 与旧锚点是否仍接近（< 5s），用于区分"自动同步"和"用户手动覆盖"两种状态。手动改过时间选择器后，锚点和 startTime 不再相等，自动同步就停手，直到下一次显式触发（点「上次结束」、切日期等）重新对齐。
+
+**「上次结束」/「现在」徽章** 的显示也基于同一判定：startTime 与当前 lastEndTime 在 5 秒内 → 显示「现在」（点击跳到当前），否则显示「上次结束」（点击回到 lastEndTime）。
+
+跨天对齐由 `alignDateWithTime(time, dateStr)` 完成：取 `time` 的时分秒部分套到 `dateStr` 这一天，避免日期错位。

@@ -109,6 +109,7 @@ const MODAL_BUTTON_ROW_STYLE: React.CSSProperties = {
 export const TimeEntryForm: React.FC = () => {
   // Store hooks
   const {
+    entries,
     currentEntry,
     startTracking,
     stopTracking,
@@ -148,6 +149,11 @@ export const TimeEntryForm: React.FC = () => {
   // 智能预选：追踪用户是否手动选过（手动选过就不再覆盖）
   const userPickedCategoryRef = useRef(false);
   const userPickedGoalRef = useRef(false);
+
+  // 锚点：当前 startTime 跟随的 lastEndTime 时间戳。
+  // entries 变化（例如编辑了最后一条记录的结束时间）时，若 startTime 仍锚定在旧值（用户没有手动改过），
+  // 则跟随到新的 lastEndTime；若 startTime 已被手动改成别的值，则保持不动。
+  const lastEndAnchorRef = useRef<number | null>(null);
 
   // ============ Effects ============
 
@@ -214,6 +220,25 @@ export const TimeEntryForm: React.FC = () => {
     }
     setEndTime(null);
   }, [selectedDate, startTime, getLastEntryEndTimeForDate]);
+
+  // 当 entries 变化时（例如编辑/删除了最后一条记录），如果 startTime 仍锚定在旧的 lastEndTime，
+  // 就跟随新的 lastEndTime 更新；如果用户已手动改过 startTime，则保持不动。
+  useEffect(() => {
+    const last = getLastEntryEndTimeForDate(selectedDate);
+    const lastTs = last ? new Date(last).getTime() : null;
+    const prevTs = lastEndAnchorRef.current;
+
+    if (
+      prevTs !== null &&
+      lastTs !== null &&
+      lastTs !== prevTs &&
+      Math.abs(startTime.getTime() - prevTs) < 5000
+    ) {
+      setStartTime(alignDateWithTime(new Date(lastTs), selectedDate));
+    }
+
+    lastEndAnchorRef.current = lastTs;
+  }, [entries, selectedDate, startTime, getLastEntryEndTimeForDate]);
 
   // 同步时间选择器草稿值
   useEffect(() => {
