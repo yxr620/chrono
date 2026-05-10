@@ -4,7 +4,7 @@
  */
 
 import { create } from 'zustand';
-import { syncEngine, type SyncStatus, type SyncResult, startAutoSync } from '../services/syncEngine';
+import { syncEngine, type SyncStatus, type SyncResult, type SyncStats, startAutoSync } from '../services/syncEngine';
 import {
   isAutoSyncEnabled as getAutoSyncEnabled,
   setAutoSyncEnabled as persistAutoSyncEnabled,
@@ -19,10 +19,12 @@ interface SyncStore {
   pulledCount: number;
   isConfigured: boolean;
   autoSyncEnabled: boolean;
+  stats: SyncStats | null;
 
   // 方法
   sync: () => Promise<void>;
   checkConfig: () => void;
+  refreshStats: () => Promise<void>;
   setAutoSyncEnabled: (enabled: boolean) => void;
   startAutoSync: (intervalMinutes?: number) => void;
   stopAutoSync: () => void;
@@ -38,6 +40,7 @@ export const useSyncStore = create<SyncStore>((set, get) => ({
   pulledCount: 0,
   isConfigured: isSyncConfigured(),
   autoSyncEnabled: getAutoSyncEnabled(),
+  stats: null,
 
   sync: async () => {
     try {
@@ -77,6 +80,15 @@ export const useSyncStore = create<SyncStore>((set, get) => ({
     } catch (error) {
       console.error('[SyncStore] 检查配置失败:', error);
       set({ isConfigured: false, autoSyncEnabled: false });
+    }
+  },
+
+  refreshStats: async () => {
+    try {
+      const data = await syncEngine.getSyncStats();
+      set({ stats: data });
+    } catch (error) {
+      console.error('[SyncStore] 加载同步统计失败:', error);
     }
   },
 

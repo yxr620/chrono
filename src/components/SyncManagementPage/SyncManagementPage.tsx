@@ -10,7 +10,7 @@ import {
   useIonAlert,
 } from '@ionic/react';
 import { useAppToast } from '../../hooks/useAppToast';
-import { syncEngine, type SyncResult, type SyncStats } from '../../services/syncEngine';
+import { syncEngine, type SyncResult } from '../../services/syncEngine';
 import { emitSyncStatus } from '../../services/syncToast';
 import type { SyncDirection } from '../../services/syncToast';
 import { useFeatureModeStore } from '../../stores/featureModeStore';
@@ -62,50 +62,24 @@ const formatRelativeTime = (value: Date | number | null): string => {
   return dayjs(ts).fromNow();
 };
 
-const fetchSyncStats = async (): Promise<SyncStats | null> => {
-  try {
-    return await syncEngine.getSyncStats();
-  } catch (error) {
-    console.error('加载同步状态失败:', error);
-    return null;
-  }
-};
-
 export const SyncManagementPage: React.FC = () => {
   const syncMode = useFeatureModeStore((state) => state.modes.sync);
   const autoSyncEnabled = useSyncStore((state) => state.autoSyncEnabled);
   const isConfigured = useSyncStore((state) => state.isConfigured);
   const setAutoSyncEnabled = useSyncStore((state) => state.setAutoSyncEnabled);
+  const stats = useSyncStore((state) => state.stats);
+  const refreshStats = useSyncStore((state) => state.refreshStats);
   const [presentAlert] = useIonAlert();
-  const [stats, setStats] = useState<SyncStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastResult, setLastResult] = useState<SyncResult | null>(null);
   const [errorHistory, setErrorHistory] = useState<SyncErrorLog[]>([]);
   const [presentToast] = useAppToast();
 
+  // Refresh in background on mount so the cached numbers stay fresh; we don't
+  // gate render on this — store already holds the last-known stats.
   useEffect(() => {
-    let cancelled = false;
-
-    const loadInitialStats = async () => {
-      const data = await fetchSyncStats();
-      if (!cancelled) {
-        setStats(data);
-      }
-    };
-
-    void loadInitialStats();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const refreshStats = async () => {
-    const data = await fetchSyncStats();
-    if (data) {
-      setStats(data);
-    }
-  };
+    void refreshStats();
+  }, [refreshStats]);
 
   const showToast = (message: string, color: 'success' | 'danger') => {
     presentToast({ message, duration: 2000, position: 'top', color });
@@ -320,43 +294,37 @@ export const SyncManagementPage: React.FC = () => {
           <span className={`sync-status-badge sync-status-badge--${statusTone}`}>{statusLabel}</span>
         </div>
 
-        {!stats ? (
-          <div className="sync-status-spinner">
-            <IonSpinner />
+        {statusLine && (
+          <div className="sync-status-line">
+            <span className="sync-status-line-text">{statusLine}</span>
           </div>
-        ) : (
-          <>
-            {statusLine && (
-              <div className="sync-status-line">
-                <span className="sync-status-line-text">{statusLine}</span>
-              </div>
-            )}
-            <div className="sync-status-line sync-status-line--data">
-              <span className="sync-status-line-text">
-                {stats.totalEntries} 条目 · {stats.totalGoals} 目标 · {stats.totalCategories} 分类
-              </span>
-            </div>
-
-            <div className="settings-row sync-status-auto-row">
-              <div className="settings-row-text">
-                <div className="settings-row-label">自动同步</div>
-                <div className="settings-row-sub">{autoSyncCaption}</div>
-              </div>
-              <IonToggle
-                checked={autoSyncEnabled}
-                disabled={syncMode === 'disabled'}
-                onIonChange={(event) => setAutoSyncEnabled(event.detail.checked)}
-                aria-label="自动同步开关"
-              />
-            </div>
-
-            <div className="sync-status-actions">
-              <IonButton expand="block" onClick={handleSyncNow} disabled={loading} className="settings-action-button">
-                {loading ? <IonSpinner name="dots" /> : '立即同步'}
-              </IonButton>
-            </div>
-          </>
         )}
+        <div className="sync-status-line sync-status-line--data">
+          <span className="sync-status-line-text">
+            {stats
+              ? `${stats.totalEntries} 条目 · ${stats.totalGoals} 目标 · ${stats.totalCategories} 分类`
+              : ' '}
+          </span>
+        </div>
+
+        <div className="settings-row sync-status-auto-row">
+          <div className="settings-row-text">
+            <div className="settings-row-label">自动同步</div>
+            <div className="settings-row-sub">{autoSyncCaption}</div>
+          </div>
+          <IonToggle
+            checked={autoSyncEnabled}
+            disabled={syncMode === 'disabled'}
+            onIonChange={(event) => setAutoSyncEnabled(event.detail.checked)}
+            aria-label="自动同步开关"
+          />
+        </div>
+
+        <div className="sync-status-actions">
+          <IonButton expand="block" onClick={handleSyncNow} disabled={loading} className="settings-action-button">
+            {loading ? <IonSpinner name="dots" /> : '立即同步'}
+          </IonButton>
+        </div>
       </section>
 
       <div className="settings-accordion-wrap">
