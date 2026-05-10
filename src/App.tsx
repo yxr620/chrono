@@ -280,6 +280,11 @@ function App() {
     }
   }, [checkConfig, syncMode, isAuthenticated]);
 
+  // 应用启动时预加载同步统计，避免设置页首次挂载时的 spinner→内容跳变
+  useEffect(() => {
+    void useSyncStore.getState().refreshStats();
+  }, []);
+
   // 应用启动时自动 Pull
   useEffect(() => {
     if (!isSyncReady()) return;
@@ -293,6 +298,7 @@ function App() {
           direction: 'pull',
           pulledCount: result.pulledCount || 0,
         });
+        void useSyncStore.getState().refreshStats();
       } else if (result.message !== '正在同步中，请稍候') {
         emitSyncStatus({ phase: 'error', direction: 'pull' });
         emitSyncToast({ message: '自动拉取失败', color: 'danger', duration: 2200 });
