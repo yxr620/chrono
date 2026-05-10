@@ -98,14 +98,13 @@
 /* ── 活动名称输入 ── */
 .edit-dialog-activity-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 14px;
   padding: 0 18px 0 20px;
 }
 
 .edit-dialog-activity-icon {
   flex: 0 0 auto;
-  margin-top: 16px;
   color: hsl(var(--muted-foreground) / 0.55);
   font-size: 20px;
 }
@@ -140,13 +139,18 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  margin-top: 10px;
   border: 0;
   border-radius: 8px;
   background: transparent;
   color: hsl(var(--muted-foreground) / 0.45);
   cursor: pointer;
   transition: color 0.15s ease, background-color 0.15s ease;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.edit-dialog-memo-button:focus {
+  outline: none;
 }
 
 .edit-dialog-memo-button ion-icon {

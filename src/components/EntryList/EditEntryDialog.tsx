@@ -9,7 +9,8 @@ import {
   IonTextarea,
 } from '@ionic/react';
 import { Capacitor } from '@capacitor/core';
-import { chatbubbleEllipsesOutline, chatbubbleOutline, pricetagOutline, flagOutline } from 'ionicons/icons';
+import { Keyboard, KeyboardResize } from '@capacitor/keyboard';
+import { chatbubbleEllipsesOutline, documentTextOutline, pricetagOutline, flagOutline } from 'ionicons/icons';
 import { useGoalStore } from '../../stores/goalStore';
 import { useCategoryStore } from '../../stores/categoryStore';
 import { useEntryStore } from '../../stores/entryStore';
@@ -63,6 +64,37 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
       loadCategories();
     }
   }, [visible, loadGoals, loadCategories]);
+
+  // iOS：弹窗打开时让键盘悬浮覆盖（不顶起界面），关闭时恢复
+  // 切 resize mode 前必须先收键盘并等 Ionic 处理完 keyboardDidHide，
+  // 否则会留下 stale 的 --keyboard-offset，造成"幽灵空白"。
+  useEffect(() => {
+    if (!visible) return;
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'ios') return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        await Keyboard.hide();
+        // 等 iOS 收键盘动画 + Ionic 的 keyboardDidHide 清理 CSS 变量
+        await new Promise(resolve => setTimeout(resolve, 300));
+        if (cancelled) return;
+        await Keyboard.setResizeMode({ mode: KeyboardResize.None });
+      } catch { /* plugin 不可用就跳过 */ }
+    })();
+
+    return () => {
+      cancelled = true;
+      (async () => {
+        try {
+          await Keyboard.hide();
+          await new Promise(resolve => setTimeout(resolve, 100));
+          await Keyboard.setResizeMode({ mode: KeyboardResize.Ionic });
+        } catch { /* ignore */ }
+      })();
+    };
+  }, [visible]);
 
   useEffect(() => {
     if (entry) {
@@ -186,7 +218,7 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
             <IonCard className="edit-dialog-card">
               <IonCardContent style={{ padding: 0 }}>
                 <div className="edit-dialog-activity-row">
-                  <IonIcon icon={chatbubbleOutline} className="edit-dialog-activity-icon" aria-hidden="true" />
+                  <IonIcon icon={documentTextOutline} className="edit-dialog-activity-icon" aria-hidden="true" />
                   <IonTextarea
                     placeholder="输入活动名称"
                     value={activity}

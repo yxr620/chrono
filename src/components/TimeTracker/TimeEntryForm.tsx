@@ -511,7 +511,11 @@ export const TimeEntryForm: React.FC = () => {
             />
           </IonItem>
           {memoExpanded && (
-            <div style={{ padding: '0 20px 12px' }}>
+            <div style={{
+              margin: '0 20px 0 48px',
+              padding: '10px 0 12px',
+              borderTop: '1px solid hsl(var(--border))',
+            }}>
               <textarea
                 autoFocus
                 placeholder="想到了什么？"
