@@ -54,8 +54,12 @@
 }
 
 :root {
-  /* 跨平台系统字体：iOS → SF Pro，Android → Roboto，Web → 系统默认 */
-  --app-font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Roboto, Arial, sans-serif;
+  /* 跨平台系统字体：iOS/macOS → SF Pro + PingFang SC；Android → Roboto + Noto；Windows → Segoe + 微软雅黑 */
+  --app-font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto,
+                     "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC",
+                     Arial, sans-serif;
+  --app-mono-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+                     "Courier New", monospace;
   font-family: var(--app-font-family);
   line-height: 1.5;
   font-weight: 400;
@@ -64,6 +68,12 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* 数字显示工具类：让时长 / 时间 / 统计数字等宽对齐，不再跳动 */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 
 * {

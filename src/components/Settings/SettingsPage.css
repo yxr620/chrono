@@ -230,7 +230,8 @@
 }
 
 .settings-stat-value-mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--app-mono-family);
+  font-variant-numeric: tabular-nums;
   font-size: 13px;
 }
 

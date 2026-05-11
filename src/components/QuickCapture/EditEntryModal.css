@@ -31,7 +31,8 @@
   flex: 1;
   font-size: 18px;
   font-weight: 600;
-  font-family: Monaco, Menlo, monospace;
+  font-family: var(--app-mono-family);
+  font-variant-numeric: tabular-nums;
   padding: 8px 12px;
   border-radius: 8px;
   background: rgba(148, 163, 184, 0.1);

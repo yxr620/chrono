@@ -406,7 +406,7 @@
   padding: 1px 5px;
   border-radius: 4px;
   font-size: 12.5px;
-  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-family: var(--app-mono-family);
 }
 
 /* 代码块 */
@@ -824,7 +824,7 @@ details[open].ai-phase-debug .ai-phase-debug-summary::after {
   border: 1px solid hsl(var(--border) / 0.5);
   border-radius: 6px;
   font-size: 11px;
-  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-family: var(--app-mono-family);
   white-space: pre-wrap;
   word-break: break-all;
   color: hsl(var(--foreground));
