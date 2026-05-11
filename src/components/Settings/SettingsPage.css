@@ -294,11 +294,7 @@
 /* ─── Service sections (sync mode picker, AI mode picker) ─── */
 
 .service-section {
-  border: 1px solid var(--ion-color-step-150, #e0e0e0);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 16px;
-  background: var(--ion-card-background, #fff);
+  margin-bottom: 0;
 }
 .service-section__header {
   display: flex;
