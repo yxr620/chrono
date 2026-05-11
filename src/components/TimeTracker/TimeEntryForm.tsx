@@ -55,7 +55,8 @@ const TIME_DISPLAY_STYLE: React.CSSProperties = {
   fontSize: '24px',
   fontWeight: '700',
   lineHeight: 1.2,
-  fontFamily: 'Monaco, Menlo, monospace',
+  fontFamily: 'var(--app-mono-family)',
+  fontVariantNumeric: 'tabular-nums',
   marginBottom: '6px'
 };
 
@@ -456,7 +457,8 @@ export const TimeEntryForm: React.FC = () => {
             fontSize: '48px',
             fontWeight: '700',
             textAlign: 'center',
-            fontFamily: 'Monaco, Menlo, Consolas, "Courier New", monospace',
+            fontFamily: 'var(--app-mono-family)',
+            fontVariantNumeric: 'tabular-nums',
             color: isDark ? '#f1f5f9' : '#333',
             letterSpacing: '-1px',
             margin: '10px 0'

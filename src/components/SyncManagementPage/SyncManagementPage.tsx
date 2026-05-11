@@ -254,27 +254,27 @@ export const SyncManagementPage: React.FC = () => {
         : lastResult?.status === 'success' || hasPersistedSync
           ? '最近成功'
           : '等待同步';
-  const statusDescription = syncMode === 'disabled'
+  const statusDescription: string | null = syncMode === 'disabled'
     ? '多设备同步当前已关闭，可在下方「多设备同步」卡片重新启用。'
     : !isConfigured
       ? syncMode === 'managed'
         ? '托管同步模式已选中，请先登录 Chrono 账号后再同步。'
         : 'BYO 模式需要有效的 OSS 凭据，请在下方「多设备同步」卡片完成配置。'
-      : stats && stats.pendingOps > 0
-        ? `当前有 ${stats.pendingOps} 条待同步操作。`
-        : '当前没有待同步操作。';
+      : null;
 
   const lastSyncRel = formatRelativeTime(stats?.lastSyncTime ?? null);
   const pendingOps = stats?.pendingOps ?? 0;
 
-  // Merged status line. Tone-driven content; disabled mode skips the line entirely
-  // because the description copy already explains "已关闭".
+  // Single status line under the badge. Badge already carries the tone label
+  // (最近成功/失败/等待同步), so the line shows only relative time + pending count.
   const statusLine: string | null = (() => {
     if (loading) return '同步中…';
     if (syncMode === 'disabled') return null;
-    if (statusTone === 'success') return `最近成功 · ${lastSyncRel} · ${pendingOps} 条待同步`;
-    if (statusTone === 'error') return `最近失败 · ${lastSyncRel} · ${pendingOps} 条待同步`;
-    return `等待同步 · ${lastSyncRel}`;
+    if (!isConfigured) return null;
+    if (statusTone === 'success' || statusTone === 'error') {
+      return pendingOps > 0 ? `${lastSyncRel} · ${pendingOps} 条待同步` : lastSyncRel;
+    }
+    return lastSyncRel;
   })();
 
   const autoSyncCaption = syncMode === 'disabled'
@@ -287,18 +287,11 @@ export const SyncManagementPage: React.FC = () => {
     <div className="sync-status-view">
       <section className="sync-status-card sync-status-card--main">
         <div className="sync-status-header">
-          <div>
-            <h4 className="settings-subsection-title">同步状态</h4>
-            <p className="sync-status-subtitle">{statusDescription}</p>
-          </div>
+          <span className="sync-status-line-text sync-status-headline">
+            {statusLine ?? statusDescription ?? ''}
+          </span>
           <span className={`sync-status-badge sync-status-badge--${statusTone}`}>{statusLabel}</span>
         </div>
-
-        {statusLine && (
-          <div className="sync-status-line">
-            <span className="sync-status-line-text">{statusLine}</span>
-          </div>
-        )}
         <div className="sync-status-line sync-status-line--data">
           <span className="sync-status-line-text">
             {stats

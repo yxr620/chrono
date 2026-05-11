@@ -55,7 +55,7 @@ window.innerWidth  < 1024 → MobileLayout（底部 tab 栏）
 |---|---|---|
 | records | `RecordsPage` | 时间记录主页（表单 + 时间轴 + 列表） |
 | goals | `GoalManager` | 目标管理 |
-| export | `ExportPage` | 数据导出 / 同步配置 / AI 设置 |
+| export | `SettingsPage` | 数据导出 / 同步配置 / AI 设置（tab key 仍为 `export`，组件位于 `components/Settings/`） |
 
 ### Desktop 布局（侧边栏，6 个导航项）
 
@@ -66,7 +66,7 @@ window.innerWidth  < 1024 → MobileLayout（底部 tab 栏）
 | dashboard | `Dashboard` | 数据统计总览（仅桌面端） |
 | ai | `AIAssistant` | AI 助手（仅桌面端） |
 | maintenance | `MaintenancePage` | 数据维护（仅桌面端） |
-| export | `ExportPage` | 设置与数据管理 |
+| export | `SettingsPage` | 设置与数据管理 |
 
 `TrendPage` 和 `GoalAnalysisPage` 是 Dashboard 内的二级页面，由 Dashboard 内的按钮跳转进入，并有返回 Dashboard 的按钮，不出现在侧边栏导航中。
 
@@ -105,30 +105,34 @@ src/
 │   ├── userDataService.ts     # 设备/存储/账号管理 API 客户端
 │   ├── gateway/               # PaidFeatureGateway 抽象（BYO ↔ Managed 路由）
 │   ├── ai/                    # AI 助手（见 ai-assistant.md）
-│   └── analysis/              # 数据分析处理器
-│       ├── processor.ts       # 数据加载 + 转换管道
-│       ├── goalAnalysisProcessor.ts
-│       └── goalCluster.ts
+│   ├── analysis/              # 数据分析处理器
+│   │   ├── processor.ts       # 数据加载 + 转换管道
+│   │   ├── goalAnalysisProcessor.ts
+│   │   └── goalCluster.ts
+│   └── quickCapture/          # 自然语言快速录入解析（LLM tool_calls → PendingEntry[]）
+│       ├── quickCaptureParse.ts
+│       └── conflictDetection.ts
 │
 ├── components/
+│   ├── ErrorBoundary.tsx      # 全局错误边界
 │   ├── RecordsPage/
-│   ├── TimeTracker/           # TimeEntryForm
+│   ├── TimeTracker/           # TimeEntryForm（内嵌 QuickCaptureButton）
 │   ├── TimelineView/          # 24 小时时间轴
 │   ├── EntryList/             # 列表 + 编辑弹窗 + 滑动删除
+│   ├── QuickCapture/          # 自然语言快速录入（按钮 + Sheet + 解析/复审/编辑视图）
 │   ├── GoalManager/           # 目标 CRUD + TimeInjectionMatrix
 │   ├── Dashboard/             # 数据统计总览
 │   ├── TrendPage/             # 趋势分析
 │   ├── GoalAnalysisPage/      # 目标分析
 │   ├── AIAssistant/           # AI 对话 + 设置
-│   ├── MaintenancePage/       # 数据维护（睡觉补录 + 数据校验）
-│   ├── ExportPage/            # 导出 / 设置
-│   ├── SyncManagementPage/    # 同步管理界面
-│   ├── Settings/              # 「服务」页（ServicesPage + OSS/AI 凭据子表单）
+│   ├── MaintenancePage/       # 数据维护（睡觉补录 + 数据校验 + 类别管理）
+│   ├── SyncManagementPage/    # 同步管理面板（嵌入到 SettingsPage）
+│   ├── Settings/              # SettingsPage（导出 tab 的实际组件，含同步/AI/账号子区块）
 │   ├── Auth/                  # SignInPage（Managed 模式登录弹窗）
 │   ├── Migration/             # 一次性 BYO → Managed 迁移弹窗
 │   ├── Desktop/               # DesktopSidebar
-│   ├── SyncButton/            # SyncButton（手动同步按钮，桌面/导出页）
-│   └── common/                # SyncIndicator、SyncToastListener、WheelTimePicker
+│   ├── SyncButton/            # SyncButton（手动同步按钮，桌面/设置页）
+│   └── common/                # SyncIndicator、SyncToastListener、WheelTimePicker、EntryFields
 │
 ├── config/
 │   └── categoryColors.ts      # 预设类别默认值 + 自定义类别调色板
@@ -137,6 +141,9 @@ src/
 │   ├── useAppToast.ts         # 封装 useIonToast，自动注入 top-toast 定位 CSS
 │   ├── useDarkMode.ts         # 暗色模式检测
 │   └── useIOSTimePicker.ts    # iOS 原生滚轮时间选择器 Hook
+│
+├── plugins/
+│   └── iosWheelDateTimePicker.ts  # iOS 原生滚轮时间选择器 Capacitor 插件桥接
 │
 └── utils/
     └── appToast.ts            # Ionic toast 选项装饰工具（注入 app-top-toast CSS 类）

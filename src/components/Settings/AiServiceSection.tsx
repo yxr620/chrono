@@ -68,18 +68,18 @@ export const AiServiceSection: React.FC<Props> = ({ onRequestSignIn }) => {
         className="service-section__radios"
         aria-label="AI 模式"
       >
-        {AI_OPTIONS.map((opt) => {
-          const disabled = opt.mode === 'managed' && !managedAvailable;
-          return (
-            <IonItem key={opt.mode} lines="none">
-              <IonRadio slot="start" value={opt.mode} disabled={disabled} />
-              <IonLabel>
-                <h3>{opt.label}</h3>
-                <p>{opt.hint}</p>
-              </IonLabel>
-            </IonItem>
-          );
-        })}
+        {AI_OPTIONS.filter((opt) => {
+          if (opt.mode !== 'managed') return true;
+          return managedAvailable && isAuthenticated;
+        }).map((opt) => (
+          <IonItem key={opt.mode} lines="none">
+            <IonRadio slot="start" value={opt.mode} />
+            <IonLabel>
+              <h3>{opt.label}</h3>
+              <p>{opt.hint}</p>
+            </IonLabel>
+          </IonItem>
+        ))}
       </IonRadioGroup>
 
       {mode === 'byo' && (

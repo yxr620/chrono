@@ -182,7 +182,7 @@ export const OssCredentialsForm: React.FC = () => {
 
       <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
         <IonButton expand="block" onClick={handleSaveOSSConfig} className="settings-action-button" style={{ flex: 1 }}>
-          💾 保存配置
+          保存配置
         </IonButton>
         {isConfigured && (
           <IonButton
@@ -193,7 +193,7 @@ export const OssCredentialsForm: React.FC = () => {
             className="settings-action-button"
             style={{ flex: 1 }}
           >
-            🗑️ 清除配置
+            清除配置
           </IonButton>
         )}
       </div>

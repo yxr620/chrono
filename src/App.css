@@ -9,7 +9,7 @@
   App.css 在构建顺序上晚于 @ionic/react/css/*，因此此处声明可以生效。
 */
 html {
-  --ion-font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Roboto, Arial, sans-serif;
+  --ion-font-family: var(--app-font-family);
 }
 
 :root {
