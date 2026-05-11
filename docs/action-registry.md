@@ -59,7 +59,7 @@ Action Registry 是 AI 助手从"只读分析工具"升级为"可读可写智能
 src/services/actions/
 ├── types.ts                 # 核心类型定义
 ├── registry.ts              # ActionRegistry 单例
-├── index.ts                 # 注册全部 16 个 action，导出 registry
+├── index.ts                 # 注册全部 17 个 action，导出 registry
 ├── read/
 │   ├── queryTimeEntries.ts  # 查询时间记录（从旧 toolDefinitions 迁移）
 │   ├── listCategories.ts    # 列出分类
