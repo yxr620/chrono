@@ -64,7 +64,10 @@
   line-height: 1.5;
   font-weight: 400;
 
-  font-synthesis: none;
+  /* 允许浏览器合成粗体：Android 系统等宽字体通常没有 Bold cut，
+     若设为 none 会导致 font-weight: 700 回落成 Regular（计时器在安卓上变细）。
+     style 仍禁止合成，避免中文字符被强行斜体化。 */
+  font-synthesis: weight;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
