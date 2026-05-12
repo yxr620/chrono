@@ -148,21 +148,26 @@ export const EntryList: React.FC<EntryListProps> = ({ selectedDate }) => {
                     </div>
                   </div>
                 </div>
-                {entry.memo && entry.id && expandedMemos.has(entry.id) && (
-                  <span
-                    className="entry-item-memo"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigator.clipboard?.writeText(entry.memo!);
-                    }}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      navigator.clipboard?.writeText(entry.memo!);
-                    }}
-                    title="点击/右键复制"
+                {entry.memo && entry.id && (
+                  <div
+                    className={`entry-item-memo-wrapper${expandedMemos.has(entry.id) ? ' is-expanded' : ''}`}
+                    aria-hidden={!expandedMemos.has(entry.id)}
                   >
-                    {entry.memo}
-                  </span>
+                    <span
+                      className="entry-item-memo"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigator.clipboard?.writeText(entry.memo!);
+                      }}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        navigator.clipboard?.writeText(entry.memo!);
+                      }}
+                      title="点击/右键复制"
+                    >
+                      {entry.memo}
+                    </span>
+                  </div>
                 )}
               </div>
             </SwipeableItem>
