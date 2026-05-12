@@ -155,15 +155,11 @@ export const EntryList: React.FC<EntryListProps> = ({ selectedDate }) => {
                   >
                     <span
                       className="entry-item-memo"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigator.clipboard?.writeText(entry.memo!);
-                      }}
                       onContextMenu={(e) => {
                         e.preventDefault();
                         navigator.clipboard?.writeText(entry.memo!);
                       }}
-                      title="点击/右键复制"
+                      title="右键复制"
                     >
                       {entry.memo}
                     </span>

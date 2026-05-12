@@ -23,7 +23,8 @@ import {
   chevronForwardOutline,
   calendarOutline,
   checkmarkCircle,
-  ellipseOutline
+  ellipseOutline,
+  chatbubbleEllipsesOutline
 } from 'ionicons/icons';
 import { Capacitor } from '@capacitor/core';
 import { useGoalStore } from '../../stores/goalStore';
@@ -655,8 +656,9 @@ export const GoalManager: React.FC = () => {
               <IonCardContent style={{ paddingBottom: 16 }}>
                 <div style={{ marginBottom: '12px' }}>
                   <IonText>
-                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold' }}>
-                      💭 今日感想 ({dayMemos.length})
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <IonIcon icon={chatbubbleEllipsesOutline} aria-hidden="true" />
+                      今日感想 ({dayMemos.length})
                     </h3>
                   </IonText>
                 </div>

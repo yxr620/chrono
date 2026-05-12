@@ -210,17 +210,12 @@
   line-height: 1.4;
   white-space: pre-wrap;
   word-break: break-word;
-  cursor: pointer;
   opacity: 0;
   transition: opacity 0.15s ease;
 }
 
 .entry-item-memo-wrapper.is-expanded .entry-item-memo {
   opacity: 1;
-}
-
-.entry-item-memo:hover {
-  color: var(--ion-color-primary);
 }
 
 @media (prefers-reduced-motion: reduce) {
