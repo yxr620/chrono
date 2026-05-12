@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
+  IonIcon,
   IonList
 } from '@ionic/react';
+import { chatbubbleEllipsesOutline } from 'ionicons/icons';
 import { useEntryStore } from '../../stores/entryStore';
 import { useGoalStore } from '../../stores/goalStore';
 import { useCategoryStore } from '../../stores/categoryStore';
@@ -20,6 +22,19 @@ export const EntryList: React.FC<EntryListProps> = ({ selectedDate }) => {
   const { goals, loadGoals } = useGoalStore();
   const { loadCategories, getCategoryColor } = useCategoryStore();
   const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
+  const [expandedMemos, setExpandedMemos] = useState<Set<string>>(new Set());
+
+  const toggleMemoExpanded = (entryId: string) => {
+    setExpandedMemos(prev => {
+      const next = new Set(prev);
+      if (next.has(entryId)) {
+        next.delete(entryId);
+      } else {
+        next.add(entryId);
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     loadEntries();
@@ -97,42 +112,58 @@ export const EntryList: React.FC<EntryListProps> = ({ selectedDate }) => {
                   }
                 }}
               >
-                <span
-                  className="entry-color-dot"
-                  style={{ backgroundColor: getCategoryColor(entry.categoryId) }}
-                />
-                <div className="entry-item-content">
-                  <span className="entry-item-title">
-                    {entry.activity}
-                  </span>
-                  {entry.memo && (
-                    <span
-                      className="entry-item-memo"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigator.clipboard?.writeText(entry.memo!);
-                      }}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        navigator.clipboard?.writeText(entry.memo!);
-                      }}
-                      title="点击/右键复制"
-                    >
-                      💭 {entry.memo}
+                <div className="entry-item-row">
+                  <span
+                    className="entry-color-dot"
+                    style={{ backgroundColor: getCategoryColor(entry.categoryId) }}
+                  />
+                  <div className="entry-item-title-row">
+                    <span className="entry-item-title">
+                      {entry.activity}
                     </span>
-                  )}
-                </div>
-                <div className="entry-item-meta">
-                  {getGoalName(entry.goalId) && (
-                    <span className="entry-goal-badge">
-                      {getGoalName(entry.goalId)}
-                    </span>
-                  )}
-                  <div className="entry-time-info">
-                    <span className="entry-item-duration">{formatDuration(entry.startTime, entry.endTime)}</span>
-                    <span className="entry-time-range">{formatTimeRange(entry.startTime, entry.endTime)}</span>
+                    {entry.memo && entry.id && (
+                      <button
+                        type="button"
+                        className={`entry-item-memo-toggle${expandedMemos.has(entry.id) ? ' is-expanded' : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleMemoExpanded(entry.id!);
+                        }}
+                        aria-label={expandedMemos.has(entry.id) ? '收起备注' : '展开备注'}
+                        aria-expanded={expandedMemos.has(entry.id)}
+                      >
+                        <IonIcon icon={chatbubbleEllipsesOutline} aria-hidden="true" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="entry-item-meta">
+                    {getGoalName(entry.goalId) && (
+                      <span className="entry-goal-badge">
+                        {getGoalName(entry.goalId)}
+                      </span>
+                    )}
+                    <div className="entry-time-info">
+                      <span className="entry-item-duration">{formatDuration(entry.startTime, entry.endTime)}</span>
+                      <span className="entry-time-range">{formatTimeRange(entry.startTime, entry.endTime)}</span>
+                    </div>
                   </div>
                 </div>
+                {entry.memo && entry.id && expandedMemos.has(entry.id) && (
+                  <span
+                    className="entry-item-memo"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigator.clipboard?.writeText(entry.memo!);
+                    }}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      navigator.clipboard?.writeText(entry.memo!);
+                    }}
+                    title="点击/右键复制"
+                  >
+                    {entry.memo}
+                  </span>
+                )}
               </div>
             </SwipeableItem>
           ))}
