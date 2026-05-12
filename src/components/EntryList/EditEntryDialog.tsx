@@ -163,21 +163,31 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
     onClose();
   };
 
-  // 获取上次记录的结束时间
-  const getLastEndTime = () => {
-    if (entries.length === 0) return null;
-    // 排除当前正在编辑的记录
-    const otherEntries = entries.filter(e => e.id !== entry?.id && e.endTime !== null);
-    if (otherEntries.length === 0) return null;
-    return otherEntries[0].endTime;
+  // 获取"上次结束"时间：当前 startTime 之前（含相等），endTime 最大的那条记录的 endTime。
+  // 这样"上次"是相对于正在编辑的这条 entry 在时间轴上的位置，而不是数据库里 startTime 最新的那条。
+  const getLastEndTime = (): Date | null => {
+    if (!entry) return null;
+    const startMs = startTime.getTime();
+    let best: Date | null = null;
+    let bestMs = -Infinity;
+    for (const e of entries) {
+      if (e.id === entry.id) continue;
+      if (e.endTime === null) continue;
+      const end = e.endTime instanceof Date ? e.endTime : new Date(e.endTime);
+      const endMs = end.getTime();
+      if (endMs <= startMs && endMs > bestMs) {
+        bestMs = endMs;
+        best = end;
+      }
+    }
+    return best;
   };
 
   // 设置开始时间为"上次结束"
   const setStartTimeToLastEnd = () => {
     const lastEndTime = getLastEndTime();
     if (lastEndTime) {
-      // 确保是 Date 对象
-      setStartTime(lastEndTime instanceof Date ? lastEndTime : new Date(lastEndTime));
+      setStartTime(lastEndTime);
       showToast('已设为上次结束时间', 'success');
     } else {
       showToast('无上次结束记录', 'danger');
