@@ -192,7 +192,6 @@ export const BackupSection: React.FC = () => {
   return (
     <IonCard className="settings-card">
       <IonCardContent className="settings-card-content">
-        <h3 className="settings-card-title">数据备份</h3>
         <div className="settings-button-stack">
           <IonButton
             expand="block"

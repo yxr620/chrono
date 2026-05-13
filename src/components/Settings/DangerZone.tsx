@@ -4,7 +4,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { userDataService } from '../../services/userDataService';
 import './MyDataSection.css';
 
-export const DangerZone: React.FC = () => {
+export const DangerZoneContent: React.FC = () => {
   const auth = useAuthStore();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,16 +31,27 @@ export const DangerZone: React.FC = () => {
   };
 
   return (
+    <>
+      {error && <p className="my-data__error">{error}</p>}
+      <p className="settings-row-sub" style={{ marginBottom: 12 }}>
+        下方操作不可撤销，请谨慎使用。
+      </p>
+      <button className="my-data__danger-btn" disabled={busy} onClick={handleDeleteAccount}>
+        删除账号及全部数据
+      </button>
+    </>
+  );
+};
+
+export const DangerZone: React.FC = () => {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  if (!isAuthenticated) return null;
+
+  return (
     <IonCard className="settings-card">
       <IonCardContent className="settings-card-content">
-        <h3 className="settings-card-title" style={{ color: 'var(--ion-color-danger)' }}>危险区</h3>
-        {error && <p className="my-data__error">{error}</p>}
-        <p className="settings-row-sub" style={{ marginBottom: 12 }}>
-          下方操作不可撤销，请谨慎使用。
-        </p>
-        <button className="my-data__danger-btn" disabled={busy} onClick={handleDeleteAccount}>
-          删除账号及全部数据
-        </button>
+        <DangerZoneContent />
       </IonCardContent>
     </IonCard>
   );

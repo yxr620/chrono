@@ -5,10 +5,8 @@ import { SyncManagementPage } from '../SyncManagementPage/SyncManagementPage';
 import { AccountSection } from './AccountSection';
 import { SyncServiceSection } from './SyncServiceSection';
 import { AiServiceSection } from './AiServiceSection';
-import { MyDataSection } from './MyDataSection';
 import { GeneralSection } from './GeneralSection';
 import { BackupSection } from './BackupSection';
-import { DangerZone } from './DangerZone';
 import './SettingsPage.css';
 
 export const SettingsPage: React.FC = () => {
@@ -26,7 +24,6 @@ export const SettingsPage: React.FC = () => {
       {/* 1. 同步操作 — high-frequency, top */}
       <IonCard className="settings-card">
         <IonCardContent className="settings-card-content">
-          <h3 className="settings-card-title">云端同步</h3>
           <SyncManagementPage />
         </IonCardContent>
       </IonCard>
@@ -48,17 +45,11 @@ export const SettingsPage: React.FC = () => {
         </IonCardContent>
       </IonCard>
 
-      {/* 5. 我的数据 (only when authenticated) */}
-      <MyDataSection />
-
-      {/* 6. 通用 */}
+      {/* 5. 通用 */}
       <GeneralSection />
 
-      {/* 7. 数据备份 */}
+      {/* 6. 数据备份 */}
       <BackupSection />
-
-      {/* 8. 危险区 (only when authenticated) */}
-      <DangerZone />
     </div>
   );
 };

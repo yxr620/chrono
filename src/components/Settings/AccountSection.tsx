@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
-import { IonCard, IonCardContent } from '@ionic/react';
+import {
+  IonAccordion,
+  IonAccordionGroup,
+  IonCard,
+  IonCardContent,
+  IonItem,
+  IonLabel,
+} from '@ionic/react';
 import { useAuthStore } from '../../stores/authStore';
 import { SignInPage } from '../Auth/SignInPage';
+import { DangerZoneContent } from './DangerZone';
+import { MyDataContent } from './MyDataSection';
 
 export const AccountSection: React.FC = () => {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -15,18 +24,41 @@ export const AccountSection: React.FC = () => {
   return (
     <IonCard className="settings-card" id="settings-account">
       <IonCardContent className="settings-card-content">
-        <h3 className="settings-card-title">账号</h3>
         {isAuthenticated ? (
-          <div className="settings-account-row">
-            <span className="settings-account-row__email">已登录：{user?.email}</span>
-            <button
-              type="button"
-              className="settings-account-row__btn"
-              onClick={() => logout()}
-            >
-              退出
-            </button>
-          </div>
+          <>
+            <div className="settings-account-row">
+              <span className="settings-account-row__email">已登录：{user?.email}</span>
+              <button
+                type="button"
+                className="settings-account-row__btn"
+                onClick={() => logout()}
+              >
+                退出
+              </button>
+            </div>
+
+            <div className="settings-accordion-wrap settings-account-accordion">
+              <IonAccordionGroup>
+                <IonAccordion value="account-data">
+                  <IonItem slot="header" lines="none">
+                    <IonLabel>Chrono 账号数据</IonLabel>
+                  </IonItem>
+                  <div className="settings-accordion-content" slot="content">
+                    <MyDataContent />
+                  </div>
+                </IonAccordion>
+
+                <IonAccordion value="account-actions">
+                  <IonItem slot="header" lines="none">
+                    <IonLabel>账号操作</IonLabel>
+                  </IonItem>
+                  <div className="settings-accordion-content" slot="content">
+                    <DangerZoneContent />
+                  </div>
+                </IonAccordion>
+              </IonAccordionGroup>
+            </div>
+          </>
         ) : (
           <div className="settings-account-row">
             <span className="settings-row-sub">
