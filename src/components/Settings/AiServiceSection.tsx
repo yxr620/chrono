@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { IonItem, IonLabel, IonRadio, IonRadioGroup, IonIcon } from '@ionic/react';
-import { sparklesOutline } from 'ionicons/icons';
+import { chevronDownOutline, sparklesOutline } from 'ionicons/icons';
 import { useFeatureModeStore } from '../../stores/featureModeStore';
 import type { FeatureMode } from '../../services/gateway/types';
 import { AiProviderForm } from './AiProviderForm';
@@ -21,8 +21,10 @@ export const AiServiceSection: React.FC<Props> = ({ onRequestSignIn }) => {
   const mode = useFeatureModeStore((s) => s.modes.ai);
   const setMode = useFeatureModeStore((s) => s.setMode);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const [expanded, setExpanded] = useState(false);
 
   const managedAvailable = !!import.meta.env.VITE_AUTH_API_URL;
+  const currentOption = AI_OPTIONS.find((opt) => opt.mode === mode) || AI_OPTIONS[0];
 
   const switchToManagedIfAllowed = async () => {
     const token = useAuthStore.getState().token;
@@ -56,35 +58,51 @@ export const AiServiceSection: React.FC<Props> = ({ onRequestSignIn }) => {
   };
 
   return (
-    <section className="service-section">
-      <header className="service-section__header">
-        <IonIcon icon={sparklesOutline} className="service-section__icon" />
-        <span className="service-section__title">AI 助手</span>
-      </header>
-
-      <IonRadioGroup
-        value={mode}
-        onIonChange={(event) => handleSelect(event.detail.value as FeatureMode)}
-        className="service-section__radios"
-        aria-label="AI 模式"
+    <section className={`service-section service-section--collapsible${expanded ? ' service-section--expanded' : ''}`}>
+      <button
+        type="button"
+        className="service-section__summary"
+        onClick={() => setExpanded((current) => !current)}
+        aria-expanded={expanded}
+        aria-controls="ai-service-settings"
       >
-        {AI_OPTIONS.filter((opt) => {
-          if (opt.mode !== 'managed') return true;
-          return managedAvailable && isAuthenticated;
-        }).map((opt) => (
-          <IonItem key={opt.mode} lines="none">
-            <IonRadio slot="start" value={opt.mode} />
-            <IonLabel>
-              <h3>{opt.label}</h3>
-              <p>{opt.hint}</p>
-            </IonLabel>
-          </IonItem>
-        ))}
-      </IonRadioGroup>
+        <span className="service-section__heading">
+          <IonIcon icon={sparklesOutline} className="service-section__icon" />
+          <span className="service-section__title-block">
+            <span className="service-section__title">AI 助手</span>
+            <span className="service-section__subtitle">{currentOption.label}</span>
+          </span>
+        </span>
+        <IonIcon icon={chevronDownOutline} className="service-section__chevron" aria-hidden="true" />
+      </button>
 
-      {mode === 'byo' && (
-        <div className="service-section__byo-form">
-          <AiProviderForm />
+      {expanded && (
+        <div className="service-section__content" id="ai-service-settings">
+          <IonRadioGroup
+            value={mode}
+            onIonChange={(event) => handleSelect(event.detail.value as FeatureMode)}
+            className="service-section__radios"
+            aria-label="AI 模式"
+          >
+            {AI_OPTIONS.filter((opt) => {
+              if (opt.mode !== 'managed') return true;
+              return managedAvailable && isAuthenticated;
+            }).map((opt) => (
+              <IonItem key={opt.mode} lines="none">
+                <IonRadio slot="start" value={opt.mode} />
+                <IonLabel>
+                  <h3>{opt.label}</h3>
+                  <p>{opt.hint}</p>
+                </IonLabel>
+              </IonItem>
+            ))}
+          </IonRadioGroup>
+
+          {mode === 'byo' && (
+            <div className="service-section__byo-form">
+              <AiProviderForm />
+            </div>
+          )}
         </div>
       )}
     </section>

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { IonRadioGroup, IonRadio, IonItem, IonLabel, IonIcon } from '@ionic/react';
-import { cloudOutline } from 'ionicons/icons';
+import { chevronDownOutline, cloudOutline } from 'ionicons/icons';
 import { useFeatureModeStore } from '../../stores/featureModeStore';
 import type { FeatureMode } from '../../services/gateway/types';
 import { OssCredentialsForm } from './OssCredentialsForm';
@@ -21,8 +21,10 @@ export const SyncServiceSection: React.FC<Props> = ({ onRequestSignIn }) => {
   const mode = useFeatureModeStore((s) => s.modes.sync);
   const setMode = useFeatureModeStore((s) => s.setMode);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const [expanded, setExpanded] = useState(false);
 
   const managedAvailable = !!import.meta.env.VITE_AUTH_API_URL;
+  const currentOption = SYNC_OPTIONS.find((opt) => opt.mode === mode) || SYNC_OPTIONS[0];
 
   const switchToManagedIfAllowed = async () => {
     const token = useAuthStore.getState().token;
@@ -56,35 +58,51 @@ export const SyncServiceSection: React.FC<Props> = ({ onRequestSignIn }) => {
   };
 
   return (
-    <section className="service-section">
-      <header className="service-section__header">
-        <IonIcon icon={cloudOutline} className="service-section__icon" />
-        <span className="service-section__title">多设备同步</span>
-      </header>
-
-      <IonRadioGroup
-        value={mode}
-        onIonChange={(e) => handleSelect(e.detail.value as FeatureMode)}
-        className="service-section__radios"
-        aria-label="同步模式"
+    <section className={`service-section service-section--collapsible${expanded ? ' service-section--expanded' : ''}`}>
+      <button
+        type="button"
+        className="service-section__summary"
+        onClick={() => setExpanded((current) => !current)}
+        aria-expanded={expanded}
+        aria-controls="sync-service-settings"
       >
-        {SYNC_OPTIONS.filter((opt) => {
-          if (opt.mode !== 'managed') return true;
-          return managedAvailable && isAuthenticated;
-        }).map((opt) => (
-          <IonItem key={opt.mode} lines="none">
-            <IonRadio slot="start" value={opt.mode} />
-            <IonLabel>
-              <h3>{opt.label}</h3>
-              <p>{opt.hint}</p>
-            </IonLabel>
-          </IonItem>
-        ))}
-      </IonRadioGroup>
+        <span className="service-section__heading">
+          <IonIcon icon={cloudOutline} className="service-section__icon" />
+          <span className="service-section__title-block">
+            <span className="service-section__title">多设备同步</span>
+            <span className="service-section__subtitle">{currentOption.label}</span>
+          </span>
+        </span>
+        <IonIcon icon={chevronDownOutline} className="service-section__chevron" aria-hidden="true" />
+      </button>
 
-      {mode === 'byo' && (
-        <div className="service-section__byo-form">
-          <OssCredentialsForm />
+      {expanded && (
+        <div className="service-section__content" id="sync-service-settings">
+          <IonRadioGroup
+            value={mode}
+            onIonChange={(e) => handleSelect(e.detail.value as FeatureMode)}
+            className="service-section__radios"
+            aria-label="同步模式"
+          >
+            {SYNC_OPTIONS.filter((opt) => {
+              if (opt.mode !== 'managed') return true;
+              return managedAvailable && isAuthenticated;
+            }).map((opt) => (
+              <IonItem key={opt.mode} lines="none">
+                <IonRadio slot="start" value={opt.mode} />
+                <IonLabel>
+                  <h3>{opt.label}</h3>
+                  <p>{opt.hint}</p>
+                </IonLabel>
+              </IonItem>
+            ))}
+          </IonRadioGroup>
+
+          {mode === 'byo' && (
+            <div className="service-section__byo-form">
+              <OssCredentialsForm />
+            </div>
+          )}
         </div>
       )}
     </section>

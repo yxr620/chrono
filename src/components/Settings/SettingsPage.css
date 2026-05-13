@@ -296,21 +296,72 @@
 .service-section {
   margin-bottom: 0;
 }
-.service-section__header {
+.service-section__summary {
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+}
+.service-section__summary:focus,
+.service-section__summary:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+.service-section__heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 .service-section__icon {
   font-size: 18px;
   display: inline-flex;
   align-items: center;
   color: hsl(var(--foreground));
+  flex-shrink: 0;
+}
+.service-section__title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
 }
 .service-section__title {
   font-size: 17px;
   font-weight: 700;
+  color: hsl(var(--foreground));
+}
+.service-section__subtitle {
+  font-size: 13px;
+  font-weight: 400;
+  color: hsl(var(--muted-foreground));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.service-section__chevron {
+  color: hsl(var(--muted-foreground));
+  flex-shrink: 0;
+  font-size: 18px;
+  transition: transform 0.16s ease;
+}
+.service-section--expanded .service-section__chevron {
+  transform: rotate(180deg);
+}
+.service-section__content {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--ion-color-step-150, #e0e0e0);
 }
 .service-section__radios {
   display: flex;
