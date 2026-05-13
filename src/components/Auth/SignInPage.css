@@ -79,8 +79,13 @@
 .signin-switch button {
   background: none;
   border: 0;
-  color: var(--ion-color-primary);
+  color: hsl(var(--primary, 221.2 83.2% 53.3%));
   cursor: pointer;
   padding: 0 4px;
   font-size: 13px;
+  font-weight: 600;
+}
+
+.dark .signin-switch button {
+  color: hsl(213 94% 68%);
 }
