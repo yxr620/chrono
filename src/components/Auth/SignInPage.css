@@ -34,7 +34,19 @@
   padding: 8px;
   border: 1px solid var(--ion-color-step-200, #ccc);
   border-radius: 6px;
+  background: hsl(var(--background, 0 0% 100%));
+  color: hsl(var(--foreground, 222.2 84% 4.9%));
+  caret-color: currentColor;
   font-size: 15px;
+}
+
+.signin-modal input::placeholder {
+  color: var(--ion-color-medium, #64748b);
+  opacity: 1;
+}
+
+.dark .signin-modal input {
+  color-scheme: dark;
 }
 
 .signin-error {
@@ -68,6 +80,14 @@
 .signin-actions button[disabled] {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.signin-modal button:focus {
+  outline: none;
+}
+
+.signin-modal button:focus-visible {
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.35);
 }
 
 .signin-switch {
