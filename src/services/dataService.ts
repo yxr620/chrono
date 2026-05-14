@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { db, type TimeEntry, type Goal, type Category } from './db';
 import { syncDb } from './syncDb';
+import { tryMergeWithLeftNeighbor } from './autoMerge';
 import dayjs from 'dayjs';
 
 // ============ Types ============
@@ -68,14 +69,25 @@ async function addEntry(
     createdAt: now,
     updatedAt: now,
   };
-  return syncDb.entries.add(newEntry);
+  const id = await syncDb.entries.add(newEntry);
+  if (newEntry.endTime != null) {
+    await tryMergeWithLeftNeighbor(newEntry);
+  }
+  return id;
 }
 
 async function updateEntry(
   id: string,
   updates: Partial<TimeEntry>
 ): Promise<void> {
+  const before = await db.entries.get(id);
   await syncDb.entries.update(id, updates);
+  const endTimeJustSet =
+    before != null && before.endTime == null && updates.endTime != null;
+  if (endTimeJustSet) {
+    const after = await db.entries.get(id);
+    if (after) await tryMergeWithLeftNeighbor(after);
+  }
 }
 
 async function deleteEntry(id: string): Promise<void> {
