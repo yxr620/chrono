@@ -259,16 +259,23 @@ export const AIAssistant: React.FC = () => {
 
   const handleConfirm = useCallback(() => {
     if (!pendingConfirmation || pendingConfirmation.resolved) return;
-    pendingConfirmation.resolve(true);
+    const resolveFn = pendingConfirmation.resolve;
+    resolveFn(true);
     setPendingConfirmation(prev => prev ? { ...prev, resolved: 'confirmed' } : null);
-    setTimeout(() => setPendingConfirmation(null), 1500);
+    // 仅当后续没有新的确认请求进入时才清除——避免清掉下一张确认卡片
+    setTimeout(() => {
+      setPendingConfirmation(prev => (prev?.resolve === resolveFn ? null : prev));
+    }, 1500);
   }, [pendingConfirmation]);
 
   const handleCancelConfirm = useCallback(() => {
     if (!pendingConfirmation || pendingConfirmation.resolved) return;
-    pendingConfirmation.resolve(false);
+    const resolveFn = pendingConfirmation.resolve;
+    resolveFn(false);
     setPendingConfirmation(prev => prev ? { ...prev, resolved: 'cancelled' } : null);
-    setTimeout(() => setPendingConfirmation(null), 1500);
+    setTimeout(() => {
+      setPendingConfirmation(prev => (prev?.resolve === resolveFn ? null : prev));
+    }, 1500);
   }, [pendingConfirmation]);
 
   // 键盘快捷键
