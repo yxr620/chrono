@@ -8,6 +8,8 @@
     "build": "tsc -b && vite build",
     "build:local": "tsc -b && vite build --mode localdev",
     "lint": "eslint .",
+    "test:app-checks": "node --import tsx --test tests/*.test.ts",
+    "test:font-system": "node --import tsx --test tests/font-system.test.ts",
     "preview": "vite preview",
     "ai:debug": "tsx scripts/ai-debug-cli.ts"
   },

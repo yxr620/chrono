@@ -192,20 +192,18 @@ Chrono 的字体通过 Fontsource 本地打包，不能使用 Google Fonts CDN�
 - `--app-text-family`：普通中文、英文 UI 文案，使用 Noto Sans SC Variable。
 - `--app-number-family`：时间、时长、统计数字、百分比、同步计数，使用 JetBrains Mono Variable。
 - `--app-code-family`：AI/debug/code 文本，默认复用 number font。
-- `--app-font-family`：旧 token，映射到 `--app-text-family`。
-- `--app-mono-family`：旧 token，映射到 `--app-number-family`。
 
-新增样式时优先使用语义化 token。旧 token 只作为兼容层保留，不要新增依赖旧名称的代码。
-
-未来可以单独做一次字体 token 命名清理：把已有组件里的 `--app-font-family` / `--app-mono-family` 引用迁移到 `--app-text-family` / `--app-number-family` / `--app-code-family`。这类清理只改变命名语义，不应改变视觉效果。清理完成后仍建议保留 `src/index.css` 里的旧 token alias，避免历史分支、遗漏引用或第三方样式覆盖导致字体 fallback。
+新增样式只使用上述语义化 token。`src/index.css` 仍保留 `--app-font-family` / `--app-mono-family` 旧 alias 作为兼容兜底（防止第三方覆盖或遗漏引用回退到系统字体），新代码不要再引用它们；`font-system.test.ts` 已加入回归断言禁止 `src/components/**` 出现旧 token。
 
 数字类文本不能只依赖 `font-variant-numeric: tabular-nums`。如果内容是当前计时器、开始/结束时间、时间范围、时长、百分比、统计指标、同步计数或 debug/code 文本，应显式使用 `--app-number-family` 或 `.tabular-nums`。
 
 字体系统有源码扫描回归测试：
 
 ```bash
-./node_modules/.bin/tsx src/font-system.test.ts
+npm run test:font-system
 ```
+
+前端源码扫描类测试集中放在根目录 `tests/`；需要一起跑这类轻量检查时使用 `npm run test:app-checks`。
 
 改动字体入口、token、Ionic 覆盖、CSP、记录列表、同步指示器或分析页数字样式时，都应运行该测试，并继续运行 `npm run build` 验证 Vite 能打包 `.woff2` 字体资产。
 

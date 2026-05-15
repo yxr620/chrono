@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const componentPath = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  './TimeEntryForm.tsx'
+  '../src/components/TimeTracker/TimeEntryForm.tsx'
 );
 
 const source = await readFile(componentPath, 'utf8');
