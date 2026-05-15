@@ -112,7 +112,7 @@
   border-radius: 6px;
   font-size: 14px;
   cursor: pointer;
-  font-family: var(--app-mono-family);
+  font-family: var(--app-number-family);
   color: hsl(var(--foreground));
   transition: background 0.15s;
 }
@@ -174,7 +174,7 @@
 .validation-item-detail {
   font-size: 13px;
   color: hsl(var(--muted-foreground));
-  font-family: var(--app-mono-family);
+  font-family: var(--app-code-family);
   margin-bottom: 8px;
   line-height: 1.6;
 }

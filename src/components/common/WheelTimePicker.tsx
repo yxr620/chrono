@@ -305,7 +305,7 @@ export const WheelTimePicker = forwardRef<WheelTimePickerHandle, WheelTimePicker
           onChange={updateHour}
           isDark={isDark}
           fontSize={20}
-          fontFamily="var(--app-mono-family)"
+          fontFamily="var(--app-number-family)"
         />
         <ScrollColumn
           ref={minuteColRef}
@@ -314,7 +314,7 @@ export const WheelTimePicker = forwardRef<WheelTimePickerHandle, WheelTimePicker
           onChange={updateMinute}
           isDark={isDark}
           fontSize={20}
-          fontFamily="var(--app-mono-family)"
+          fontFamily="var(--app-number-family)"
         />
       </div>
 
@@ -326,7 +326,7 @@ export const WheelTimePicker = forwardRef<WheelTimePickerHandle, WheelTimePicker
         transform: 'translateY(-50%)',
         fontSize: '20px',
         fontWeight: 700,
-        fontFamily: 'var(--app-mono-family)',
+        fontFamily: 'var(--app-number-family)',
         color: textColor,
         pointerEvents: 'none',
         zIndex: 10,

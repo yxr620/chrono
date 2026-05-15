@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -8,6 +8,18 @@ const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 const readProjectFile = (relativePath: string) =>
   readFile(path.join(rootDir, relativePath), 'utf8');
+
+const walk = async (dir: string): Promise<string[]> => {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const files = await Promise.all(
+    entries.map(async (entry) => {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) return walk(full);
+      return [full];
+    })
+  );
+  return files.flat();
+};
 
 const cssBlock = (source: string, selector: string) => {
   const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -75,4 +87,25 @@ test('analysis pages apply number font to key metric and date surfaces', async (
   assert.match(cssBlock(trendCss, '.trend-summary-details'), /font-family:\s*var\(--app-number-family\);/);
   assert.match(cssBlock(goalCss, '.goal-header-meta'), /font-family:\s*var\(--app-number-family\);/);
   assert.match(cssBlock(goalCss, '.goal-detail-meta'), /font-family:\s*var\(--app-number-family\);/);
+});
+
+test('component sources do not reference legacy font tokens', async () => {
+  const componentsDir = path.join(rootDir, 'src/components');
+  const files = (await walk(componentsDir)).filter((f) => /\.(tsx?|css)$/.test(f));
+
+  const offenders: string[] = [];
+  for (const file of files) {
+    const content = await readFile(file, 'utf8');
+    if (/--app-mono-family|--app-font-family/.test(content)) {
+      offenders.push(path.relative(rootDir, file));
+    }
+  }
+
+  assert.deepEqual(
+    offenders,
+    [],
+    `Legacy font tokens (--app-mono-family / --app-font-family) must be migrated to ` +
+      `--app-number-family / --app-code-family / --app-text-family. ` +
+      `Offending files:\n${offenders.join('\n')}`
+  );
 });

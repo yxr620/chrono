@@ -223,7 +223,7 @@
 }
 
 .settings-stat-value-mono {
-  font-family: var(--app-mono-family);
+  font-family: var(--app-number-family);
   font-variant-numeric: tabular-nums;
   font-size: 13px;
 }

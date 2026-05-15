@@ -31,7 +31,7 @@
   flex: 1;
   font-size: 18px;
   font-weight: 600;
-  font-family: var(--app-mono-family);
+  font-family: var(--app-number-family);
   font-variant-numeric: tabular-nums;
   padding: 8px 12px;
   border-radius: 8px;

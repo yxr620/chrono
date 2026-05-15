@@ -127,7 +127,7 @@
 .sync-status-log-time {
   font-size: 12px;
   color: hsl(var(--muted-foreground));
-  font-family: var(--app-mono-family);
+  font-family: var(--app-number-family);
   font-variant-numeric: tabular-nums;
 }
 
