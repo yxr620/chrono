@@ -254,6 +254,14 @@ export const AIAssistant: React.FC = () => {
 
   // 中断生成
   const handleStop = () => {
+    // 若用户在确认弹窗 pending 时按下停止，必须先 resolve(false)，
+    // 否则引擎卡在 await onConfirmRequired，整个对话窗口会永久 sending。
+    setPendingConfirmation(prev => {
+      if (prev && !prev.resolved) {
+        prev.resolve(false);
+      }
+      return null;
+    });
     abortRef.current?.abort();
   };
 

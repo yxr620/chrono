@@ -179,7 +179,19 @@ export async function runToolCallLoop(
                 callbacks.onPhase('toolCall', toolLabel);
 
                 // 写入/维护操作需要用户确认
-                if (action.risk !== 'none' && callbacks.onConfirmRequired) {
+                if (action.risk !== 'none') {
+                    if (!callbacks.onConfirmRequired) {
+                        // 调用方未提供确认机制——硬拒绝，绝不静默执行
+                        const toolDebug = JSON.stringify({ tool: tc.function.name, args, result: '调用方未提供确认机制' }, null, 2);
+                        callbacks.onPhase('toolCall', toolLabel + '（已拒绝：无确认机制）', toolDebug);
+                        messages.push({
+                            role: 'tool',
+                            content: `已拒绝执行高风险操作 ${tc.function.name}：调用方未提供用户确认机制。`,
+                            tool_call_id: tc.id,
+                        } as any);
+                        continue;
+                    }
+
                     const card = action.confirm
                         ? await action.confirm(args)
                         : {
@@ -190,6 +202,8 @@ export async function runToolCallLoop(
                         };
 
                     const confirmed = await callbacks.onConfirmRequired(card);
+                    // 确认期间用户可能按下了停止——立刻退出
+                    signal?.throwIfAborted();
                     if (!confirmed) {
                         const toolDebug = JSON.stringify({ tool: tc.function.name, args, result: '用户取消' }, null, 2);
                         callbacks.onPhase('toolCall', toolLabel + '（已取消）', toolDebug);
@@ -202,7 +216,14 @@ export async function runToolCallLoop(
                     }
                 }
 
-                const result = await action.handler(args);
+                let result: { success: boolean; message: string };
+                try {
+                    result = await action.handler(args);
+                } catch (handlerErr: unknown) {
+                    // handler 抛错——构造失败结果让 LLM 知道，避免连累同轮已成功的 tool
+                    const errMsg = handlerErr instanceof Error ? handlerErr.message : String(handlerErr);
+                    result = { success: false, message: `工具执行异常：${errMsg}` };
+                }
 
                 // 构建工具调用的详细调试信息
                 const toolDebug = JSON.stringify({ tool: tc.function.name, args, result: result.message }, null, 2);
@@ -319,14 +340,31 @@ function formatMessagesDebug(messages: ChatMessage[]): string {
 }
 
 /**
- * 简单检测 API 是否不支持 function calling
+ * 检测 API 是否明确告知"不支持 function calling / tools"
+ *
+ * 之前只用 includes('function')/('tools')/('not supported') 太激进，
+ * 任何带"function timeout"/"cloud function ..."/"feature not supported"
+ * 的错误都会被误判成"不支持工具"，从而跳到无 tools 的 answering 兜底，
+ * 让模型基于不完整数据编造答案。
+ *
+ * 这里改用更具体的短语集合，匹配主流 provider 的实际错误文案。
  */
-function isFunctionCallingUnsupported(err: any): boolean {
-    const msg = (err?.message || '').toLowerCase();
-    return (
-        msg.includes('tools') ||
-        msg.includes('function') ||
-        msg.includes('not supported') ||
-        msg.includes('invalid parameter')
-    );
+function isFunctionCallingUnsupported(err: unknown): boolean {
+    const msg = (err instanceof Error ? err.message : '').toLowerCase();
+    if (!msg) return false;
+
+    const phrases = [
+        'does not support tool',
+        'does not support function',
+        'tools parameter is not',
+        'tools is not supported',
+        'tool_choice is not',
+        'function calling is not supported',
+        'function calling not supported',
+        'function_call is not',
+        'tool calling is not supported',
+        '不支持工具',
+        '不支持函数调用',
+    ];
+    return phrases.some(p => msg.includes(p));
 }
