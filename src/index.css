@@ -54,29 +54,33 @@
 }
 
 :root {
-  /* 跨平台系统字体：iOS/macOS → SF Pro + PingFang SC；Android → Roboto + Noto；Windows → Segoe + 微软雅黑 */
-  --app-font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto,
-                     "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC",
-                     Arial, sans-serif;
-  --app-mono-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
-                     "Courier New", monospace;
-  font-family: var(--app-font-family);
+  --app-text-family: "Noto Sans SC Variable", sans-serif;
+  --app-number-family: "JetBrains Mono Variable", "Noto Sans SC Variable", monospace;
+  --app-code-family: var(--app-number-family);
+  --app-font-family: var(--app-text-family);
+  --app-mono-family: var(--app-number-family);
+  font-family: var(--app-text-family);
   line-height: 1.5;
   font-weight: 400;
-
-  /* 允许浏览器合成粗体：Android 系统等宽字体通常没有 Bold cut，
-     若设为 none 会导致 font-weight: 700 回落成 Regular（计时器在安卓上变细）。
-     style 仍禁止合成，避免中文字符被强行斜体化。 */
-  font-synthesis: weight;
+  font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* 数字显示工具类：让时长 / 时间 / 统计数字等宽对齐，不再跳动 */
+.numeric-text,
 .tabular-nums {
+  font-family: var(--app-number-family);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
+}
+
+.code-text,
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--app-code-family);
 }
 
 * {
@@ -98,6 +102,7 @@ body {
   -webkit-overflow-scrolling: touch;
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
+  font-family: var(--app-text-family);
   touch-action: pan-y;
   /* 只允许垂直平移 */
 }
@@ -109,6 +114,7 @@ body {
   flex-direction: column;
   overflow-x: hidden;
   max-width: 100vw;
+  font-family: var(--app-text-family);
 }
 
 a {
@@ -137,6 +143,12 @@ button {
   color: hsl(var(--primary-foreground));
   cursor: pointer;
   transition: border-color 0.25s;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
 }
 
 button:hover {

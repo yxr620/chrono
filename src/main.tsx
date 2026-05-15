@@ -1,5 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import "@fontsource-variable/noto-sans-sc/wght.css";
+import "@fontsource-variable/jetbrains-mono/wght.css";
 import './index.css'
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';

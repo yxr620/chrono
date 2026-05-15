@@ -22,6 +22,8 @@
     "@capacitor/share": "^7.0.2",
     "@capacitor/splash-screen": "^7.0.3",
     "@capacitor/status-bar": "^7.0.3",
+    "@fontsource-variable/jetbrains-mono": "^5.2.8",
+    "@fontsource-variable/noto-sans-sc": "^5.2.10",
     "@ionic/react": "^8.7.10",
     "ali-oss": "^6.23.0",
     "dayjs": "^1.11.19",

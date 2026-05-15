@@ -64,13 +64,18 @@ const CHART_STYLES = {
       border: '1px solid rgba(67, 51, 35, 0.1)',
       borderRadius: 14,
       boxShadow: '0 18px 38px -28px rgba(63, 43, 21, 0.36)',
+      fontFamily: 'var(--app-number-family)',
       fontSize: 12,
+      fontVariantNumeric: 'tabular-nums',
       padding: 10,
       color: '#1d1712',
     },
   },
   axis: {
-    tick: { fill: '#7f7264' },
+    tick: {
+      fill: '#7f7264',
+      fontFamily: 'var(--app-number-family)',
+    },
     stroke: 'rgba(67, 51, 35, 0.16)',
   },
   grid: {

@@ -10,7 +10,7 @@
     radial-gradient(circle at top left, rgba(132, 96, 55, 0.06), transparent 24%),
     linear-gradient(180deg, #efe7dc 0%, #f4ede4 100%);
   border-radius: 0;
-  font-family: var(--app-font-family);
+  font-family: var(--app-text-family);
   color: #1d1712;
 }
 
@@ -50,7 +50,7 @@
 
 .goal-page-header-editorial h1 {
   margin: 0;
-  font-family: var(--app-font-family);
+  font-family: var(--app-text-family);
   font-size: 2.8rem;
   line-height: 0.96;
   font-weight: 400;
@@ -59,6 +59,8 @@
 
 .goal-header-meta {
   margin: 8px 0 0;
+  font-family: var(--app-number-family);
+  font-variant-numeric: tabular-nums;
   font-size: 13px;
   color: #6d6155;
   line-height: 1.7;
@@ -144,6 +146,8 @@
   padding: 6px 10px;
   border-radius: 10px;
   border: 1px solid rgba(67, 51, 35, 0.12);
+  font-family: var(--app-number-family);
+  font-variant-numeric: tabular-nums;
   font-size: 13px;
   background: rgba(255, 255, 255, 0.66);
   color: #1d1712;
@@ -181,7 +185,7 @@
 
 .goal-metric-value {
   margin-top: 10px;
-  font-family: var(--app-mono-family);
+  font-family: var(--app-number-family);
   font-variant-numeric: tabular-nums;
   font-size: 1.52rem;
   font-weight: 600;
@@ -231,7 +235,7 @@
 
 .goal-section-title-row h2 {
   margin: 0;
-  font-family: var(--app-font-family);
+  font-family: var(--app-text-family);
   font-size: 1.72rem;
   font-weight: 400;
 }
@@ -301,7 +305,7 @@
 }
 
 .goal-distribution-value {
-  font-family: var(--app-mono-family);
+  font-family: var(--app-number-family);
   font-variant-numeric: tabular-nums;
   font-size: 12px;
   color: #6f6459;
@@ -341,7 +345,7 @@
 .goal-cluster-rank {
   padding-top: 2px;
   font-size: 11px;
-  font-family: var(--app-mono-family);
+  font-family: var(--app-number-family);
   font-variant-numeric: tabular-nums;
   color: #b7aa9a;
 }
@@ -367,7 +371,7 @@
 
 .goal-cluster-hours {
   flex-shrink: 0;
-  font-family: var(--app-mono-family);
+  font-family: var(--app-number-family);
   font-variant-numeric: tabular-nums;
   font-size: 13px;
   color: #41372e;
@@ -375,6 +379,8 @@
 
 .goal-cluster-meta {
   margin-top: 4px;
+  font-family: var(--app-number-family);
+  font-variant-numeric: tabular-nums;
   font-size: 12px;
   color: #7e7164;
   line-height: 1.55;
@@ -434,13 +440,15 @@
 }
 
 .goal-detail-meta {
+  font-family: var(--app-number-family);
+  font-variant-numeric: tabular-nums;
   font-size: 12px;
   color: #7e7164;
 }
 
 .goal-detail-duration {
   font-size: 12px;
-  font-family: var(--app-mono-family);
+  font-family: var(--app-number-family);
   font-variant-numeric: tabular-nums;
   color: #41372e;
   text-align: right;
@@ -512,6 +520,8 @@
 
 .goal-suggestion-meta {
   margin-top: 4px;
+  font-family: var(--app-number-family);
+  font-variant-numeric: tabular-nums;
   font-size: 12px;
   color: #7e7164;
 }
@@ -536,6 +546,8 @@
   margin-left: 8px;
   padding: 2px 8px;
   border-radius: 999px;
+  font-family: var(--app-number-family);
+  font-variant-numeric: tabular-nums;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -616,7 +628,7 @@
 
 .goal-status-card h2 {
   margin: 0;
-  font-family: var(--app-font-family);
+  font-family: var(--app-text-family);
   font-size: 2rem;
   font-weight: 400;
   line-height: 1;

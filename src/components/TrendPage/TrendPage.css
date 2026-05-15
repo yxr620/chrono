@@ -10,7 +10,7 @@
     radial-gradient(circle at top left, rgba(132, 96, 55, 0.06), transparent 24%),
     linear-gradient(180deg, #efe7dc 0%, #f4ede4 100%);
   border-radius: 0;
-  font-family: var(--app-font-family);
+  font-family: var(--app-text-family);
   color: #1d1712;
 }
 
@@ -50,7 +50,7 @@
 
 .trend-page-header-editorial h1 {
   margin: 0;
-  font-family: var(--app-font-family);
+  font-family: var(--app-text-family);
   font-size: 2.8rem;
   line-height: 0.96;
   font-weight: 400;
@@ -59,6 +59,8 @@
 
 .trend-header-meta {
   margin: 8px 0 0;
+  font-family: var(--app-number-family);
+  font-variant-numeric: tabular-nums;
   font-size: 13px;
   color: #6d6155;
   line-height: 1.7;
@@ -144,6 +146,8 @@
   padding: 6px 10px;
   border-radius: 10px;
   border: 1px solid rgba(67, 51, 35, 0.12);
+  font-family: var(--app-number-family);
+  font-variant-numeric: tabular-nums;
   font-size: 13px;
   background: rgba(255, 255, 255, 0.66);
   color: #1d1712;
@@ -170,7 +174,7 @@
 
 .trend-section-title-row h2 {
   margin: 0;
-  font-family: var(--app-font-family);
+  font-family: var(--app-text-family);
   font-size: 1.72rem;
   font-weight: 400;
 }
@@ -240,6 +244,8 @@
 .trend-chart-stats {
   display: flex;
   gap: 16px;
+  font-family: var(--app-number-family);
+  font-variant-numeric: tabular-nums;
   font-size: 12px;
   color: #7e7164;
 }
@@ -318,6 +324,8 @@
 }
 
 .trend-summary-details {
+  font-family: var(--app-number-family);
+  font-variant-numeric: tabular-nums;
   font-size: 12px;
   color: #7e7164;
 }
@@ -328,6 +336,8 @@
 }
 
 .trend-summary-diff {
+  font-family: var(--app-number-family);
+  font-variant-numeric: tabular-nums;
   font-weight: 600;
   font-size: 14px;
   flex-shrink: 0;
@@ -362,7 +372,7 @@
 
 .trend-status-card h2 {
   margin: 0;
-  font-family: var(--app-font-family);
+  font-family: var(--app-text-family);
   font-size: 2rem;
   font-weight: 400;
   line-height: 1;

@@ -10,7 +10,7 @@
     radial-gradient(circle at top left, rgba(132, 96, 55, 0.06), transparent 24%),
     linear-gradient(180deg, #efe7dc 0%, #f4ede4 100%);
   border-radius: 0;
-  font-family: var(--app-font-family);
+  font-family: var(--app-text-family);
   color: #1d1712;
 }
 
@@ -47,7 +47,7 @@
 
 .dashboard-header-editorial h1 {
   margin: 0;
-  font-family: var(--app-font-family);
+  font-family: var(--app-text-family);
   font-size: clamp(2.7rem, 4vw, 3.8rem);
   font-weight: 400;
   line-height: 0.95;
@@ -56,6 +56,8 @@
 
 .dashboard-header-meta {
   margin: 10px 0 0;
+  font-family: var(--app-number-family);
+  font-variant-numeric: tabular-nums;
   font-size: 13px;
   color: #6a5f54;
   line-height: 1.7;
@@ -117,6 +119,8 @@
   border: 1px solid rgba(67, 51, 35, 0.12);
   background: rgba(255, 255, 255, 0.66);
   color: #1d1712;
+  font-family: var(--app-number-family);
+  font-variant-numeric: tabular-nums;
   font-size: 13px;
   color-scheme: light;
 }
@@ -145,7 +149,8 @@
 }
 
 .dashboard-lead-value {
-  font-family: var(--app-font-family);
+  font-family: var(--app-number-family);
+  font-variant-numeric: tabular-nums;
   font-size: clamp(4.8rem, 10vw, 7.6rem);
   line-height: 0.84;
   letter-spacing: -0.05em;
@@ -197,7 +202,7 @@
 
 .dashboard-metric-value {
   margin-top: 10px;
-  font-family: var(--app-mono-family);
+  font-family: var(--app-number-family);
   font-variant-numeric: tabular-nums;
   font-size: 1.55rem;
   font-weight: 600;
@@ -231,7 +236,7 @@
 
 .analysis-section-title h2 {
   margin: 0;
-  font-family: var(--app-font-family);
+  font-family: var(--app-text-family);
   font-size: 1.68rem;
   font-weight: 400;
   line-height: 1;
@@ -282,7 +287,7 @@
 }
 
 .dashboard-summary-value {
-  font-family: var(--app-mono-family);
+  font-family: var(--app-number-family);
   font-variant-numeric: tabular-nums;
   font-size: 12px;
   color: #6f6459;
@@ -384,7 +389,7 @@
 }
 
 .dashboard-category-ring-core strong {
-  font-family: var(--app-mono-family);
+  font-family: var(--app-number-family);
   font-variant-numeric: tabular-nums;
   font-size: 17px;
   font-weight: 600;
@@ -473,7 +478,7 @@
 
 .dashboard-status-card h2 {
   margin: 0;
-  font-family: var(--app-font-family);
+  font-family: var(--app-text-family);
   font-size: 2rem;
   font-weight: 400;
   line-height: 1;

@@ -52,6 +52,7 @@ npm run dev       # → http://localhost:5173
 | 构建 | Vite 7（Web / Android）、Electron 26（macOS） |
 | 多平台 | Capacitor 7 |
 | 图表 | Recharts |
+| 字体 | Fontsource 本地打包：Noto Sans SC Variable + JetBrains Mono Variable |
 
 ## 项目结构
 

@@ -170,6 +170,7 @@
   font-size: 11px;
   color: hsl(var(--foreground) / 0.7);
   white-space: nowrap;
+  font-family: var(--app-number-family);
   font-variant-numeric: tabular-nums;
 }
 
@@ -177,6 +178,7 @@
   font-size: 10px;
   color: hsl(var(--muted-foreground));
   white-space: nowrap;
+  font-family: var(--app-number-family);
   font-variant-numeric: tabular-nums;
 }
 

@@ -180,6 +180,35 @@ cd android
 ./gradlew assembleDebug
 ```
 
+### 字体系统维护
+
+Chrono 的字体通过 Fontsource 本地打包，不能使用 Google Fonts CDN。依赖在根 `package.json`：
+
+- `@fontsource-variable/noto-sans-sc`
+- `@fontsource-variable/jetbrains-mono`
+
+字体入口在 `src/main.tsx`，必须早于 `src/index.css` 引入。`src/index.css` 负责定义全局 token：
+
+- `--app-text-family`：普通中文、英文 UI 文案，使用 Noto Sans SC Variable。
+- `--app-number-family`：时间、时长、统计数字、百分比、同步计数，使用 JetBrains Mono Variable。
+- `--app-code-family`：AI/debug/code 文本，默认复用 number font。
+- `--app-font-family`：旧 token，映射到 `--app-text-family`。
+- `--app-mono-family`：旧 token，映射到 `--app-number-family`。
+
+新增样式时优先使用语义化 token。旧 token 只作为兼容层保留，不要新增依赖旧名称的代码。
+
+未来可以单独做一次字体 token 命名清理：把已有组件里的 `--app-font-family` / `--app-mono-family` 引用迁移到 `--app-text-family` / `--app-number-family` / `--app-code-family`。这类清理只改变命名语义，不应改变视觉效果。清理完成后仍建议保留 `src/index.css` 里的旧 token alias，避免历史分支、遗漏引用或第三方样式覆盖导致字体 fallback。
+
+数字类文本不能只依赖 `font-variant-numeric: tabular-nums`。如果内容是当前计时器、开始/结束时间、时间范围、时长、百分比、统计指标、同步计数或 debug/code 文本，应显式使用 `--app-number-family` 或 `.tabular-nums`。
+
+字体系统有源码扫描回归测试：
+
+```bash
+./node_modules/.bin/tsx src/font-system.test.ts
+```
+
+改动字体入口、token、Ionic 覆盖、CSP、记录列表、同步指示器或分析页数字样式时，都应运行该测试，并继续运行 `npm run build` 验证 Vite 能打包 `.woff2` 字体资产。
+
 ### 什么时候用 `build`，什么时候用 `build:local`
 
 - `npm run build:local`：本地调试 / 自己日常使用，保留 `.env.local` 里的配置。

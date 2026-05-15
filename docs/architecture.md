@@ -28,6 +28,34 @@
 | 多平台桥接 | Capacitor 7 |
 | 日期处理 | Day.js |
 | 图表 | Recharts 3 |
+| 字体 | Fontsource 本地打包：Noto Sans SC Variable + JetBrains Mono Variable |
+
+## 字体系统
+
+Chrono 使用本地打包字体，不依赖 Google Fonts CDN。字体入口在 `src/main.tsx`：
+
+```typescript
+import "@fontsource-variable/noto-sans-sc/wght.css";
+import "@fontsource-variable/jetbrains-mono/wght.css";
+```
+
+字体 token 由 `src/index.css` 统一定义：
+
+| Token | 用途 |
+|---|---|
+| `--app-text-family` | 普通 UI 文案、标题、标签、正文，当前指向 `Noto Sans SC Variable` |
+| `--app-number-family` | 时间、时长、统计数字、百分比、同步计数，当前指向 `JetBrains Mono Variable` |
+| `--app-code-family` | AI/debug/code 文本，默认复用 `--app-number-family` |
+| `--app-font-family` | 旧 token，兼容映射到 `--app-text-family` |
+| `--app-mono-family` | 旧 token，兼容映射到 `--app-number-family` |
+
+保留旧 token 是为了让已有组件和内联样式继续走统一字体系统，避免遗漏旧引用后回到系统默认字体。新代码应优先使用语义化 token。
+
+后续可以做一次专门的命名清理，把现有组件里的旧 token 引用迁移到语义化 token：普通文本改为 `--app-text-family`，数字改为 `--app-number-family`，AI/debug/code 文本改为 `--app-code-family`。即使清理完成，`src/index.css` 中的旧 token alias 也建议保留，作为历史分支、遗漏引用和第三方覆盖的兼容保险。
+
+数字规则：只需要等宽对齐的数字不能只写 `font-variant-numeric: tabular-nums`。当前计时器、开始/结束时间、时间范围、时长、百分比、统计指标、同步计数、AI/debug/code 文本都应显式使用 `--app-number-family` 或 `--app-code-family`。全局 `.tabular-nums` 已兼容升级为同时应用 number font 和 tabular numeric features。
+
+Ionic 字体入口在 `src/App.css`，通过 `--ion-font-family: var(--app-text-family)` 覆盖平台默认字体，并对常见 Ionic host 和 overlay 组件做继承兜底。
 
 ## 平台支持
 
