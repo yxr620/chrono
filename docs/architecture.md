@@ -102,7 +102,7 @@ src/
 ├── App.css
 ├── types/                     # 共享 TypeScript 类型
 │
-├── stores/                    # Zustand 状态管理（6 个 store）
+├── stores/                    # Zustand 状态管理（8 个 store）
 │   ├── entryStore.ts          # 时间记录 CRUD + 计时器
 │   ├── goalStore.ts           # 目标 CRUD
 │   ├── categoryStore.ts       # 分类（6 个预设 + 自定义类别 CRUD）
@@ -128,6 +128,7 @@ src/
 │   ├── authService.ts         # Managed 模式 HTTP 客户端（注册/登录/STS/AI 代理）
 │   ├── userDataService.ts     # 设备/存储/账号管理 API 客户端
 │   ├── gateway/               # PaidFeatureGateway 抽象（BYO ↔ Managed 路由）
+│   ├── actions/               # AI-First Action Registry（read / write / maintenance，详见 docs/action-registry.md）
 │   ├── ai/                    # AI 助手（见 ai-assistant.md）
 │   ├── analysis/              # 数据分析处理器
 │   │   ├── processor.ts       # 数据加载 + 转换管道
@@ -222,8 +223,11 @@ VITE_AI_MODEL=qwen3.6-max-preview
 
 ```bash
 npm run dev          # Vite 开发服务器（http://localhost:5173）
-npm run build        # TypeScript 编译 + Vite 生产构建
-npm run lint         # ESLint 检查（项目唯一的代码质量检查）
+npm run build        # TypeScript 编译 + Vite 生产构建（不打包 .env.local 秘钥）
+npm run build:local  # 本地构建（保留 .env.local 秘钥，用于 Android/设备调试）
+npm run lint         # ESLint 检查（主要代码质量检查）
+npm run test:app-checks    # node:test 应用回归脚本（tests/*.test.ts）
+npm run test:font-system   # 字体 token 回归测试
 npm run preview      # 预览生产构建
 npm run ai:debug     # AI 助手 CLI 调试
 

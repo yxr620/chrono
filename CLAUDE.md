@@ -24,35 +24,38 @@ cd electron && npm run electron:start   # Start Electron (inspector on port 5858
 cd electron && npm run electron:make    # Build distributable (.dmg/.app)
 ```
 
-There are no automated tests — linting is the primary code quality check.
+Linting is the primary code quality check. A small number of `node --test` suites exist (`npm run test:app-checks`, `npm run test:font-system`, defined in `tests/`); there is no full test suite.
 
 ## Architecture
 
-**Chrono** is a multiplatform time tracker (web, Android, macOS) built with React + Ionic + Capacitor. The same web codebase targets all platforms.
+**Chrono** is a multiplatform time tracker (web, Android, iOS, macOS) built with React + Ionic + Capacitor. The same web codebase targets all platforms.
 
 ### Tech Stack
 - **UI**: React 18 + Ionic React 8 + TypeScript
-- **Build**: Vite 7 (web/Android), Electron 26 (macOS via `@capacitor-community/electron`)
-- **State**: Zustand 5 (6 stores)
+- **Build**: Vite 7 (web/Android/iOS), Electron 26 (macOS via `@capacitor-community/electron`)
+- **State**: Zustand 5 (8 stores)
 - **Persistence**: Dexie.js (IndexedDB) — database name `TimeTrackerDB`
 - **Dates**: Day.js
 
 ### State Management (`src/stores/`)
-Six Zustand stores, each with a clear domain:
+Eight Zustand stores, each with a clear domain:
 - `entryStore` — time entries (CRUD, active timer control)
 - `goalStore` — goal management
-- `categoryStore` — activity categories (6 hardcoded types)
+- `categoryStore` — activity categories (6 presets + user-defined custom)
 - `dateStore` — globally selected date shared across pages
 - `syncStore` — sync status and OSS configuration
 - `aiStore` — AI assistant settings and conversation history
+- `authStore` — Managed mode sign-in state and JWT
+- `featureModeStore` — per-feature mode (`disabled` / `byo` / `managed`)
 
 ### Data Layer (`src/services/`)
 - `db.ts` — Dexie schema: tables `entries`, `goals`, `categories`, `syncMetadata`, `syncOperations`
-- `dataService.ts` — CRUD operations wrapper used by stores (sits between stores and `db.ts`)
+- `dataService.ts` — High-level CRUD + maintenance queries used by stores, AI tools, and analysis (reads via `db`, writes via `syncDb`)
 - `syncDb.ts` — DB wrapper that tracks changes for sync
 - `syncEngine.ts` — Push/pull/merge sync (oplog + snapshot, LWW strategy)
 - `oss.ts` — Aliyun OSS operations (optional cloud backend)
 - `export.ts` — JSON import/export
+- `actions/` — AI-first Action Registry (read/write/maintenance actions, see `docs/action-registry.md`)
 - `ai/` — AI assistant with function-calling, supports multiple LLM providers (Qwen, Gemini, GLM, Kimi, MiniMax, OpenAI, custom)
 - `analysis/` — Data analysis (goal clustering, trend analysis)
 
@@ -71,7 +74,7 @@ Six preset categories + user-defined custom categories. Colors are stored in the
 
 If `VITE_AUTH_API_URL` is set, the app offers **Managed mode** for paid features (sync + AI). Users sign in with email/password; the backend (Aliyun Function Compute, source in `server/`) signs OSS STS tokens and proxies LLM calls. Without `VITE_AUTH_API_URL`, only BYO mode is available — users supply their own credentials via the **Services** page.
 
-Per-feature mode (`off` / `byo` / `managed`) is stored in `chrono_feature_modes` in localStorage. Routing happens through `src/services/gateway/` (`CompositeGateway` → `ByoGateway` or `ManagedGateway`). A one-time `MigrationPrompt` (mounted in `App.tsx`) offers existing BYO users a one-click switch on boot — opting in scrubs every provider's BYO `apiKey` from localStorage.
+Per-feature mode (`disabled` / `byo` / `managed`) is stored in `chrono_feature_modes` in localStorage. Routing happens through `src/services/gateway/` (`CompositeGateway` → `ByoGateway` or `ManagedGateway`). A one-time `MigrationPrompt` (mounted in `App.tsx`) offers existing BYO users a one-click switch on boot — opting in scrubs every provider's BYO `apiKey` from localStorage.
 
 Backend code: `server/src/`. Deploy with `server/deploy.sh` then upload the resulting zip in the Aliyun FC console. Operator runbook: `server/RUNBOOK.md`. Full design (archived): `docs/superpowers/archive/2026-04-21-managed-services.md`.
 
@@ -83,7 +86,7 @@ Desktop-only feature. Two modes: BYO (`VITE_AI_*` env vars + per-provider settin
 
 ### Platform Data Paths
 - **Web**: IndexedDB in browser
-- **Android**: app data directory via Capacitor
+- **Android / iOS**: app data directory via Capacitor
 - **macOS (Electron)**: `~/Library/Application Support/Chrono/`
 
 ### Environment Variables
