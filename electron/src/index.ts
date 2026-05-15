@@ -18,6 +18,11 @@ const appMenuBarMenuTemplate: (MenuItemConstructorOptions | MenuItem)[] = [
   { role: 'viewMenu' },
 ];
 
+const logAutoUpdateError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error);
+  console.warn(`Auto update check failed: ${message}`);
+};
+
 // Get Config options from capacitor.config
 const capacitorFileConfig: CapacitorElectronConfig = getCapacitorElectronConfig();
 
@@ -46,7 +51,10 @@ if (electronIsDev) {
   // Initialize our app, build windows, and load content.
   await myCapacitorApp.init();
   // Check for updates if we are in a packaged app.
-  autoUpdater.checkForUpdatesAndNotify();
+  if (app.isPackaged && !electronIsDev) {
+    autoUpdater.on('error', logAutoUpdateError);
+    autoUpdater.checkForUpdatesAndNotify().catch(logAutoUpdateError);
+  }
 })();
 
 // Handle when all of our windows are close (platforms have their own expectations).

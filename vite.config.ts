@@ -22,14 +22,14 @@ export default defineConfig(({ mode }) => ({
         display: 'standalone',
         icons: [
           {
-            src: '/icon-192.png',
+            src: '/icons/icon-192.webp',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/webp'
           },
           {
-            src: '/icon-512.png',
+            src: '/icons/icon-512.webp',
             sizes: '512x512',
-            type: 'image/png'
+            type: 'image/webp'
           }
         ]
       }

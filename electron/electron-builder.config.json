@@ -1,5 +1,7 @@
 {
-  "appId": "com.yourdoamnin.yourapp",
+  "appId": "com.yxr.timetracker",
+  "productName": "Chrono",
+  "electronDist": "node_modules/electron/dist",
   "directories": {
     "buildResources": "resources"
   },
@@ -22,7 +24,12 @@
     "icon": "assets/appIcon.ico"
   },
   "mac": {
-    "category": "your.app.category.type",
-    "target": "dmg"
+    "category": "public.app-category.productivity",
+    "target": "dmg",
+    "icon": "assets/appIcon.icns",
+    "identity": null
+  },
+  "dmg": {
+    "icon": "assets/appIcon.icns"
   }
 }

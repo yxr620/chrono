@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.example.timetracker',
+  appId: 'com.yxr.timetracker',
   appName: 'Chrono',
   webDir: 'dist',
   android: {
@@ -10,7 +10,7 @@ const config: CapacitorConfig = {
   plugins: {
     StatusBar: {
       style: 'light',
-      backgroundColor: '#ffffff',
+      backgroundColor: '#EEEEF2',
       overlay: false,
     },
     Keyboard: {
