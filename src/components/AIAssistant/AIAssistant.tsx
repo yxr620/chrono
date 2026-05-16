@@ -19,6 +19,11 @@ import { ConfirmationCard } from './ConfirmationCard';
 import { shouldSendAssistantMessageFromKeyboard } from './keyboardShortcuts';
 import { getAssistantTextareaLayout } from './textareaAutosize';
 import type { ConfirmationCard as ConfirmationCardType } from '../../services/actions/types';
+import {
+  getPhaseDurationMs,
+  markFinalPhaseEnded,
+  type AssistantPhaseTiming,
+} from './phaseTiming';
 import './AIAssistant.css';
 
 // 配置 marked：关闭 mangle/headerIds 避免不必要的输出
@@ -42,10 +47,10 @@ function renderMarkdown(text: string): string {
 
 // 阶段配置：label 和 icon
 const PHASE_CONFIG: Record<string, { label: string; icon: string }> = {
-  preparing: { icon: '📋', label: '准备上下文' },
-  thinking: { icon: '💭', label: '思考中' },
-  toolCall: { icon: '🔧', label: '查询数据' },
-  answering: { icon: '✍️', label: '生成回答' },
+  preparing: { icon: '[]', label: '准备上下文' },
+  thinking: { icon: '..', label: '思考中' },
+  toolCall: { icon: '$', label: '查询数据' },
+  answering: { icon: '>>', label: '生成回答' },
 };
 
 /**
@@ -80,7 +85,7 @@ function formatDuration(ms: number): string {
 }
 
 const PhasesIndicator: React.FC<{
-  phases: Array<{ key: string; detail?: string; level?: number; failed?: boolean; debugInfo?: string; at?: number }>;
+  phases: AssistantPhaseTiming[];
   loading?: boolean;
 }> = ({ phases, loading }) => {
   // 活跃阶段：每 200ms 刷新 1 次（仅在还在运行时）
@@ -95,18 +100,13 @@ const PhasesIndicator: React.FC<{
   return (
     <div className="ai-phases">
       {phases.map((p, i) => {
-        const cfg = PHASE_CONFIG[p.key] || { icon: '⏳', label: '处理中' };
+        const cfg = PHASE_CONFIG[p.key] || { icon: '..', label: '处理中' };
         const isActive = loading && i === phases.length - 1;
         const level = p.level || 0;
         const hasDebug = !!p.debugInfo && !isActive;
 
-        // 耗时计算：下一阶段的 at - 本阶段的 at；最后一项且在 loading 中 → now - at
-        const next = phases[i + 1];
-        let durationMs: number | undefined;
-        if (p.at) {
-          if (next?.at) durationMs = next.at - p.at;
-          else if (isActive) durationMs = now - p.at;
-        }
+        // 耗时计算：已完成阶段用固定时间，活跃阶段用当前时间滚动刷新
+        const durationMs = getPhaseDurationMs(phases, i, { loading, now });
         const durationLabel = durationMs !== undefined ? formatDuration(durationMs) : '';
 
         const statusIcon = isActive
@@ -172,7 +172,7 @@ export const AIAssistant: React.FC = () => {
     ? isAuthenticated
     : aiMode === 'byo' && isConfigured();
   // 阶段累积：每次发送前重置，onPhase 调用时追加
-  const phasesRef = useRef<Array<{ key: string; detail?: string; level?: number; failed?: boolean; debugInfo?: string; at?: number }>>([]);
+  const phasesRef = useRef<AssistantPhaseTiming[]>([]);
   const handleOpenServices = useCallback(() => {
     navigateToTab('export');
   }, []);
@@ -275,17 +275,22 @@ export const AIAssistant: React.FC = () => {
         abort.signal,
       );
 
+      const finalizedPhases = markFinalPhaseEnded(phasesRef.current);
+      phasesRef.current = finalizedPhases;
       updateMessage(aiMsgId, {
         content: content || accumulated,
         thinking: thinking || thinkingAccum || undefined,
         loading: false,
+        phases: [...finalizedPhases],
       });
     } catch (error: unknown) {
+      const finalizedPhases = markFinalPhaseEnded(phasesRef.current);
+      phasesRef.current = finalizedPhases;
       if (error instanceof Error && error.name === 'AbortError') {
-        updateMessage(aiMsgId, { loading: false });
+        updateMessage(aiMsgId, { loading: false, phases: [...finalizedPhases] });
       } else {
         const errorMsg = error instanceof Error ? error.message : '请求失败';
-        updateMessage(aiMsgId, { content: `❌ ${errorMsg}`, loading: false, error: true });
+        updateMessage(aiMsgId, { content: `❌ ${errorMsg}`, loading: false, error: true, phases: [...finalizedPhases] });
       }
     } finally {
       setSending(false);
@@ -336,7 +341,7 @@ export const AIAssistant: React.FC = () => {
   };
 
   const buildAssistantCopyText = useCallback((msg: {
-    phases?: Array<{ key: string; detail?: string; debugInfo?: string }>;
+    phases?: AssistantPhaseTiming[];
     thinking?: string;
     content: string;
   }) => {
@@ -364,7 +369,7 @@ export const AIAssistant: React.FC = () => {
   }, []);
 
   const handleCopyAssistantMessage = useCallback((msgId: string, msg: {
-    phases?: Array<{ key: string; detail?: string; debugInfo?: string }>;
+    phases?: AssistantPhaseTiming[];
     thinking?: string;
     content: string;
   }) => {

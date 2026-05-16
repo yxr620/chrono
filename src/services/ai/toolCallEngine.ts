@@ -103,7 +103,7 @@ export async function runToolCallLoop(
     signal?: AbortSignal,
 ): Promise<{ content: string; thinking?: string }> {
     // 1. 构建 system prompt
-    callbacks.onPhase('preparing', '构建上下文');
+    callbacks.onPhase('preparing', '构建系统提示词');
     const config = await gateway.getAiClientConfig();
     const systemPrompt = await buildSystemPrompt();
     // 准备完毕后，补充 debugInfo

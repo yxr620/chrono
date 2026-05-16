@@ -25,6 +25,8 @@ export interface ChatMessage {
     debugInfo?: string;
     /** 阶段开始时间戳（ms），用于计算耗时 */
     at?: number;
+    /** 阶段结束时间戳（ms），用于冻结最后一个阶段的耗时 */
+    endedAt?: number;
   }>;
   /** thinking 模型输出的推理过程（流式累积） */
   thinking?: string;
