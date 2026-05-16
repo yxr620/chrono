@@ -116,3 +116,56 @@ test('streamChatWithTools is a thin wrapper that forwards model+messages+tools',
     globalThis.fetch = originalFetch;
   }
 });
+
+test('streamChatWithTools dispatches a tool call and continues streaming after the result', async () => {
+  // Two SSE payloads: first response demands a tool call, second yields the final text.
+  let callCount = 0;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => {
+    callCount += 1;
+    const body = callCount === 1
+      ? [
+          'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":"echo","arguments":"{\\"msg\\":\\"hi\\"}"}}]}}]}',
+          'data: {"choices":[{"delta":{},"finish_reason":"tool_calls"}]}',
+          'data: [DONE]',
+          '',
+        ].join('\n\n')
+      : [
+          'data: {"choices":[{"delta":{"content":"got hi"}}]}',
+          'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}',
+          'data: [DONE]',
+          '',
+        ].join('\n\n');
+    return new Response(body, { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+  }) as any;
+
+  // Reset registry, register an echo tool
+  (actionRegistry as any).actions = new Map();
+  actionRegistry.register(makeAction({
+    name: 'echo',
+    risk: 'none',
+    parameters: { type: 'object', properties: { msg: { type: 'string' } }, required: ['msg'] },
+    handler: async (args: any) => ({ success: true, message: `echoed:${args.msg}` }),
+  }));
+
+  try {
+    const model = createLanguageModel({ baseURL: 'https://example.com/v1', apiKey: 'sk', model: 'm' });
+    const tools = actionRegistry.toSdkTools({});
+    const result = streamChatWithTools({ model, messages: [{ role: 'user', content: 'echo hi' }], tools });
+
+    const events: string[] = [];
+    let textBuf = '';
+    for await (const event of result.fullStream) {
+      events.push(event.type);
+      if (event.type === 'text-delta') {
+        textBuf += (event as any).textDelta ?? (event as any).text ?? '';
+      }
+    }
+    assert.ok(events.includes('tool-call'), 'expected tool-call event');
+    assert.ok(events.includes('tool-result') || events.includes('tool-call-result'), 'expected a tool result event');
+    assert.equal(textBuf, 'got hi');
+    assert.equal(callCount, 2, 'expected two upstream calls (initial + post-tool)');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

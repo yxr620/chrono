@@ -12,6 +12,7 @@ import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import {
   streamText,
   generateText,
+  stepCountIs,
   type CoreMessage,
   type LanguageModel,
   type StreamTextResult,
@@ -66,7 +67,8 @@ export function streamChatWithTools(opts: {
     model: opts.model,
     messages: opts.messages,
     tools: opts.tools,
-    maxSteps: opts.maxSteps ?? 5,
+    // AI SDK v5 replaced maxSteps with stopWhen; stepCountIs(n) replicates the old behaviour.
+    stopWhen: stepCountIs(opts.maxSteps ?? 5),
     abortSignal: opts.abortSignal,
     // Auto-fix common model errors like wrong tool name casing.
     experimental_repairToolCall: async ({ toolCall, tools }) => {
