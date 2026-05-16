@@ -14,9 +14,10 @@ interface StsResponse {
   expiration: string;
 }
 
-interface FeatureFlags {
+export interface FeatureFlags {
   sync: boolean;
   ai: boolean;
+  aiModel?: string;
 }
 
 async function post<T>(path: string, body: unknown, token?: string): Promise<T> {

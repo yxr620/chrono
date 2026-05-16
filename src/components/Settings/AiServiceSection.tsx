@@ -6,6 +6,8 @@ import type { FeatureMode } from '../../services/gateway/types';
 import { AiProviderForm } from './AiProviderForm';
 import { useAuthStore } from '../../stores/authStore';
 import { authService } from '../../services/authService';
+import { useManagedAiModel } from '../../hooks/useManagedAiModel';
+import { formatManagedAiModel } from '../../services/ai/managedAiModelLabel';
 
 const AI_OPTIONS: Array<{ mode: FeatureMode; label: string; hint: string }> = [
   { mode: 'disabled', label: '关闭',                       hint: '不启用 AI 助手' },
@@ -24,7 +26,12 @@ export const AiServiceSection: React.FC<Props> = ({ onRequestSignIn }) => {
   const [expanded, setExpanded] = useState(false);
 
   const managedAvailable = !!import.meta.env.VITE_AUTH_API_URL;
+  const managedAiModel = useManagedAiModel(managedAvailable && (expanded || mode === 'managed'));
+  const managedAiModelLabel = formatManagedAiModel(managedAiModel);
   const currentOption = AI_OPTIONS.find((opt) => opt.mode === mode) || AI_OPTIONS[0];
+  const currentSubtitle = mode === 'managed'
+    ? `${currentOption.label} · ${managedAiModelLabel}`
+    : currentOption.label;
 
   const switchToManagedIfAllowed = async () => {
     const token = useAuthStore.getState().token;
@@ -70,7 +77,7 @@ export const AiServiceSection: React.FC<Props> = ({ onRequestSignIn }) => {
           <IonIcon icon={sparklesOutline} className="service-section__icon" />
           <span className="service-section__title-block">
             <span className="service-section__title">AI 助手</span>
-            <span className="service-section__subtitle">{currentOption.label}</span>
+            <span className="service-section__subtitle">{currentSubtitle}</span>
           </span>
         </span>
         <IonIcon icon={chevronDownOutline} className="service-section__chevron" aria-hidden="true" />
@@ -92,7 +99,7 @@ export const AiServiceSection: React.FC<Props> = ({ onRequestSignIn }) => {
                 <IonRadio slot="start" value={opt.mode} />
                 <IonLabel>
                   <h3>{opt.label}</h3>
-                  <p>{opt.hint}</p>
+                  <p>{opt.mode === 'managed' ? `当前模型：${managedAiModelLabel}` : opt.hint}</p>
                 </IonLabel>
               </IonItem>
             ))}

@@ -11,10 +11,12 @@ import DOMPurify from 'dompurify';
 import { useAIStore } from '../../stores/aiStore';
 import { useFeatureModeStore } from '../../stores/featureModeStore';
 import { useAuthStore } from '../../stores/authStore';
+import { useManagedAiModel } from '../../hooks/useManagedAiModel';
 import { runToolCallLoop } from '../../services/ai/toolCallEngine';
 import { navigateToTab } from '../../services/appNavigation';
 import type { ChatMessage as LLMMessage } from '../../services/ai/llmClient';
 import { AI_PROVIDERS } from '../../services/ai/providers';
+import { formatManagedAiUsageLabel } from '../../services/ai/managedAiModelLabel';
 import { ConfirmationCard } from './ConfirmationCard';
 import { shouldSendAssistantMessageFromKeyboard } from './keyboardShortcuts';
 import { getAssistantTextareaLayout } from './textareaAutosize';
@@ -170,6 +172,8 @@ export const AIAssistant: React.FC = () => {
   const confirmCountRef = useRef(0);
 
   const currentProvider = AI_PROVIDERS.find(p => p.id === config.providerId);
+  const managedAiModel = useManagedAiModel(aiMode === 'managed');
+  const managedAiUsageLabel = formatManagedAiUsageLabel(managedAiModel);
   const aiConfigured = aiMode === 'managed'
     ? isAuthenticated
     : aiMode === 'byo' && isConfigured();
@@ -392,7 +396,7 @@ export const AIAssistant: React.FC = () => {
         : '供应商凭据现在在「设置」页面配置。';
   const serviceBannerText = aiConfigured
     ? aiMode === 'managed'
-      ? '当前使用 Chrono 托管 AI。'
+      ? `${managedAiUsageLabel}。`
       : '供应商凭据现在在「设置」页面配置。'
     : aiMode === 'disabled'
       ? 'AI 助手当前处于关闭模式。'
@@ -417,7 +421,7 @@ export const AIAssistant: React.FC = () => {
               ? '当前已关闭，请前往「设置」页面启用。'
               : aiMode === 'managed'
                 ? aiConfigured
-                  ? '当前使用 Chrono 托管 AI'
+                  ? managedAiUsageLabel
                   : '请先登录 Chrono 账号。'
                 : aiConfigured
                   ? `当前使用 ${currentProvider?.name || config.providerId} · ${config.model}`
