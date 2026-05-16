@@ -7,17 +7,27 @@
  *   2. expose actions as SDK tools (with confirmation gating)
  *   3. consume `result.fullStream` and dispatch UI events
  *
- * Phase mapping:
- *   - preparing  : while we build the system prompt (synchronous, no model call)
- *   - thinking   : streaming model output before any tool call
- *   - toolCall   : one phase per tool-call event; updated when tool-result arrives
- *   - answering  : streaming model output after a tool result
+ * Phase mapping (SDK v5 fullStream events):
+ *   - preparing     : while we build the system prompt (synchronous, no model call)
+ *   - requesting    : from pre-stream fallback emit (carries MODEL REQUEST debug);
+ *                     re-emitted on each `start-step` after a `finish-step` resets
+ *                     `requestingEmittedThisStep`
+ *   - reasoning     : first `reasoning-delta` in a step (Qwen instruct / GLM-flash
+ *                     never emit reasoning, so this row may not appear)
+ *   - composingTool : `tool-input-start` → until `tool-call` overrides it
+ *   - toolCall      : `tool-call` → updated when `tool-result` arrives (covers
+ *                     only local action execution, ms-level)
+ *   - answering     : first `text-delta` after `tool-result` (or after model
+ *                     start in tool-less queries)
  *
  * SDK v5 event field notes:
- *   - text-delta      → { type: 'text-delta', text: string }
- *   - reasoning-delta → { type: 'reasoning-delta', text: string }
- *   - tool-call       → { type: 'tool-call', toolName, toolCallId, input }
- *   - tool-result     → { type: 'tool-result', toolName, toolCallId, input, output }
+ *   - text-delta       → { type, id, text: string }
+ *   - reasoning-delta  → { type, id, text: string }
+ *   - tool-input-start → { type, id, toolName: string }
+ *   - tool-call        → { type, toolCallId, toolName, input }
+ *   - tool-result      → { type, toolCallId, toolName, input, output }
+ *   - start-step       → { type, request, warnings }
+ *   - finish-step      → { type, response, usage, finishReason, providerMetadata }
  */
 
 import dayjs from 'dayjs';
@@ -155,16 +165,27 @@ export async function runToolCallLoop(
     { role: 'user', content: userQuery },
   ];
 
-  callbacks.onPhase(
-    'thinking',
-    '分析问题',
-    createTextDebug('MODEL REQUEST', `model=${config.model}\nmessages=${messages.length}\ntools=${Object.keys(tools).length}`),
-  );
-
-  let currentPhaseKind: 'thinking' | 'toolCall' | 'answering' | null = 'thinking';
+  type PhaseKind = 'requesting' | 'reasoning' | 'composingTool' | 'toolCall' | 'answering' | null;
+  let currentPhaseKind: PhaseKind = null;
+  let stepIdx = 0;
+  let requestingEmittedThisStep = false;
+  let reasoningEmittedThisStep = false;
   let textBuf = '';
   let thinkBuf = '';
   const toolCallLabels = new Map<string, string>(); // toolCallId → label for tool-result lookup
+
+  const modelReqDebug = createTextDebug(
+    'MODEL REQUEST',
+    `model=${config.model}\nmessages=${messages.length}\ntools=${Object.keys(tools).length}`,
+  );
+
+  // Pre-stream fallback emit: guarantees the "请求模型" row exists even for
+  // providers that don't emit `start-step`, and serves as the carrier for the
+  // MODEL REQUEST debugInfo. A real `start-step` arriving next will see
+  // `requestingEmittedThisStep === true` and no-op, avoiding a duplicate row.
+  callbacks.onPhase('requesting', '请求模型', modelReqDebug);
+  currentPhaseKind = 'requesting';
+  requestingEmittedThisStep = true;
 
   try {
     const result = streamChatWithTools({
@@ -183,7 +204,7 @@ export async function runToolCallLoop(
           // SDK v5 fullStream text-delta: { type, id, text: string }
           const delta = readTextDelta(event);
           if (!delta) break;
-          if (currentPhaseKind === null || currentPhaseKind === 'toolCall') {
+          if (currentPhaseKind !== 'answering') {
             callbacks.onPhase('answering', '生成回答');
             currentPhaseKind = 'answering';
           }
@@ -196,9 +217,43 @@ export async function runToolCallLoop(
           // SDK v5 fullStream reasoning-delta: { type, id, text: string }
           const delta = readTextDelta(event);
           if (delta) {
+            if (!reasoningEmittedThisStep) {
+              callbacks.onPhase('reasoning', '模型推理中');
+              currentPhaseKind = 'reasoning';
+              reasoningEmittedThisStep = true;
+            }
             thinkBuf += delta;
             callbacks.onThinking?.(delta);
           }
+          break;
+        }
+
+        case 'start-step': {
+          // SDK v5: fires at the start of each model round-trip. We pre-emit
+          // 'requesting' before the stream begins, so the first start-step
+          // is a no-op; continuation steps (after a finish-step reset the
+          // flag) emit a fresh "请求模型 (继续)" row.
+          if (!requestingEmittedThisStep) {
+            const label = stepIdx === 0 ? '请求模型' : '请求模型 (继续)';
+            callbacks.onPhase('requesting', label);
+            currentPhaseKind = 'requesting';
+            requestingEmittedThisStep = true;
+          }
+          break;
+        }
+
+        case 'tool-input-start': {
+          // SDK v5 fullStream tool-input-start: { type, id, toolName: string }
+          const name = (event.toolName ?? '') as string;
+          callbacks.onPhase('composingTool', `构造工具调用：${name}`);
+          currentPhaseKind = 'composingTool';
+          break;
+        }
+
+        case 'finish-step': {
+          stepIdx += 1;
+          requestingEmittedThisStep = false;
+          reasoningEmittedThisStep = false;
           break;
         }
 
@@ -255,10 +310,12 @@ export async function runToolCallLoop(
           throw event.error ?? new Error('SDK error event without payload');
         }
 
-        // Ignore tool-call-delta (the SDK accumulates args itself), step-start,
-        // step-finish, reasoning-start, reasoning-end, text-start, text-end,
-        // tool-input-start, tool-input-delta, tool-input-end, etc. — they are
-        // not meaningful for our phase UI.
+        // Ignore tool-input-delta / tool-input-end (the SDK accumulates args
+        // itself; emitting per-delta would only cause UI flicker), reasoning-
+        // start / reasoning-end / text-start / text-end (we drive phase
+        // transitions from the *-delta events instead), and `start` / `abort`
+        // (no meaningful phase impact). `tool-error` is also currently
+        // ignored — see spec §6 for the planned failure-state integration.
         default:
           break;
       }

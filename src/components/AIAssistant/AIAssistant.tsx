@@ -51,10 +51,12 @@ function renderMarkdown(text: string): string {
 
 // 阶段配置：label 和 icon
 const PHASE_CONFIG: Record<string, { label: string; icon: string }> = {
-  preparing: { icon: '[]', label: '准备上下文' },
-  thinking: { icon: '..', label: '思考中' },
-  toolCall: { icon: '$', label: '查询数据' },
-  answering: { icon: '>>', label: '生成回答' },
+  preparing:     { icon: '[]', label: '准备上下文' },
+  requesting:    { icon: '>',  label: '请求模型' },
+  reasoning:     { icon: '~',  label: '模型推理中' },
+  composingTool: { icon: '{}', label: '构造工具调用' },
+  toolCall:      { icon: '$',  label: '调用工具' },
+  answering:     { icon: '>>', label: '生成回答' },
 };
 
 /**

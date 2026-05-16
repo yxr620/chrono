@@ -22,7 +22,11 @@ test('AI phase indicators use flat text glyphs instead of emoji icons', async ()
 
   assert.doesNotMatch(phaseConfig, /📋|💭|🔧|✍️|⏳/u);
   assert.match(phaseConfig, /preparing:\s*\{\s*icon:\s*'\[\]'/);
-  assert.match(phaseConfig, /thinking:\s*\{\s*icon:\s*'\.\.'/);
+  assert.match(phaseConfig, /requesting:\s*\{\s*icon:\s*'>'/);
+  assert.match(phaseConfig, /reasoning:\s*\{\s*icon:\s*'~'/);
+  assert.match(phaseConfig, /composingTool:\s*\{\s*icon:\s*'\{\}'/);
+  assert.match(phaseConfig, /toolCall:\s*\{\s*icon:\s*'\$'/);
+  assert.match(phaseConfig, /answering:\s*\{\s*icon:\s*'>>'/);
 });
 
 test('AI phase rows keep status and icon aligned with the summary line when expanded', async () => {
