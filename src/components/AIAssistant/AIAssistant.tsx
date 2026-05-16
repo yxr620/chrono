@@ -244,9 +244,8 @@ export const AIAssistant: React.FC = () => {
     try {
 
       let accumulated = '';
-      let thinkingAccum = '';
 
-      const { content, thinking } = await runToolCallLoop(
+      const { content } = await runToolCallLoop(
         query,
         recentHistory,
         {
@@ -271,10 +270,6 @@ export const AIAssistant: React.FC = () => {
             accumulated += delta;
             updateMessage(aiMsgId, { content: accumulated, loading: true });
           },
-          onThinking: (thinkingDelta) => {
-            thinkingAccum += thinkingDelta;
-            updateMessage(aiMsgId, { thinking: thinkingAccum, loading: true });
-          },
           onToolCall: () => {
             // 工具调用信息已通过 onPhase 显示
           },
@@ -292,7 +287,6 @@ export const AIAssistant: React.FC = () => {
       phasesRef.current = finalizedPhases;
       updateMessage(aiMsgId, {
         content: content || accumulated,
-        thinking: thinking || thinkingAccum || undefined,
         loading: false,
         phases: [...finalizedPhases],
       });
@@ -355,7 +349,6 @@ export const AIAssistant: React.FC = () => {
 
   const buildAssistantCopyText = useCallback((msg: {
     phases?: AssistantPhaseTiming[];
-    thinking?: string;
     content: string;
   }) => {
     const sections: string[] = [];
@@ -370,10 +363,6 @@ export const AIAssistant: React.FC = () => {
       sections.push(`过程日志\n${phaseText}`);
     }
 
-    if (msg.thinking) {
-      sections.push(`思考过程\n${msg.thinking}`);
-    }
-
     if (msg.content) {
       sections.push(`最终回答\n${msg.content}`);
     }
@@ -383,7 +372,6 @@ export const AIAssistant: React.FC = () => {
 
   const handleCopyAssistantMessage = useCallback((msgId: string, msg: {
     phases?: AssistantPhaseTiming[];
-    thinking?: string;
     content: string;
   }) => {
     const fullText = buildAssistantCopyText(msg);
@@ -487,12 +475,11 @@ export const AIAssistant: React.FC = () => {
                 <div className={`ai-msg-bubble ${msg.error ? 'ai-msg-error' : ''}`}>
                   {msg.role === 'assistant' ? (
                     <>
-                      {!msg.loading && (msg.content || msg.phases?.length || msg.thinking) && (
+                      {!msg.loading && (msg.content || msg.phases?.length) && (
                         <button
                           className="ai-msg-copy-btn"
                           onClick={() => handleCopyAssistantMessage(msg.id, {
                             phases: msg.phases,
-                            thinking: msg.thinking,
                             content: msg.content,
                           })}
                           title="复制完整过程与回答"
@@ -500,16 +487,9 @@ export const AIAssistant: React.FC = () => {
                           {copiedMsgId === msg.id ? '已复制' : '复制全部'}
                         </button>
                       )}
-                      {/* 执行阶段列表 */}
+                      {/* 执行阶段列表 — reasoning 内容已在 PhasesIndicator 中按步分块展开 (REASONING (本步)),底部不再重复 */}
                       {msg.phases && msg.phases.length > 0 && (
                         <PhasesIndicator phases={msg.phases} loading={msg.loading} />
-                      )}
-                      {/* Thinking 模型推理过程 */}
-                      {msg.thinking && (
-                        <details className="ai-thinking" open={!msg.content}>
-                          <summary className="ai-thinking-summary">思考过程</summary>
-                          <div className="ai-thinking-content">{msg.thinking}</div>
-                        </details>
                       )}
                       {/* 主回答 */}
                       {msg.content ? (

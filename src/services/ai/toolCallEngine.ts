@@ -1,6 +1,7 @@
 /**
  * Tool Call Engine — translates Vercel AI SDK `fullStream` events into the
- * Chrono UI's phase / chunk / thinking / toolCall callbacks.
+ * Chrono UI's phase / chunk / toolCall callbacks (plus an optional onThinking
+ * hook used only by the `ai:debug` CLI for verbose tracing).
  *
  * The SDK handles the actual round-loop (maxSteps); we only:
  *   1. build the system prompt + initial messages
@@ -152,7 +153,7 @@ export async function runToolCallLoop(
   history: ChatMessage[],
   callbacks: ToolCallEngineCallbacks,
   signal?: AbortSignal,
-): Promise<{ content: string; thinking?: string }> {
+): Promise<{ content: string }> {
   // 1. Preparing
   callbacks.onPhase('preparing', '构建系统提示词');
   const config = await gateway.getAiClientConfig();
@@ -176,7 +177,6 @@ export async function runToolCallLoop(
   let requestingEmittedThisStep = false;
   let reasoningEmittedThisStep = false;
   let textBuf = '';
-  let thinkBuf = '';
   let stepReasoningBuf = '';  // per-step reasoning text, flushed as debugInfo when leaving the reasoning phase
   const toolCallLabels = new Map<string, string>(); // toolCallId → label for tool-result lookup
 
@@ -243,7 +243,6 @@ export async function runToolCallLoop(
               reasoningEmittedThisStep = true;
             }
             stepReasoningBuf += delta;
-            thinkBuf += delta;
             callbacks.onThinking?.(delta);
           }
           break;
@@ -404,5 +403,5 @@ export async function runToolCallLoop(
     throw err;
   }
 
-  return { content: textBuf, thinking: thinkBuf || undefined };
+  return { content: textBuf };
 }

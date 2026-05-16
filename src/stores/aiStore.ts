@@ -29,8 +29,6 @@ export interface ChatMessage {
     /** 阶段结束时间戳（ms），用于冻结最后一个阶段的耗时 */
     endedAt?: number;
   }>;
-  /** thinking 模型输出的推理过程（流式累积） */
-  thinking?: string;
 }
 
 /** 当前生效的配置（对外接口不变） */
