@@ -6,6 +6,7 @@ interface FCHttpResponseObject {
   setStatusCode: (n: number) => void;
   setHeader: (k: string, v: string) => void;
   send: (body: string) => void;
+  write?: (chunk: Uint8Array) => void;
 }
 
 interface FCEventV3 {
@@ -25,12 +26,24 @@ interface NormalizedRequest {
   body: string;
 }
 
-async function readStream(stream: any): Promise<string> {
+interface ReadableNodeStreamLike {
+  on: (event: 'data' | 'end' | 'error', callback: (...args: never[]) => void) => void;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object';
+}
+
+function isReadableNodeStreamLike(value: unknown): value is ReadableNodeStreamLike {
+  return isRecord(value) && typeof value.on === 'function';
+}
+
+async function readStream(stream: unknown): Promise<string> {
   if (stream == null) return '';
   if (typeof stream === 'string') return stream;
   if (Buffer.isBuffer(stream)) return stream.toString('utf-8');
-  if (typeof stream.on !== 'function') return '';
-  return await new Promise((resolve, reject) => {
+  if (!isReadableNodeStreamLike(stream)) return '';
+  return await new Promise<string>((resolve, reject) => {
     const chunks: Buffer[] = [];
     stream.on('data', (c: Buffer) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
     stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
@@ -38,14 +51,25 @@ async function readStream(stream: any): Promise<string> {
   });
 }
 
-async function normalizeRequest(arg1: any): Promise<NormalizedRequest> {
+async function readWebStream(stream: ReadableStream<Uint8Array>): Promise<string> {
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) chunks.push(value);
+  }
+  return Buffer.concat(chunks.map(chunk => Buffer.from(chunk))).toString('utf-8');
+}
+
+async function normalizeRequest(arg1: unknown): Promise<NormalizedRequest> {
   // FC 2.0 / FC 3.0 stream style: (req, resp, context) — req has .method/.path/.headers
-  if (arg1 && typeof arg1 === 'object' && typeof arg1.method === 'string' && arg1.headers) {
+  if (isRecord(arg1) && typeof arg1.method === 'string' && isRecord(arg1.headers)) {
     const body = await readStream(arg1.body);
     return {
       method: String(arg1.method).toUpperCase(),
-      path: arg1.path ?? '/',
-      headers: arg1.headers ?? {},
+      path: typeof arg1.path === 'string' ? arg1.path : '/',
+      headers: arg1.headers as Record<string, string>,
       body,
     };
   }
@@ -56,7 +80,7 @@ async function normalizeRequest(arg1: any): Promise<NormalizedRequest> {
     try { parsed = JSON.parse(arg1.toString('utf-8')); } catch { /* keep empty */ }
   } else if (typeof arg1 === 'string') {
     try { parsed = JSON.parse(arg1); } catch { /* keep empty */ }
-  } else if (arg1 && typeof arg1 === 'object') {
+  } else if (isRecord(arg1)) {
     parsed = arg1 as FCEventV3;
   }
 
@@ -70,19 +94,24 @@ async function normalizeRequest(arg1: any): Promise<NormalizedRequest> {
   return { method, path, headers, body };
 }
 
-function isStreamResponse(x: any): x is FCHttpResponseObject {
-  return !!x && typeof x.setStatusCode === 'function' && typeof x.send === 'function';
+function isStreamResponse(x: unknown): x is FCHttpResponseObject {
+  return isRecord(x) && typeof x.setStatusCode === 'function' && typeof x.send === 'function';
 }
 
-export const handler = async (arg1: any, arg2: any, _arg3?: any): Promise<unknown> => {
+export const handler = async (arg1: unknown, arg2: unknown): Promise<unknown> => {
   const req = await normalizeRequest(arg1);
   const respObj = isStreamResponse(arg2) ? arg2 : null;
 
   const origin = req.headers['origin'] ?? req.headers['Origin'];
   const cors = corsHeaders(origin);
 
-  const reply = (status: number, body: string, contentType?: string): unknown => {
-    const hdrs: Record<string, string> = { ...cors };
+  const reply = (
+    status: number,
+    body: string,
+    contentType?: string,
+    extraHeaders?: Record<string, string>,
+  ): unknown => {
+    const hdrs: Record<string, string> = { ...cors, ...(extraHeaders ?? {}) };
     if (contentType) hdrs['Content-Type'] = contentType;
     if (respObj) {
       Object.entries(hdrs).forEach(([k, v]) => respObj.setHeader(k, v));
@@ -101,7 +130,7 @@ export const handler = async (arg1: any, arg2: any, _arg3?: any): Promise<unknow
     const route = routes.find(r => r.method === req.method && r.pattern.test(req.path));
     if (!route) throw new HttpError(404, 'route_not_found');
 
-    let parsedBody: any = {};
+    let parsedBody: unknown = {};
     if (req.body) {
       try { parsedBody = JSON.parse(req.body); }
       catch { throw new HttpError(400, 'invalid_json'); }
@@ -126,17 +155,34 @@ export const handler = async (arg1: any, arg2: any, _arg3?: any): Promise<unknow
         stream?: ReadableStream<Uint8Array>;
       };
       if (raw.stream) {
+        // Diagnostic header so curl / browser devtools can see at a glance
+        // whether FC handed us a streaming-capable response object.
+        const canStream = !!(respObj && respObj.write);
         if (!respObj) {
-          throw new HttpError(500, 'streaming_response_requires_fc_stream_handler');
+          console.log('[stream] FC invoked us with no respObj — falling back to buffered relay');
+          return reply(raw.status, await readWebStream(raw.stream), raw.contentType, {
+            'X-Chrono-Streaming': 'false',
+            'X-Chrono-Stream-Reason': 'no-response-object',
+          });
         }
         Object.entries(cors).forEach(([k, v]) => respObj.setHeader(k, v));
         respObj.setHeader('Content-Type', raw.contentType);
+        respObj.setHeader('X-Chrono-Streaming', canStream ? 'true' : 'false');
+        if (!canStream) {
+          respObj.setHeader('X-Chrono-Stream-Reason', 'respObj-missing-write');
+        }
         respObj.setStatusCode(raw.status);
+        if (!respObj.write) {
+          console.log('[stream] respObj.write missing — FC trigger is request-response, buffering full body');
+          respObj.send(await readWebStream(raw.stream));
+          return undefined;
+        }
+        console.log('[stream] respObj.write available — streaming chunks 1:1');
         const reader = raw.stream.getReader();
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          if (value) (respObj as any).write(value);
+          if (value) respObj.write(value);
         }
         respObj.send('');
         return undefined;
