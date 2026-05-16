@@ -19,6 +19,8 @@ import { ConfirmationCard } from './ConfirmationCard';
 import { shouldSendAssistantMessageFromKeyboard } from './keyboardShortcuts';
 import { getAssistantTextareaLayout } from './textareaAutosize';
 import type { ConfirmationCard as ConfirmationCardType } from '../../services/actions/types';
+import { debugInfoToText } from '../../services/ai/debugInfo';
+import { DebugInfoPanel } from './DebugInfoPanel';
 import {
   getPhaseDurationMs,
   markFinalPhaseEnded,
@@ -135,7 +137,7 @@ const PhasesIndicator: React.FC<{
                   {labelText}
                   {durationBadge}
                 </summary>
-                <pre className="ai-phase-debug-content">{p.debugInfo}</pre>
+                <DebugInfoPanel debugInfo={p.debugInfo!} />
               </details>
             ) : (
               <span className="ai-phase-label">
@@ -351,7 +353,7 @@ export const AIAssistant: React.FC = () => {
       const phaseText = msg.phases.map((phase, index) => {
         const phaseName = PHASE_CONFIG[phase.key]?.label || phase.key;
         const title = phase.detail || phaseName;
-        const debug = phase.debugInfo ? `\n${phase.debugInfo}` : '';
+        const debug = phase.debugInfo ? `\n${debugInfoToText(phase.debugInfo)}` : '';
         return `${index + 1}. ${title}${debug}`;
       }).join('\n\n');
       sections.push(`过程日志\n${phaseText}`);

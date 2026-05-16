@@ -1,9 +1,11 @@
+import type { AssistantDebugInfoPayload } from '../../services/ai/debugInfo';
+
 export interface AssistantPhaseTiming {
   key: string;
   detail?: string;
   level?: number;
   failed?: boolean;
-  debugInfo?: string;
+  debugInfo?: AssistantDebugInfoPayload;
   at?: number;
   endedAt?: number;
 }

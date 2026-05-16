@@ -20,14 +20,14 @@ AI 助手是 Chrono 的桌面端自然语言入口。它不是一个单纯的聊
 6. 最终回答会流式进入 assistant 气泡；完成后可以点「复制全部」复制阶段、思考和回答。
 7. 用户点「停止生成」时，当前网络请求会 abort；如果此时正在等确认，会先按取消处理，避免对话卡住。
 
-这个页面本身就是最重要的人测接口：阶段名告诉你当前卡在哪一层，耗时告诉你慢在哪一层，折叠的 debugInfo 可以看到 system prompt、发给模型的消息和工具结果。
+这个页面本身就是最重要的人测接口：阶段名告诉你当前卡在哪一层，耗时告诉你慢在哪一层，折叠的 debugInfo 会按结构展示 system prompt、模型请求 messages、tools 声明、模型响应和工具结果。
 
 ## 主要模块
 
 | 模块 | 位置 | 职责 |
 |---|---|---|
 | 对话页面 | `src/components/AIAssistant/AIAssistant.tsx` | 输入、消息气泡、阶段展示、停止生成、确认卡片 |
-| 对话状态 | `src/stores/aiStore.ts` | provider 配置、消息列表、每条消息的 phases / thinking / loading |
+| 对话状态 | `src/stores/aiStore.ts` | provider 配置、消息列表、每条消息的 phases / thinking / loading / 结构化 debugInfo |
 | 调用引擎 | `src/services/ai/toolCallEngine.ts` | 构建 prompt、组织历史、控制 tool-calling 循环、处理 fallback |
 | LLM 客户端 | `src/services/ai/llmClient.ts` | OpenAI-compatible HTTP 请求、SSE 流式解析、`<think>` 分离 |
 | Gateway | `src/services/gateway/` | 根据 feature mode 选择 BYO 或 Managed AI 配置 |
@@ -103,7 +103,7 @@ thinking 有三个重要分支：
 
 ### 直接回答
 
-适用于闲聊、解释性问题，或者模型认为不需要本地数据的问题。风险是：如果用户问的是时间记录，而模型没有调用工具，答案可能缺少数据依据。调试时看 thinking 阶段的 debugInfo，确认发给模型的 tools 是否完整，以及 prompt 是否明确要求查询。
+适用于闲聊、解释性问题，或者模型认为不需要本地数据的问题。风险是：如果用户问的是时间记录，而模型没有调用工具，答案可能缺少数据依据。调试时看 thinking 阶段的 debugInfo，确认发给模型的 messages、tools、模型响应是否符合预期，以及 prompt 是否明确要求查询。
 
 ### 读取型查询
 

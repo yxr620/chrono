@@ -7,6 +7,7 @@
 import { create } from 'zustand';
 import { AI_PROVIDERS } from '../services/ai/providers';
 import { resolveAIDefaultConfig } from '../services/ai/envDefaults';
+import type { AssistantDebugInfoPayload } from '../services/ai/debugInfo';
 
 export interface ChatMessage {
   id: string;
@@ -22,7 +23,7 @@ export interface ChatMessage {
     level?: number;
     failed?: boolean;
     /** 可折叠的详细调试信息（JSON、prompt 文本等） */
-    debugInfo?: string;
+    debugInfo?: AssistantDebugInfoPayload;
     /** 阶段开始时间戳（ms），用于计算耗时 */
     at?: number;
     /** 阶段结束时间戳（ms），用于冻结最后一个阶段的耗时 */

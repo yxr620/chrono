@@ -18,10 +18,23 @@
 
 import dayjs from 'dayjs';
 import { db } from '../db';
-import { chatWithTools, chatStream, type ChatMessage } from './llmClient';
+import {
+    CHAT_STREAM_REQUEST_OPTIONS,
+    CHAT_WITH_TOOLS_REQUEST_OPTIONS,
+    chatWithTools,
+    chatStream,
+    type ChatMessage,
+} from './llmClient';
 import { actionRegistry } from '../actions';
 import { gateway } from '../gateway';
 import type { ConfirmationCard } from '../actions';
+import {
+    createModelRequestDebug,
+    createModelResponseDebug,
+    createSystemPromptDebug,
+    createToolResultDebug,
+    type AssistantDebugInfoPayload,
+} from './debugInfo';
 
 const MAX_TOOL_ROUNDS = 5;
 
@@ -32,7 +45,7 @@ export interface ToolCallInfo {
 }
 
 export interface ToolCallEngineCallbacks {
-    onPhase: (phase: string, detail?: string, debugInfo?: string) => void;
+    onPhase: (phase: string, detail?: string, debugInfo?: AssistantDebugInfoPayload) => void;
     onChunk: (delta: string) => void;
     onThinking?: (delta: string) => void;
     onToolCall?: (info: ToolCallInfo) => void;
@@ -107,7 +120,7 @@ export async function runToolCallLoop(
     const config = await gateway.getAiClientConfig();
     const systemPrompt = await buildSystemPrompt();
     // 准备完毕后，补充 debugInfo
-    callbacks.onPhase('preparing', undefined, systemPrompt);
+    callbacks.onPhase('preparing', undefined, createSystemPromptDebug(systemPrompt));
 
     // 组装消息列表（system + 历史 + 当前问题）
     const messages: ChatMessage[] = [
@@ -124,13 +137,19 @@ export async function runToolCallLoop(
 
         // 将当前发送给模型的消息列表作为 debugInfo
         const thinkingLabel = round === 1 ? '分析问题' : '综合分析';
-        const thinkingDebug = formatMessagesDebug(messages);
-        callbacks.onPhase('thinking', thinkingLabel, thinkingDebug);
+        const toolDefs = actionRegistry.toToolDefinitions();
+        const requestDebug = createModelRequestDebug(messages, toolDefs, {
+            model: config.model,
+            baseURL: config.baseURL,
+            ...CHAT_WITH_TOOLS_REQUEST_OPTIONS,
+        });
+        callbacks.onPhase('thinking', thinkingLabel, requestDebug);
 
         try {
             // 非流式调用（带 tools）
-            const toolDefs = actionRegistry.toToolDefinitions();
             const response = await chatWithTools(config, messages, toolDefs, signal);
+            const responseDebug = createModelResponseDebug(response);
+            callbacks.onPhase('thinking', thinkingLabel, [requestDebug, responseDebug]);
 
             // 没有 tool_calls → 本轮 thinking 的模型调用已经给出了最终回答
             if (!response.tool_calls || response.tool_calls.length === 0) {
@@ -182,7 +201,13 @@ export async function runToolCallLoop(
                 if (action.risk !== 'none') {
                     if (!callbacks.onConfirmRequired) {
                         // 调用方未提供确认机制——硬拒绝，绝不静默执行
-                        const toolDebug = JSON.stringify({ tool: tc.function.name, args, result: '调用方未提供确认机制' }, null, 2);
+                        const toolDebug = createToolResultDebug({
+                            tool: tc.function.name,
+                            args,
+                            result: '调用方未提供确认机制',
+                            success: false,
+                            toolCallId: tc.id,
+                        });
                         callbacks.onPhase('toolCall', toolLabel + '（已拒绝：无确认机制）', toolDebug);
                         messages.push({
                             role: 'tool',
@@ -205,7 +230,13 @@ export async function runToolCallLoop(
                     // 确认期间用户可能按下了停止——立刻退出
                     signal?.throwIfAborted();
                     if (!confirmed) {
-                        const toolDebug = JSON.stringify({ tool: tc.function.name, args, result: '用户取消' }, null, 2);
+                        const toolDebug = createToolResultDebug({
+                            tool: tc.function.name,
+                            args,
+                            result: '用户取消',
+                            success: false,
+                            toolCallId: tc.id,
+                        });
                         callbacks.onPhase('toolCall', toolLabel + '（已取消）', toolDebug);
                         messages.push({
                             role: 'tool',
@@ -226,7 +257,13 @@ export async function runToolCallLoop(
                 }
 
                 // 构建工具调用的详细调试信息
-                const toolDebug = JSON.stringify({ tool: tc.function.name, args, result: result.message }, null, 2);
+                const toolDebug = createToolResultDebug({
+                    tool: tc.function.name,
+                    args,
+                    result: result.message,
+                    success: result.success,
+                    toolCallId: tc.id,
+                });
                 callbacks.onPhase('toolCall', toolLabel, toolDebug);
 
                 // 通知 UI
@@ -254,7 +291,11 @@ export async function runToolCallLoop(
     }
 
     // 3. 兜底：流式输出（仅当 thinking 循环未产出内容时到达此处）
-    const answeringDebug = formatMessagesDebug(messages);
+    const answeringDebug = createModelRequestDebug(messages, [], {
+        model: config.model,
+        baseURL: config.baseURL,
+        ...CHAT_STREAM_REQUEST_OPTIONS,
+    });
     callbacks.onPhase('answering', '流式生成', answeringDebug);
     signal?.throwIfAborted();
 
@@ -274,6 +315,14 @@ export async function runToolCallLoop(
             callbacks.onThinking?.(thinkingDelta);
         },
     );
+
+    callbacks.onPhase('answering', '流式生成', [
+        answeringDebug,
+        createModelResponseDebug({
+            content: accumulated,
+            thinking: thinkingAccum || undefined,
+        }),
+    ]);
 
     return { content: accumulated, thinking: thinkingAccum || undefined };
 }
@@ -301,42 +350,6 @@ function formatToolLabel(name: string, args: Record<string, unknown>): string {
             return name;
         }
     }
-}
-
-/**
- * 格式化消息列表为可读的调试文本
- */
-function formatMessagesDebug(messages: ChatMessage[]): string {
-    return messages.map((m, i) => {
-        const msg = m as any;
-        const role = msg.role.toUpperCase();
-        const parts: string[] = [];
-
-        // 主内容
-        const content = msg.content || '';
-        if (content) {
-            const display = content.length > 2000
-                ? content.slice(0, 2000) + `\n... (${content.length} chars total)`
-                : content;
-            parts.push(display);
-        }
-
-        // assistant 的 tool_calls
-        if (msg.tool_calls && msg.tool_calls.length > 0) {
-            const calls = msg.tool_calls.map((tc: any) => {
-                const name = tc.function?.name || 'unknown';
-                let argsStr = tc.function?.arguments || '{}';
-                try { argsStr = JSON.stringify(JSON.parse(argsStr), null, 2); } catch { /* keep raw */ }
-                return `  → ${name}(${argsStr})`;
-            }).join('\n');
-            parts.push(`[tool_calls]\n${calls}`);
-        }
-
-        // tool 消息的 tool_call_id
-        const suffix = msg.tool_call_id ? ` (tool_call_id: ${msg.tool_call_id})` : '';
-
-        return `── [${i + 1}] ${role}${suffix} ──\n${parts.join('\n') || '(empty)'}`;
-    }).join('\n\n');
 }
 
 /**

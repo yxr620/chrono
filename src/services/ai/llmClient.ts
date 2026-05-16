@@ -15,6 +15,38 @@ export interface LLMConfig {
   model: string;
 }
 
+export interface ChatCompletionRequestOptions {
+  stream: boolean;
+  temperature: number;
+  maxTokens: number;
+}
+
+export const CHAT_STREAM_REQUEST_OPTIONS = {
+  stream: true,
+  temperature: 0.7,
+  maxTokens: 2048,
+} as const satisfies ChatCompletionRequestOptions;
+
+export const CHAT_ONCE_REQUEST_OPTIONS = {
+  stream: false,
+  temperature: 0,
+  maxTokens: 1024,
+} as const satisfies ChatCompletionRequestOptions;
+
+export const CHAT_WITH_TOOLS_REQUEST_OPTIONS = {
+  stream: false,
+  temperature: 0.7,
+  maxTokens: 2048,
+} as const satisfies ChatCompletionRequestOptions;
+
+export function toChatCompletionPayloadOptions(options: ChatCompletionRequestOptions) {
+  return {
+    stream: options.stream,
+    temperature: options.temperature,
+    max_tokens: options.maxTokens,
+  };
+}
+
 /**
  * 流式调用 OpenAI 兼容接口
  * @param config LLM 配置
@@ -41,9 +73,7 @@ export async function chatStream(
     body: JSON.stringify({
       model: config.model,
       messages,
-      stream: true,
-      temperature: 0.7,
-      max_tokens: 2048,
+      ...toChatCompletionPayloadOptions(CHAT_STREAM_REQUEST_OPTIONS),
     }),
     signal,
   });
@@ -188,9 +218,7 @@ export async function chatOnce(
     body: JSON.stringify({
       model: config.model,
       messages,
-      stream: false,
-      temperature: 0,
-      max_tokens: 1024,
+      ...toChatCompletionPayloadOptions(CHAT_ONCE_REQUEST_OPTIONS),
     }),
     signal,
   });
@@ -239,9 +267,7 @@ export async function chatWithTools(
       model: config.model,
       messages,
       tools,
-      stream: false,
-      temperature: 0.7,
-      max_tokens: 2048,
+      ...toChatCompletionPayloadOptions(CHAT_WITH_TOOLS_REQUEST_OPTIONS),
     }),
     signal,
   });
