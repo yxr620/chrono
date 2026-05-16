@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useCallback, useMemo, useImperativeHandle, forwardRef } from 'react';
 import dayjs from 'dayjs';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { generateDateItems } from './wheelTimePickerDates';
 
 // ============ 常量 ============
 
@@ -28,20 +29,6 @@ const MINUTES: readonly { value: string; label: string }[] = Array.from({ length
   const v = String(i).padStart(2, '0');
   return { value: v, label: v };
 });
-
-const generateDateItems = (): { value: string; label: string }[] => {
-  const today = dayjs();
-  const todayStr = today.format('YYYY-MM-DD');
-
-  return Array.from({ length: 31 }, (_, i) => {
-    const d = today.add(i - 15, 'day');
-    const dateStr = d.format('YYYY-MM-DD');
-    const label = dateStr === todayStr
-      ? `Today ${d.format('MM/DD')}`
-      : `${d.format('ddd')} ${d.format('MM/DD')}`;
-    return { value: dateStr, label };
-  });
-};
 
 // ============ ScrollColumn（原生 scroll-snap 滚轮列）============
 

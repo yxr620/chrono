@@ -6,7 +6,7 @@ Action Registry 是 AI 助手的本地工具层。它把「模型想做什么」
 
 ## 架构图
 
-![Action Registry 架构与确认流程](assets/action-registry-flow.svg)
+![Action Registry 架构与确认流程](assets/action-registry-flow.png)
 
 ## 它在 AI 对话中的位置
 

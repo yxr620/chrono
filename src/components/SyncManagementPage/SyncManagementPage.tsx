@@ -22,7 +22,6 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
 
 dayjs.extend(relativeTime);
-dayjs.locale('zh-cn');
 
 interface SyncErrorLog {
   id: number;
@@ -59,7 +58,7 @@ const formatRelativeTime = (value: Date | number | null): string => {
   const diffMs = Date.now() - ts;
   if (diffMs < 60_000) return '刚刚';
   if (diffMs > 30 * 24 * 60 * 60 * 1000) return formatTimestamp(ts);
-  return dayjs(ts).fromNow();
+  return dayjs(ts).locale('zh-cn').fromNow();
 };
 
 export const SyncManagementPage: React.FC = () => {
