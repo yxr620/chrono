@@ -59,7 +59,8 @@ class ActionRegistry {
       out[action.name] = tool({
         description: action.description,
         // Hand the registry's JSON Schema to the SDK; no zod migration needed.
-        parameters: jsonSchema(action.parameters as any),
+        // SDK v5 renamed `parameters` → `inputSchema`.
+        inputSchema: jsonSchema(action.parameters as any),
         execute: async (args: Record<string, unknown>) => {
           if (action.risk !== 'none') {
             if (!ctx.onConfirmRequired) {
