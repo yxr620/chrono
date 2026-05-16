@@ -6,7 +6,7 @@
 import dayjs from 'dayjs';
 import { db, type TimeEntry, type Category, type Goal } from '../db';
 import { gateway } from '../gateway';
-import { chatWithTools, type ChatMessage } from '../ai/llmClient';
+import { createLanguageModel, generateChatOnce, type CoreMessage } from '../ai/llmClient';
 import { actionRegistry } from '../actions';
 import { predictMetadata } from '../metadataPredictor';
 import { detectConflicts, type ConflictInfo } from './conflictDetection';
@@ -193,25 +193,36 @@ export async function parseTranscript(
   signal?: AbortSignal,
 ): Promise<ParseResult> {
   const config = await gateway.getAiClientConfig();
-  const tools = actionRegistry.toToolDefinitionsFor(['add_entry']);
+  const model = createLanguageModel(config);
+  // add_entry is risk:none, so no confirmation gating is needed; passing {}
+  // keeps the API identical to the AI Assistant call site.
+  const allTools = actionRegistry.toSdkTools({});
+  // Restrict to the add_entry tool only — quickCapture must never trigger queries / writes / deletes.
+  const tools = Object.fromEntries(
+    Object.entries(allTools).filter(([name]) => name === 'add_entry'),
+  );
 
-  const messages: ChatMessage[] = [
+  const messages: CoreMessage[] = [
     { role: 'system', content: buildSystemPrompt(ctx) },
     { role: 'user', content: transcript.trim() },
   ];
 
-  const response = await chatWithTools(config, messages, tools, signal);
-  const calls = response.tool_calls ?? [];
+  const response = await generateChatOnce({
+    model,
+    messages,
+    tools,
+    abortSignal: signal,
+  });
+
+  // SDK exposes executed tool calls as `response.toolCalls`. Each entry has
+  // `{ toolName, input }` (already JSON-parsed) instead of OpenAI's nested
+  // `function.name` / `function.arguments` strings.
+  const calls = response.toolCalls ?? [];
 
   const entries: PendingEntry[] = [];
   for (const call of calls) {
-    if (call.function.name !== 'add_entry') continue;
-    let params: AddEntryParams;
-    try {
-      params = JSON.parse(call.function.arguments) as AddEntryParams;
-    } catch {
-      continue;
-    }
+    if (call.toolName !== 'add_entry') continue;
+    const params = call.input as AddEntryParams;
     if (!params.date || !params.start_time || !params.end_time || !params.activity) {
       continue;
     }
