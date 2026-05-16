@@ -119,8 +119,29 @@ export const handler = async (arg1: any, arg2: any, _arg3?: any): Promise<unknow
 
     const result = await route.handler(req, parsedBody, userId);
     if (result && typeof result === 'object' && (result as { __raw?: boolean }).__raw) {
-      const raw = result as { status: number; contentType: string; body: string };
-      return reply(raw.status, raw.body, raw.contentType);
+      const raw = result as {
+        status: number;
+        contentType: string;
+        body?: string;
+        stream?: ReadableStream<Uint8Array>;
+      };
+      if (raw.stream) {
+        if (!respObj) {
+          throw new HttpError(500, 'streaming_response_requires_fc_stream_handler');
+        }
+        Object.entries(cors).forEach(([k, v]) => respObj.setHeader(k, v));
+        respObj.setHeader('Content-Type', raw.contentType);
+        respObj.setStatusCode(raw.status);
+        const reader = raw.stream.getReader();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value) (respObj as any).write(value);
+        }
+        respObj.send('');
+        return undefined;
+      }
+      return reply(raw.status, raw.body ?? '', raw.contentType);
     }
     return reply(200, JSON.stringify(result), 'application/json');
   } catch (err) {

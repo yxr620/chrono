@@ -34,15 +34,14 @@ registerRoute('POST', /^\/v1\/chat\/completions$/, true, async (_req, body, user
     throw internal(`upstream_${upstream.status}`, errText.slice(0, 500));
   }
 
-  // MVP: buffer the entire upstream response and relay it. SSE chunks will
-  // arrive at the client as one batch when the response completes (acceptable
-  // for typical Qwen replies under FC's 30s default timeout). Upgrade to a
-  // true streaming relay if latency becomes a problem.
-  const buf = await upstream.arrayBuffer();
+  if (!upstream.body) {
+    throw internal('upstream_no_body');
+  }
+
   return {
     __raw: true,
     status: upstream.status,
-    contentType: upstream.headers.get('content-type') ?? 'application/json',
-    body: Buffer.from(buf).toString('utf-8'),
+    contentType: upstream.headers.get('content-type') ?? 'text/event-stream',
+    stream: upstream.body,  // ReadableStream<Uint8Array> — relays SSE chunks 1:1
   };
 });

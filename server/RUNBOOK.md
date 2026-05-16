@@ -73,3 +73,15 @@ FC 控制台 → `chrono-api` → 日志。SLS 查询可按 request id、错误�
 - FC 错误率（首两周建议盯到 < 1%）
 - OSS 存储增长（`sync/` 下的 GiB 走势）
 - 每日 `chat/completions` 调用计数（防止白名单外漏写）
+
+## Streaming relay (since 2026-05-16)
+
+`/v1/chat/completions` now relays SSE chunks directly instead of buffering the
+upstream response. FC must be configured with HTTP-trigger **streaming response**
+(default in FC 3.0; verify in the function's trigger settings if upgrading from
+an older FC 2.x deployment). No client changes required; existing JWT auth flow
+is unaffected.
+
+If a user reports "AI replies arrive as one block" after this change:
+1. Check the FC trigger type — must be HTTP **streaming**, not HTTP **request-response**
+2. Check function logs for `streaming_response_requires_fc_stream_handler` (means FC handed us a non-stream response object)
