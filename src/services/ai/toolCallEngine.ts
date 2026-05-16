@@ -172,12 +172,26 @@ export async function runToolCallLoop(
   let reasoningEmittedThisStep = false;
   let textBuf = '';
   let thinkBuf = '';
+  let stepReasoningBuf = '';  // per-step reasoning text, flushed as debugInfo when leaving the reasoning phase
   const toolCallLabels = new Map<string, string>(); // toolCallId → label for tool-result lookup
 
   const modelReqDebug = createTextDebug(
     'MODEL REQUEST',
     `model=${config.model}\nmessages=${messages.length}\ntools=${Object.keys(tools).length}`,
   );
+
+  // Back-fill the current `reasoning` row with its accumulated text as
+  // debugInfo. Must be called BEFORE emitting any other phase so that the
+  // onPhase handler's "update-in-place when last key matches" branch fires.
+  const flushReasoningDebug = () => {
+    if (currentPhaseKind === 'reasoning' && stepReasoningBuf) {
+      callbacks.onPhase(
+        'reasoning',
+        undefined,
+        createTextDebug('REASONING (本步)', stepReasoningBuf),
+      );
+    }
+  };
 
   // Pre-stream fallback emit: guarantees the "请求模型" row exists even for
   // providers that don't emit `start-step`, and serves as the carrier for the
@@ -205,6 +219,7 @@ export async function runToolCallLoop(
           const delta = readTextDelta(event);
           if (!delta) break;
           if (currentPhaseKind !== 'answering') {
+            flushReasoningDebug();
             callbacks.onPhase('answering', '生成回答');
             currentPhaseKind = 'answering';
           }
@@ -222,6 +237,7 @@ export async function runToolCallLoop(
               currentPhaseKind = 'reasoning';
               reasoningEmittedThisStep = true;
             }
+            stepReasoningBuf += delta;
             thinkBuf += delta;
             callbacks.onThinking?.(delta);
           }
@@ -232,10 +248,15 @@ export async function runToolCallLoop(
           // SDK v5: fires at the start of each model round-trip. We pre-emit
           // 'requesting' before the stream begins, so the first start-step
           // is a no-op; continuation steps (after a finish-step reset the
-          // flag) emit a fresh "请求模型 (继续)" row.
+          // flag) emit a fresh "请求模型 (继续)" row with a per-step debug.
           if (!requestingEmittedThisStep) {
+            flushReasoningDebug();
             const label = stepIdx === 0 ? '请求模型' : '请求模型 (继续)';
-            callbacks.onPhase('requesting', label);
+            const stepDebug = createTextDebug(
+              'MODEL REQUEST',
+              `model=${config.model}\nstep=${stepIdx + 1}\ntools=${Object.keys(tools).length}\n(messages history extended by SDK with previous tool results)`,
+            );
+            callbacks.onPhase('requesting', label, stepDebug);
             currentPhaseKind = 'requesting';
             requestingEmittedThisStep = true;
           }
@@ -244,6 +265,7 @@ export async function runToolCallLoop(
 
         case 'tool-input-start': {
           // SDK v5 fullStream tool-input-start: { type, id, toolName: string }
+          flushReasoningDebug();
           const name = (event.toolName ?? '') as string;
           callbacks.onPhase('composingTool', `构造工具调用：${name}`);
           currentPhaseKind = 'composingTool';
@@ -251,6 +273,8 @@ export async function runToolCallLoop(
         }
 
         case 'finish-step': {
+          flushReasoningDebug();
+          stepReasoningBuf = '';
           stepIdx += 1;
           requestingEmittedThisStep = false;
           reasoningEmittedThisStep = false;
@@ -263,6 +287,23 @@ export async function runToolCallLoop(
           const args = (event.input ?? event.args ?? {}) as Record<string, unknown>;
           const label = formatToolLabel(name, args);
           toolCallLabels.set(event.toolCallId ?? event.id ?? name, label);
+          // Back-fill the composingTool row with the parsed input args as
+          // debugInfo. For providers that emit tool-call atomically (no
+          // preceding tool-input-start), currentPhaseKind won't be
+          // 'composingTool' and we skip the back-fill but still flush any
+          // pending reasoning debug.
+          if (currentPhaseKind === 'composingTool') {
+            callbacks.onPhase(
+              'composingTool',
+              undefined,
+              createTextDebug(
+                'TOOL INPUT',
+                `tool=${name}\ninput=${JSON.stringify(args, null, 2)}`,
+              ),
+            );
+          } else {
+            flushReasoningDebug();
+          }
           callbacks.onPhase('toolCall', label);
           currentPhaseKind = 'toolCall';
           break;
