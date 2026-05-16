@@ -191,8 +191,14 @@
 .ai-messages {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
   padding: 0 4px 16px;
   min-height: 0;
+}
+
+.ai-messages-content {
+  min-height: 100%;
 }
 
 /* 欢迎页 */

@@ -3,7 +3,7 @@
  * 桌面端对话界面：快捷问题 + 消息列表 + 输入框
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { IonIcon } from '@ionic/react';
 import { sendOutline, trashOutline, stopCircleOutline } from 'ionicons/icons';
 import { marked } from 'marked';
@@ -28,6 +28,10 @@ import {
   markFinalPhaseEnded,
   type AssistantPhaseTiming,
 } from './phaseTiming';
+import {
+  isAssistantMessagesNearBottom,
+  scrollAssistantMessagesToBottom,
+} from './scrollBehavior';
 import './AIAssistant.css';
 
 // 配置 marked：关闭 mangle/headerIds 避免不必要的输出
@@ -169,7 +173,10 @@ export const AIAssistant: React.FC = () => {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
+  const messagesContentRef = useRef<HTMLDivElement>(null);
+  const shouldStickToBottomRef = useRef(true);
+  const scrollFrameRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [pendingConfirmation, setPendingConfirmation] = useState<{
@@ -191,14 +198,52 @@ export const AIAssistant: React.FC = () => {
     navigateToTab('export');
   }, []);
 
-  // 自动滚动到底部
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
+    if (scrollFrameRef.current !== null) {
+      cancelAnimationFrame(scrollFrameRef.current);
+    }
+
+    scrollFrameRef.current = requestAnimationFrame(() => {
+      scrollFrameRef.current = null;
+      const scroller = messagesScrollRef.current;
+      if (!scroller) return;
+      scrollAssistantMessagesToBottom(scroller, behavior);
+    });
   }, []);
 
+  const handleMessagesScroll = useCallback(() => {
+    const scroller = messagesScrollRef.current;
+    if (!scroller) return;
+    shouldStickToBottomRef.current = isAssistantMessagesNearBottom(scroller);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (shouldStickToBottomRef.current) {
+      scrollToBottom('auto');
+    }
+  }, [messages, pendingConfirmation, scrollToBottom]);
+
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
+    const content = messagesContentRef.current;
+    if (!content || typeof ResizeObserver === 'undefined') return;
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (shouldStickToBottomRef.current) {
+        scrollToBottom('auto');
+      }
+    });
+    resizeObserver.observe(content);
+
+    return () => resizeObserver.disconnect();
+  }, [messages.length, scrollToBottom]);
+
+  useEffect(() => {
+    return () => {
+      if (scrollFrameRef.current !== null) {
+        cancelAnimationFrame(scrollFrameRef.current);
+      }
+    };
+  }, []);
 
   // 自适应输入框高度
   const adjustTextareaHeight = () => {
@@ -218,6 +263,7 @@ export const AIAssistant: React.FC = () => {
       return;
     }
 
+    shouldStickToBottomRef.current = true;
     setInput('');
     if (inputRef.current) {
       inputRef.current.style.height = 'auto';
@@ -449,7 +495,11 @@ export const AIAssistant: React.FC = () => {
       </div>
 
       {/* 消息区 */}
-      <div className="ai-messages">
+      <div
+        className="ai-messages"
+        ref={messagesScrollRef}
+        onScroll={handleMessagesScroll}
+      >
         {messages.length === 0 ? (
           <div className="ai-welcome">
             <div className="ai-welcome-icon">✨</div>
@@ -475,7 +525,7 @@ export const AIAssistant: React.FC = () => {
             )}
           </div>
         ) : (
-          <>
+          <div className="ai-messages-content" ref={messagesContentRef}>
             {messages.map(msg => (
               <div key={msg.id} className={`ai-msg ai-msg-${msg.role}`}>
                 <div className={`ai-msg-bubble ${msg.error ? 'ai-msg-error' : ''}`}>
@@ -523,8 +573,7 @@ export const AIAssistant: React.FC = () => {
                 </div>
               </div>
             )}
-            <div ref={messagesEndRef} />
-          </>
+          </div>
         )}
       </div>
 
