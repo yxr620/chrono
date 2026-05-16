@@ -56,7 +56,12 @@ export interface ToolCallInfo {
 }
 
 export interface ToolCallEngineCallbacks {
-  onPhase: (phase: string, detail?: string, debugInfo?: AssistantDebugInfoPayload) => void;
+  onPhase: (
+    phase: string,
+    detail?: string,
+    debugInfo?: AssistantDebugInfoPayload,
+    failed?: boolean,
+  ) => void;
   onChunk: (delta: string) => void;
   onThinking?: (delta: string) => void;
   onToolCall?: (info: ToolCallInfo) => void;
@@ -341,6 +346,38 @@ export async function runToolCallLoop(
           break;
         }
 
+        case 'tool-error': {
+          // SDK v5 fullStream tool-error: { type, toolCallId, toolName, input, error }
+          // Fires for SDK-level tool failures (unknown tool name, schema
+          // validation, etc.) — handler exceptions inside toSdkTools are
+          // caught upstream and surface as `tool-result` with success=false.
+          const name = (event.toolName ?? '') as string;
+          const args = (event.input ?? {}) as Record<string, unknown>;
+          const err = event.error;
+          const errorMessage = err instanceof Error
+            ? err.message
+            : typeof err === 'string'
+              ? err
+              : JSON.stringify(err);
+          const callId = (event.toolCallId ?? event.id ?? name) as string;
+          const label = toolCallLabels.get(callId) ?? formatToolLabel(name, args);
+          callbacks.onPhase(
+            'toolCall',
+            label,
+            createToolResultDebug({
+              tool: name,
+              args,
+              result: errorMessage,
+              success: false,
+              toolCallId: callId,
+            }),
+            true,
+          );
+          callbacks.onToolCall?.({ name, args, result: errorMessage });
+          currentPhaseKind = null;
+          break;
+        }
+
         case 'finish': {
           // Final phase finalisation happens via markFinalPhaseEnded at the
           // caller (AIAssistant.tsx); nothing to do here.
@@ -355,8 +392,7 @@ export async function runToolCallLoop(
         // itself; emitting per-delta would only cause UI flicker), reasoning-
         // start / reasoning-end / text-start / text-end (we drive phase
         // transitions from the *-delta events instead), and `start` / `abort`
-        // (no meaningful phase impact). `tool-error` is also currently
-        // ignored — see spec §6 for the planned failure-state integration.
+        // (no meaningful phase impact).
         default:
           break;
       }

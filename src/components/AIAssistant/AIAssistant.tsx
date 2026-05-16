@@ -250,15 +250,20 @@ export const AIAssistant: React.FC = () => {
         query,
         recentHistory,
         {
-          onPhase: (phase, detail, debugInfo) => {
+          onPhase: (phase, detail, debugInfo, failed) => {
             const prev = phasesRef.current;
-            // 如果最后一项 key 相同且当前带 debugInfo，则更新最后一项（补充调试信息）
+            // 如果最后一项 key 相同且当前带 debugInfo，则更新最后一项（补充调试信息 / 失败态）
             if (debugInfo && prev.length > 0 && prev[prev.length - 1].key === phase) {
               const updated = [...prev];
-              updated[updated.length - 1] = { ...updated[updated.length - 1], detail: detail ?? updated[updated.length - 1].detail, debugInfo };
+              updated[updated.length - 1] = {
+                ...updated[updated.length - 1],
+                detail: detail ?? updated[updated.length - 1].detail,
+                debugInfo,
+                failed: failed ?? updated[updated.length - 1].failed,
+              };
               phasesRef.current = updated;
             } else {
-              phasesRef.current = [...prev, { key: phase, detail, debugInfo, at: Date.now() }];
+              phasesRef.current = [...prev, { key: phase, detail, debugInfo, failed, at: Date.now() }];
             }
             updateMessage(aiMsgId, { phases: [...phasesRef.current] });
           },
