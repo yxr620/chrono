@@ -198,6 +198,17 @@ async function main() {
     }
   }
 
+  // Seed the zustand stores so the gateway returns this CLI's config.
+  // toolCallEngine now reads via gateway.getAiClientConfig() rather than
+  // taking config as an argument, so the CLI has to plant the config first.
+  const { useAIStore } = await import('../src/stores/aiStore');
+  const { useFeatureModeStore } = await import('../src/stores/featureModeStore');
+  useFeatureModeStore.setState({ modes: { ai: 'byo', sync: 'disabled' } } as any);
+  useAIStore.setState({
+    config: { providerId, baseURL: config.baseURL, apiKey: config.apiKey, model: config.model },
+    isConfigured: () => true,
+  } as any);
+
   const { runToolCallLoop } = await import('../src/services/ai/toolCallEngine');
 
   let verbose = args.verbose;
@@ -252,7 +263,6 @@ async function main() {
 
       try {
         const result = await runToolCallLoop(
-          config,
           query,
           recentHistory,
           {
@@ -261,7 +271,7 @@ async function main() {
               console.log(`\n[PHASE] ${title}`);
               if (verbose && debugInfo) {
                 console.log('----- debug -----');
-                console.log(truncate(debugInfo));
+                console.log(truncate(typeof debugInfo === 'string' ? debugInfo : JSON.stringify(debugInfo, null, 2)));
                 console.log('-----------------');
               }
             },
