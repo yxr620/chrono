@@ -17,7 +17,6 @@ import {
   type StreamTextResult,
   type GenerateTextResult,
   type Tool,
-  type ToolSet,
 } from 'ai';
 
 /** Public message shape used by AIAssistant.tsx + toolCallEngine + quickCapture */
