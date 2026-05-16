@@ -56,7 +56,7 @@ Eight Zustand stores, each with a clear domain:
 - `oss.ts` — Aliyun OSS operations (optional cloud backend)
 - `export.ts` — JSON import/export
 - `actions/` — AI-first Action Registry (read/write/maintenance actions, see `docs/action-registry.md`)
-- `ai/` — AI assistant with function-calling, supports multiple LLM providers (Qwen, Gemini, GLM, Kimi, MiniMax, OpenAI, custom)
+- `ai/` — AI assistant powered by **Vercel AI SDK** (`ai@5.x` + `@ai-sdk/openai-compatible`); `streamChatWithTools` drives the assistant loop (text + tool_calls in one continuous stream), `generateChatOnce` drives quickCapture single-shot parse. Supports Qwen, Gemini, GLM, Kimi, MiniMax, OpenAI, custom.
 - `analysis/` — Data analysis (goal clustering, trend analysis)
 
 All records have `version`, `deviceId`, `syncStatus`, and `deleted` (soft delete) fields for sync support.
@@ -83,6 +83,10 @@ Optional. Two modes: BYO (user-supplied OSS keys) or Managed (signed STS tokens 
 
 ### AI Assistant
 Desktop-only feature. Two modes: BYO (`VITE_AI_*` env vars + per-provider settings UI) or Managed (`/v1/chat/completions` proxy on the Chrono backend, requires sign-in and email allowlist). Uses tool/function calling to query time entry data. BYO supports Qwen, Gemini, GLM, Kimi, MiniMax, OpenAI, and a custom OpenAI-compatible endpoint.
+
+Streaming model: every call uses `streamText` (SDK v5). `toolCallEngine.ts` is an event translator over `result.fullStream` — `text-delta` / `reasoning-delta` / `tool-call` / `tool-result` events map to the UI's phase indicator (`preparing` / `thinking` / `toolCall` / `answering`). The SDK handles cross-chunk `tool_call` argument accumulation, multi-step tool loops (`stopWhen: stepCountIs(5)`), and reasoning/`<think>` normalisation. See `docs/ai-assistant.md` and `docs/superpowers/specs/2026-05-16-streaming-ai-assistant-design.md`.
+
+Managed mode's true streaming depends on the Aliyun FC trigger type — HTTP streaming response gives true SSE pass-through; HTTP request-response falls back to buffered relay. See `server/RUNBOOK.md` *Streaming relay (since 2026-05-16)*.
 
 ### Platform Data Paths
 - **Web**: IndexedDB in browser
