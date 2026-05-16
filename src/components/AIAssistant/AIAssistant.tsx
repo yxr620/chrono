@@ -16,6 +16,8 @@ import { navigateToTab } from '../../services/appNavigation';
 import type { ChatMessage as LLMMessage } from '../../services/ai/llmClient';
 import { AI_PROVIDERS } from '../../services/ai/providers';
 import { ConfirmationCard } from './ConfirmationCard';
+import { shouldSendAssistantMessageFromKeyboard } from './keyboardShortcuts';
+import { getAssistantTextareaLayout } from './textareaAutosize';
 import type { ConfirmationCard as ConfirmationCardType } from '../../services/actions/types';
 import './AIAssistant.css';
 
@@ -189,7 +191,9 @@ export const AIAssistant: React.FC = () => {
     const textarea = inputRef.current;
     if (textarea) {
       textarea.style.height = 'auto';
-      textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+      const layout = getAssistantTextareaLayout(textarea.scrollHeight);
+      textarea.style.height = layout.height;
+      textarea.style.overflowY = layout.overflowY;
     }
   };
 
@@ -203,6 +207,7 @@ export const AIAssistant: React.FC = () => {
     setInput('');
     if (inputRef.current) {
       inputRef.current.style.height = 'auto';
+      inputRef.current.style.overflowY = 'hidden';
     }
     setSending(true);
 
@@ -323,8 +328,8 @@ export const AIAssistant: React.FC = () => {
   }, [pendingConfirmation]);
 
   // 键盘快捷键
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (shouldSendAssistantMessageFromKeyboard(e)) {
       e.preventDefault();
       handleSend();
     }
