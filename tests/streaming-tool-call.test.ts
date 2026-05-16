@@ -67,8 +67,7 @@ test('toSdkTools catches handler exceptions and returns structured failure', asy
   assert.match(result.message, /工具执行异常.*boom/);
 });
 
-import { createLanguageModel, generateChatOnce, streamChatWithTools } from '../src/services/ai/llmClient';
-import { tool, jsonSchema } from 'ai';
+import { createLanguageModel, streamChatWithTools } from '../src/services/ai/llmClient';
 
 test('createLanguageModel returns a LanguageModel-shaped object', () => {
   const m = createLanguageModel({

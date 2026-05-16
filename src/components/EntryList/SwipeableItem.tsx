@@ -20,18 +20,18 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({ actions, children,
   const [isOpen, setIsOpen] = useState(false);
   const max = actions.length * actionWidth;
 
-  const move = (x: number, animate: boolean) => {
+  const move = useCallback((x: number, animate: boolean) => {
     if (!contentRef.current) return;
     contentRef.current.style.transition = animate ? 'transform .3s ease-out' : 'none';
     contentRef.current.style.transform = `translateX(${x}px)`;
     drag.current.offset = x;
-  };
+  }, []);
 
-  const onDragStart = (x: number, y: number) => {
+  const onDragStart = useCallback((x: number, y: number) => {
     drag.current = { ...drag.current, startX: x, startY: y, base: drag.current.offset, active: true, locked: false, horizontal: false };
-  };
+  }, []);
 
-  const onDragMove = (x: number, y: number) => {
+  const onDragMove = useCallback((x: number, y: number) => {
     const d = drag.current;
     if (!d.active) return false;
     const dx = x - d.startX, dy = y - d.startY;
@@ -45,19 +45,19 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({ actions, children,
     else if (nx < -max) nx = -(max + (-nx - max) * 0.2);
     move(nx, false);
     return true; // consumed
-  };
+  }, [max, move]);
 
-  const onDragEnd = () => {
+  const onDragEnd = useCallback(() => {
     const d = drag.current;
     if (!d.active) return;
     d.active = false;
     if (-d.offset > max * 0.35) { move(-max, true); setIsOpen(true); }
     else { move(0, true); setIsOpen(false); }
-  };
+  }, [max, move]);
 
   // Mouse drag: attach move/up to window so drag continues outside element
-  const onMouseMove = useCallback((e: MouseEvent) => { if (onDragMove(e.clientX, e.clientY)) e.preventDefault(); }, [max]);
-  const onMouseUp = useCallback(() => { onDragEnd(); window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('mouseup', onMouseUp); }, [max]);
+  const onMouseMove = useCallback((e: MouseEvent) => { if (onDragMove(e.clientX, e.clientY)) e.preventDefault(); }, [onDragMove]);
+  const onMouseUp = useCallback(() => { onDragEnd(); window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('mouseup', onMouseUp); }, [onDragEnd, onMouseMove]);
 
   // Defensive: if the component unmounts mid-drag, drop the window listeners.
   useEffect(() => () => {
@@ -72,7 +72,7 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({ actions, children,
     };
     const t = setTimeout(() => { document.addEventListener('touchstart', close, { passive: true }); document.addEventListener('mousedown', close); }, 10);
     return () => { clearTimeout(t); document.removeEventListener('touchstart', close); document.removeEventListener('mousedown', close); };
-  }, [isOpen]);
+  }, [isOpen, move]);
 
   return (
     <div ref={containerRef} className="swipeable-item-container">

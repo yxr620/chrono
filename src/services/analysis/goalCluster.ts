@@ -68,7 +68,7 @@ export function tokenize(text: string): string[] {
   
   // 分割：按空格、标点符号分割
   const tokens = normalized
-    .split(/[\s,，。.、;；:：!！?？(（)）\[\]【】{}<>《》""''`~·\-_+=|\\/@#$%^&*]+/)
+    .split(/[\s,，。.、;；:：!！?？(（)）[\]【】{}<>《》""''`~·\-_+=|\\/@#$%^&*]+/)
     .filter(Boolean);
   
   const result: string[] = [];
