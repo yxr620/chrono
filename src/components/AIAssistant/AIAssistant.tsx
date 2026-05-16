@@ -109,7 +109,10 @@ const PhasesIndicator: React.FC<{
         const cfg = PHASE_CONFIG[p.key] || { icon: '..', label: '处理中' };
         const isActive = loading && i === phases.length - 1;
         const level = p.level || 0;
-        const hasDebug = !!p.debugInfo && !isActive;
+        const hasDebug = !!p.debugInfo;
+        // 活跃的 reasoning 行强制展开，给用户看到流式推理文本；
+        // 其它阶段保留 details 的默认折叠 + 用户手动展开行为。
+        const forceOpen = isActive && p.key === 'reasoning' && hasDebug;
 
         // 耗时计算：已完成阶段用固定时间，活跃阶段用当前时间滚动刷新
         const durationMs = getPhaseDurationMs(phases, i, { loading, now });
@@ -136,7 +139,10 @@ const PhasesIndicator: React.FC<{
             {statusIcon}
             <span className="ai-phase-icon">{cfg.icon}</span>
             {hasDebug ? (
-              <details className="ai-phase-debug">
+              <details
+                className={`ai-phase-debug${forceOpen ? ' ai-phase-debug-streaming' : ''}`}
+                {...(forceOpen ? { open: true } : {})}
+              >
                 <summary className="ai-phase-debug-summary">
                   {labelText}
                   {durationBadge}

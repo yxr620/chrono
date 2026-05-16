@@ -183,19 +183,6 @@ export async function runToolCallLoop(
     `model=${config.model}\nmessages=${messages.length}\ntools=${Object.keys(tools).length}`,
   );
 
-  // Back-fill the current `reasoning` row with its accumulated text as
-  // debugInfo. Must be called BEFORE emitting any other phase so that the
-  // onPhase handler's "update-in-place when last key matches" branch fires.
-  const flushReasoningDebug = () => {
-    if (currentPhaseKind === 'reasoning' && stepReasoningBuf) {
-      callbacks.onPhase(
-        'reasoning',
-        undefined,
-        createTextDebug('REASONING (本步)', stepReasoningBuf),
-      );
-    }
-  };
-
   // Pre-stream fallback emit: guarantees the "请求模型" row exists even for
   // providers that don't emit `start-step`, and serves as the carrier for the
   // MODEL REQUEST debugInfo. A real `start-step` arriving next will see
@@ -222,7 +209,6 @@ export async function runToolCallLoop(
           const delta = readTextDelta(event);
           if (!delta) break;
           if (currentPhaseKind !== 'answering') {
-            flushReasoningDebug();
             callbacks.onPhase('answering', '生成回答');
             currentPhaseKind = 'answering';
           }
@@ -233,6 +219,10 @@ export async function runToolCallLoop(
 
         case 'reasoning-delta': {
           // SDK v5 fullStream reasoning-delta: { type, id, text: string }
+          // Live-stream the per-step reasoning text by repeatedly pushing
+          // updated debugInfo to the current `reasoning` row (the onPhase
+          // update-in-place branch fires because the last key still matches).
+          // This is what makes the UI show streaming reasoning while active.
           const delta = readTextDelta(event);
           if (delta) {
             if (!reasoningEmittedThisStep) {
@@ -241,6 +231,11 @@ export async function runToolCallLoop(
               reasoningEmittedThisStep = true;
             }
             stepReasoningBuf += delta;
+            callbacks.onPhase(
+              'reasoning',
+              undefined,
+              createTextDebug('REASONING (本步)', stepReasoningBuf),
+            );
           }
           break;
         }
@@ -251,7 +246,6 @@ export async function runToolCallLoop(
           // is a no-op; continuation steps (after a finish-step reset the
           // flag) emit a fresh "请求模型 (继续)" row with a per-step debug.
           if (!requestingEmittedThisStep) {
-            flushReasoningDebug();
             const label = stepIdx === 0 ? '请求模型' : '请求模型 (继续)';
             const stepDebug = createTextDebug(
               'MODEL REQUEST',
@@ -266,7 +260,6 @@ export async function runToolCallLoop(
 
         case 'tool-input-start': {
           // SDK v5 fullStream tool-input-start: { type, id, toolName: string }
-          flushReasoningDebug();
           const name = (event.toolName ?? '') as string;
           callbacks.onPhase('composingTool', `构造工具调用：${name}`);
           currentPhaseKind = 'composingTool';
@@ -274,7 +267,6 @@ export async function runToolCallLoop(
         }
 
         case 'finish-step': {
-          flushReasoningDebug();
           stepReasoningBuf = '';
           stepIdx += 1;
           requestingEmittedThisStep = false;
@@ -291,8 +283,8 @@ export async function runToolCallLoop(
           // Back-fill the composingTool row with the parsed input args as
           // debugInfo. For providers that emit tool-call atomically (no
           // preceding tool-input-start), currentPhaseKind won't be
-          // 'composingTool' and we skip the back-fill but still flush any
-          // pending reasoning debug.
+          // 'composingTool' and we skip the back-fill — the reasoning row
+          // is already up-to-date from per-delta live streaming.
           if (currentPhaseKind === 'composingTool') {
             callbacks.onPhase(
               'composingTool',
@@ -302,8 +294,6 @@ export async function runToolCallLoop(
                 `tool=${name}\ninput=${JSON.stringify(args, null, 2)}`,
               ),
             );
-          } else {
-            flushReasoningDebug();
           }
           callbacks.onPhase('toolCall', label);
           currentPhaseKind = 'toolCall';
