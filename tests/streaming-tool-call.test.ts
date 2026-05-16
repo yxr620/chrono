@@ -66,3 +66,53 @@ test('toSdkTools catches handler exceptions and returns structured failure', asy
   assert.equal(result.success, false);
   assert.match(result.message, /工具执行异常.*boom/);
 });
+
+import { createLanguageModel, generateChatOnce, streamChatWithTools } from '../src/services/ai/llmClient';
+import { tool, jsonSchema } from 'ai';
+
+test('createLanguageModel returns a LanguageModel-shaped object', () => {
+  const m = createLanguageModel({
+    baseURL: 'https://example.com/v1',
+    apiKey: 'sk-test',
+    model: 'gpt-test',
+  });
+  // SDK's LanguageModel has these fields across 4.x and 5.x
+  assert.equal(typeof (m as any).modelId, 'string');
+  assert.match((m as any).modelId, /gpt-test/);
+});
+
+test('streamChatWithTools is a thin wrapper that forwards model+messages+tools', async () => {
+  // Replace global fetch with one that returns a minimal SSE stream
+  const sseBody = [
+    'data: {"id":"x","object":"chat.completion.chunk","choices":[{"delta":{"content":"hi"}}]}',
+    'data: {"id":"x","object":"chat.completion.chunk","choices":[{"delta":{},"finish_reason":"stop"}]}',
+    'data: [DONE]',
+    '',
+  ].join('\n\n');
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (_url: string, _init: any) => new Response(sseBody, {
+    status: 200,
+    headers: { 'Content-Type': 'text/event-stream' },
+  })) as any;
+
+  try {
+    const model = createLanguageModel({
+      baseURL: 'https://example.com/v1',
+      apiKey: 'sk-test',
+      model: 'gpt-test',
+    });
+    const result = streamChatWithTools({
+      model,
+      messages: [{ role: 'user', content: 'hello' }],
+      tools: {},
+    });
+    let buf = '';
+    for await (const part of result.fullStream) {
+      if (part.type === 'text-delta') buf += (part as any).textDelta ?? (part as any).text ?? '';
+    }
+    assert.equal(buf, 'hi');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

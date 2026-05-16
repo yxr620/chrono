@@ -1,13 +1,34 @@
 /**
- * LLM Client
- * 统一调用 OpenAI 兼容接口，支持流式输出
- * 零依赖，使用原生 fetch + ReadableStream
+ * LLM Client — Vercel AI SDK adapter
+ *
+ * One unified abstraction over OpenAI-compatible providers (Qwen / Gemini-openai
+ * / GLM / Kimi / MiniMax / OpenAI / custom / Managed). All three exports use the
+ * same `LanguageModel` and only differ in streaming vs. one-shot semantics.
+ *
+ * Replaces the previous hand-rolled `chatStream`/`chatWithTools`/`chatOnce`.
  */
 
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import {
+  streamText,
+  generateText,
+  type CoreMessage,
+  type LanguageModel,
+  type StreamTextResult,
+  type GenerateTextResult,
+  type Tool,
+  type ToolSet,
+} from 'ai';
+
+/** Public message shape used by AIAssistant.tsx + toolCallEngine + quickCapture */
 export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
+  role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
+  // SDK accepts richer shapes (e.g. parts arrays); we accept that pass-through
+  // anywhere it's actually needed via the `CoreMessage` re-export below.
 }
+
+export type { CoreMessage };
 
 export interface LLMConfig {
   baseURL: string;
@@ -15,286 +36,88 @@ export interface LLMConfig {
   model: string;
 }
 
-export interface ChatCompletionRequestOptions {
-  stream: boolean;
-  temperature: number;
-  maxTokens: number;
-}
-
-export const CHAT_STREAM_REQUEST_OPTIONS = {
-  stream: true,
-  temperature: 0.7,
-  maxTokens: 2048,
-} as const satisfies ChatCompletionRequestOptions;
-
-export const CHAT_ONCE_REQUEST_OPTIONS = {
-  stream: false,
-  temperature: 0,
-  maxTokens: 1024,
-} as const satisfies ChatCompletionRequestOptions;
-
-export const CHAT_WITH_TOOLS_REQUEST_OPTIONS = {
-  stream: false,
-  temperature: 0.7,
-  maxTokens: 2048,
-} as const satisfies ChatCompletionRequestOptions;
-
-export function toChatCompletionPayloadOptions(options: ChatCompletionRequestOptions) {
-  return {
-    stream: options.stream,
-    temperature: options.temperature,
-    max_tokens: options.maxTokens,
-  };
+/** Build a LanguageModel from a Chrono LLMConfig. Caller can reuse across calls. */
+export function createLanguageModel(config: LLMConfig): LanguageModel {
+  const provider = createOpenAICompatible({
+    name: 'chrono',
+    baseURL: config.baseURL.replace(/\/$/, ''),
+    apiKey: config.apiKey,
+  });
+  return provider.chatModel(config.model);
 }
 
 /**
- * 流式调用 OpenAI 兼容接口
- * @param config LLM 配置
- * @param messages 消息列表
- * @param onChunk 增量 token 回调
- * @param signal 中断信号
- * @returns 完整文本
+ * Streaming chat with tools — drives the AI Assistant tool loop.
+ *
+ * Returns the SDK's StreamTextResult. Consumers iterate `result.fullStream`
+ * and translate events into UI phases / chunks. The SDK handles:
+ *   - cross-chunk tool_call argument accumulation
+ *   - multi-step tool calling (maxSteps rounds)
+ *   - reasoning_content / thinking / <think> normalisation
+ *   - per-provider transform quirks (Mistral 9-char IDs, etc.)
  */
-export async function chatStream(
-  config: LLMConfig,
-  messages: ChatMessage[],
-  onChunk: (delta: string) => void,
-  signal?: AbortSignal,
-  onThinking?: (delta: string) => void,
-): Promise<string> {
-  const url = `${config.baseURL.replace(/\/$/, '')}/chat/completions`;
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${config.apiKey}`,
+export function streamChatWithTools(opts: {
+  model: LanguageModel;
+  messages: CoreMessage[];
+  tools: Record<string, Tool>;
+  maxSteps?: number;
+  abortSignal?: AbortSignal;
+}): StreamTextResult<Record<string, Tool>, never> {
+  return streamText({
+    model: opts.model,
+    messages: opts.messages,
+    tools: opts.tools,
+    maxSteps: opts.maxSteps ?? 5,
+    abortSignal: opts.abortSignal,
+    // Auto-fix common model errors like wrong tool name casing.
+    experimental_repairToolCall: async ({ toolCall, tools }) => {
+      const wanted = toolCall.toolName.toLowerCase();
+      const match = Object.keys(tools).find(k => k.toLowerCase() === wanted);
+      return match && match !== toolCall.toolName
+        ? { ...toolCall, toolName: match }
+        : null;
     },
-    body: JSON.stringify({
-      model: config.model,
-      messages,
-      ...toChatCompletionPayloadOptions(CHAT_STREAM_REQUEST_OPTIONS),
-    }),
-    signal,
   });
-
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    throw new Error(`LLM 请求失败 (${res.status}): ${errText || res.statusText}`);
-  }
-
-  if (!res.body) {
-    throw new Error('响应无 body');
-  }
-
-  // 解析 SSE 流
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let full = '';
-  let buffer = '';
-
-  // <think> tag streaming parser state (Qwen3 等模型在 content 中输出推理过程)
-  let insideThink = false;
-  let tagBuf = '';
-
-  /** 检查 text 末尾是否与 tag 的某个前缀匹配，返回匹配长度 */
-  function partialTagLen(text: string, tag: string): number {
-    const maxCheck = Math.min(tag.length - 1, text.length);
-    for (let i = maxCheck; i >= 1; i--) {
-      if (text.endsWith(tag.slice(0, i))) return i;
-    }
-    return 0;
-  }
-
-  /** 处理 content chunk，将 <think> 块路由到 onThinking */
-  function processContentChunk(raw: string) {
-    tagBuf += raw;
-    while (tagBuf.length > 0) {
-      if (insideThink) {
-        const endIdx = tagBuf.indexOf('</think>');
-        if (endIdx !== -1) {
-          const t = tagBuf.slice(0, endIdx);
-          if (t && onThinking) onThinking(t);
-          tagBuf = tagBuf.slice(endIdx + 8).replace(/^\n/, '');
-          insideThink = false;
-        } else {
-          const keep = partialTagLen(tagBuf, '</think>');
-          const safe = tagBuf.length - keep;
-          if (safe > 0) {
-            if (onThinking) onThinking(tagBuf.slice(0, safe));
-            tagBuf = tagBuf.slice(safe);
-          }
-          break;
-        }
-      } else {
-        const startIdx = tagBuf.indexOf('<think>');
-        if (startIdx !== -1) {
-          const before = tagBuf.slice(0, startIdx);
-          if (before) { full += before; onChunk(before); }
-          tagBuf = tagBuf.slice(startIdx + 7);
-          insideThink = true;
-        } else {
-          const keep = partialTagLen(tagBuf, '<think>');
-          const safe = tagBuf.length - keep;
-          if (safe > 0) {
-            const s = tagBuf.slice(0, safe);
-            full += s;
-            onChunk(s);
-            tagBuf = tagBuf.slice(safe);
-          }
-          break;
-        }
-      }
-    }
-  }
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed || !trimmed.startsWith('data: ')) continue;
-      const data = trimmed.slice(6);
-      if (data === '[DONE]') continue;
-
-      try {
-        const json = JSON.parse(data);
-        const delta = json.choices?.[0]?.delta;
-        if (!delta) continue;
-
-        // 主回答 content（含 <think> 标签过滤）
-        const content: string = delta.content || '';
-        if (content) {
-          processContentChunk(content);
-        }
-
-        // Thinking 模型的推理过程（Qwen-QwQ / DeepSeek-R1 等，使用独立字段，Ollama 使用 thinking）
-        const reasoning: string =
-          delta.reasoning_content || delta.thinking_content || delta.thinking || '';
-        if (reasoning && onThinking) {
-          onThinking(reasoning);
-        }
-      } catch {
-        // skip malformed JSON lines
-      }
-    }
-  }
-
-  // 刷新 tag buffer 中的剩余内容
-  if (tagBuf) {
-    if (insideThink) {
-      if (onThinking) onThinking(tagBuf);
-    } else {
-      full += tagBuf;
-      onChunk(tagBuf);
-    }
-  }
-
-  return full;
 }
 
 /**
- * 非流式调用，直接返回完整文本
- * 用于时间提取等需要完整响应的轻量调用
+ * Non-streaming one-shot — drives quickCapture parse and any future single-call uses.
+ * Returns the full assistant response with tool_calls already extracted.
  */
-export async function chatOnce(
-  config: LLMConfig,
-  messages: ChatMessage[],
-  signal?: AbortSignal,
-): Promise<string> {
-  const url = `${config.baseURL.replace(/\/$/, '')}/chat/completions`;
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: config.model,
-      messages,
-      ...toChatCompletionPayloadOptions(CHAT_ONCE_REQUEST_OPTIONS),
-    }),
-    signal,
+export async function generateChatOnce(opts: {
+  model: LanguageModel;
+  messages: CoreMessage[];
+  tools?: Record<string, Tool>;
+  abortSignal?: AbortSignal;
+}): Promise<GenerateTextResult<Record<string, Tool>, never>> {
+  return await generateText({
+    model: opts.model,
+    messages: opts.messages,
+    tools: opts.tools,
+    abortSignal: opts.abortSignal,
   });
-
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    throw new Error(`LLM 请求失败 (${res.status}): ${errText || res.statusText}`);
-  }
-
-  const json = await res.json();
-  return json.choices?.[0]?.message?.content || '';
 }
 
 /**
- * 带工具声明的非流式调用
- * 返回完整 message 对象（可能包含 tool_calls）
+ * Recognise provider errors that mean "function calling unsupported".
+ * Used by the engine to surface a friendly Chinese message instead of
+ * silently falling back to a no-tools answer (the old behaviour).
  */
-export interface ToolCallResult {
-  id: string;
-  type: 'function';
-  function: { name: string; arguments: string };
-}
-
-export interface ChatMessageWithTools {
-  role: 'assistant';
-  content: string | null;
-  tool_calls?: ToolCallResult[];
-  thinking?: string;
-}
-
-export async function chatWithTools(
-  config: LLMConfig,
-  messages: ChatMessage[],
-  tools: unknown[],
-  signal?: AbortSignal,
-): Promise<ChatMessageWithTools> {
-  const url = `${config.baseURL.replace(/\/$/, '')}/chat/completions`;
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: config.model,
-      messages,
-      tools,
-      ...toChatCompletionPayloadOptions(CHAT_WITH_TOOLS_REQUEST_OPTIONS),
-    }),
-    signal,
-  });
-
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    throw new Error(`LLM 请求失败 (${res.status}): ${errText || res.statusText}`);
-  }
-
-  const json = await res.json();
-  const message = json.choices?.[0]?.message;
-  if (!message) {
-    throw new Error('LLM 响应格式异常：无 message');
-  }
-
-  // Strip <think>...</think> blocks (Qwen3 等模型会在 content 中输出推理过程)
-  const rawContent = message.content || '';
-  let thinkingContent = message.reasoning_content || message.thinking_content || message.thinking || '';
-  const cleanContent = rawContent.replace(/<think>([\s\S]*?)<\/think>\n?/g, (_: string, t: string) => {
-    if (!thinkingContent) thinkingContent += t;
-    return '';
-  }).trim();
-
-  return {
-    role: 'assistant',
-    content: cleanContent || null,
-    tool_calls: message.tool_calls || undefined,
-    thinking: thinkingContent || undefined,
-  };
+export function isUnsupportedToolsError(err: unknown): boolean {
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  if (!msg) return false;
+  const phrases = [
+    'does not support tool',
+    'does not support function',
+    'tools parameter is not',
+    'tools is not supported',
+    'tool_choice is not',
+    'function calling is not supported',
+    'function calling not supported',
+    'function_call is not',
+    'tool calling is not supported',
+    '不支持工具',
+    '不支持函数调用',
+  ];
+  return phrases.some(p => msg.includes(p));
 }
