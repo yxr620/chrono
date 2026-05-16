@@ -103,7 +103,6 @@ npm run dev              # Start the web development server
 npm run build            # Type-check and build the web app
 npm run lint             # Run ESLint
 npm run test:app-checks  # Run application-level tests
-npm run ai:debug         # Debug AI assistant function calling
 ```
 
 Platform-specific workflows are documented in [docs/development.md](docs/development.md), including Android builds, Electron builds, APK release steps, and troubleshooting.

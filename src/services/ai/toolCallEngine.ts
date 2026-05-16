@@ -1,7 +1,6 @@
 /**
  * Tool Call Engine — translates Vercel AI SDK `fullStream` events into the
- * Chrono UI's phase / chunk / toolCall callbacks (plus an optional onThinking
- * hook used only by the `ai:debug` CLI for verbose tracing).
+ * Chrono UI's phase / chunk / toolCall callbacks.
  *
  * The SDK handles the actual round-loop (maxSteps); we only:
  *   1. build the system prompt + initial messages
@@ -64,7 +63,6 @@ export interface ToolCallEngineCallbacks {
     failed?: boolean,
   ) => void;
   onChunk: (delta: string) => void;
-  onThinking?: (delta: string) => void;
   onToolCall?: (info: ToolCallInfo) => void;
   onConfirmRequired?: (card: ConfirmationCard) => Promise<boolean>;
 }
@@ -243,7 +241,6 @@ export async function runToolCallLoop(
               reasoningEmittedThisStep = true;
             }
             stepReasoningBuf += delta;
-            callbacks.onThinking?.(delta);
           }
           break;
         }

@@ -33,7 +33,6 @@ npm run dev                   # http://localhost:5173
 | `npm run build:local` | **本地构建** — 同上，但保留 `.env.local` 中的密钥（用于本地 Android 测试） |
 | `npm run lint` | ESLint 检查 |
 | `npm run preview` | 预览生产构建 |
-| `npm run ai:debug` | AI 助手 CLI 调试 |
 
 ## 环境变量
 
@@ -75,14 +74,6 @@ VITE_AI_API_KEY=your-api-key
 **关键原理**：`npm run build` 默认使用 production mode，Vite 会加载 `.env.production` 并覆盖 `.env.local`。由于 `.env.production` 中密钥为空，发布构建自动不含密钥。`npm run build:local` 使用自定义 mode，不触发 `.env.production` 覆盖，保留 `.env.local` 中的密钥。
 
 > **应用内优先级**：localStorage 设置 > 环境变量。用户在应用内修改的配置会覆盖 env 默认值。
-
-## AI CLI 调试
-
-```bash
-npm run ai:debug -- --data ./path/to/export.json --verbose
-```
-
-详细参数见 `npm run ai:debug -- --help`。
 
 ---
 

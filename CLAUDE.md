@@ -11,7 +11,6 @@ npm run build        # Release build — no secrets (production mode, uses .env.
 npm run build:local  # Local build — keeps .env.local secrets (for Android/device testing)
 npm run lint         # ESLint checks
 npm run preview      # Preview production build
-npm run ai:debug     # CLI debugging for AI assistant
 
 # Mobile (Android)
 npm run build:local && npx cap copy     # Local testing (with secrets)

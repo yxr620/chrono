@@ -139,7 +139,7 @@ autoPush('action: add_entry');
 4. 写入或高风险维护操作实现 `confirm()`，把参数转成用户能确认的 `ConfirmationCard`。
 5. handler 走 `dataService -> store reload -> autoPush`，不要直接绕过同步链路写 `db`。
 6. 在 `src/services/actions/index.ts` 注册 action。
-7. 用 AI 页面或 `npm run ai:debug` 走一遍：模型是否选对 action，确认卡片是否可理解，tool result 是否足够模型生成最终回答。
+7. 用 AI 页面走一遍：模型是否选对 action，确认卡片是否可理解，tool result 是否足够模型生成最终回答。
 
 ## 调试重点
 

@@ -10,8 +10,7 @@
     "lint": "eslint .",
     "test:app-checks": "node --import tsx --test tests/*.test.ts",
     "test:font-system": "node --import tsx --test tests/font-system.test.ts",
-    "preview": "vite preview",
-    "ai:debug": "tsx scripts/ai-debug-cli.ts"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^1.0.39",

@@ -139,7 +139,6 @@ AI 助手不会把整个 IndexedDB 上传给模型。默认发送给模型的是
 
 机器/半自动测试入口：
 
-- `npm run ai:debug`：CLI 版对话，可通过 `--data <file>` 加载导出的数据，在终端观察 phase、tool、最终回答。
 - `npx eslint src/components/AIAssistant/AIAssistant.tsx src/stores/aiStore.ts`：改动对话 UI 或 store 后的最小 lint 检查。
 - Action handler 适合用 `fake-indexeddb` 做单测；tool-calling 主循环适合通过 mock LLM 注入固定 `tool_calls` 做回归测试。
 

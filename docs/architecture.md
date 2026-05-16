@@ -229,7 +229,6 @@ npm run lint         # ESLint 检查（主要代码质量检查）
 npm run test:app-checks    # node:test 应用回归脚本（tests/*.test.ts）
 npm run test:font-system   # 字体 token 回归测试
 npm run preview      # 预览生产构建
-npm run ai:debug     # AI 助手 CLI 调试
 
 # Android && IOS
 npm run build && npx cap copy    # 同步 Web 构建到 Android & IOS
