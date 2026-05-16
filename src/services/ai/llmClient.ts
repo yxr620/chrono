@@ -13,7 +13,7 @@ import {
   streamText,
   generateText,
   stepCountIs,
-  type CoreMessage,
+  type ModelMessage,
   type LanguageModel,
   type StreamTextResult,
   type GenerateTextResult,
@@ -28,7 +28,10 @@ export interface ChatMessage {
   // anywhere it's actually needed via the `CoreMessage` re-export below.
 }
 
-export type { CoreMessage };
+export type { ModelMessage };
+
+/** @deprecated Use ModelMessage instead */
+export type CoreMessage = ModelMessage;
 
 export interface LLMConfig {
   baseURL: string;
@@ -58,7 +61,7 @@ export function createLanguageModel(config: LLMConfig): LanguageModel {
  */
 export function streamChatWithTools(opts: {
   model: LanguageModel;
-  messages: CoreMessage[];
+  messages: ModelMessage[];
   tools: Record<string, Tool>;
   maxSteps?: number;
   abortSignal?: AbortSignal;
@@ -87,7 +90,7 @@ export function streamChatWithTools(opts: {
  */
 export async function generateChatOnce(opts: {
   model: LanguageModel;
-  messages: CoreMessage[];
+  messages: ModelMessage[];
   tools?: Record<string, Tool>;
   abortSignal?: AbortSignal;
 }): Promise<GenerateTextResult<Record<string, Tool>, never>> {

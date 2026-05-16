@@ -26,14 +26,24 @@ The server treats `https://localhost`, `http://localhost`, and `capacitor://loca
 ```bash
 npm install
 npm run build
+npm test
 ```
 
 ## Deploy
 
 1. Set FC env vars in the console.
 2. `./deploy.sh` produces `chrono-api.zip`.
-3. Upload via FC console → 函数代码 → 上传代码.
-4. Handler: `index.handler`.
+3. Upload via FC console → `chrono-api-web` → 函数代码 → 上传代码.
+4. Run it as Web / Custom Runtime:
+
+```text
+Runtime: custom.debian10
+Listen port: 9000
+Startup: /code/bootstrap
+Handler: unused
+```
+
+Use a stable `VITE_AUTH_API_URL` for released clients; changing the public API URL requires rebuilding the app.
 
 ## Endpoints
 

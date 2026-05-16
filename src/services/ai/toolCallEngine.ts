@@ -27,7 +27,7 @@ import {
   streamChatWithTools,
   isUnsupportedToolsError,
   type ChatMessage,
-  type CoreMessage,
+  type ModelMessage,
 } from './llmClient';
 import { actionRegistry } from '../actions';
 import { gateway } from '../gateway';
@@ -149,9 +149,9 @@ export async function runToolCallLoop(
     onConfirmRequired: callbacks.onConfirmRequired,
   });
 
-  const messages: CoreMessage[] = [
+  const messages: ModelMessage[] = [
     { role: 'system', content: systemPrompt },
-    ...history.map(m => ({ role: m.role, content: m.content }) as CoreMessage),
+    ...history.map(m => ({ role: m.role, content: m.content }) as ModelMessage),
     { role: 'user', content: userQuery },
   ];
 

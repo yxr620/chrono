@@ -59,10 +59,22 @@ https://your-web-domain.example,https://localhost,http://localhost,capacitor://l
 
 ```bash
 cd server
-./deploy.sh                 # 生成 dist/ + chrono-api.zip
+./deploy.sh                 # 生成 chrono-api.zip
 ```
 
-FC 控制台 → `chrono-api` → 上传 `chrono-api.zip` → 部署。
+Managed AI 真流式必须部署到 Web 函数 / Custom Runtime。推荐函数名：`chrono-api-web`。
+
+```text
+函数类型: Web 函数 / Custom Runtime
+运行环境: custom.debian10
+监听端口: 9000
+启动命令: /code/bootstrap
+Handler: 不使用
+HTTP 触发器: 同步调用
+认证方式: 无需认证
+```
+
+如果公网 API URL 改了，需要同步更新前端构建环境里的 `VITE_AUTH_API_URL` 并重新发布 APK/Web。长期建议使用自定义域名作为稳定 API 地址。
 
 ## 查看日志
 
@@ -76,54 +88,24 @@ FC 控制台 → `chrono-api` → 日志。SLS 查询可按 request id、错误�
 
 ## Streaming relay (since 2026-05-16)
 
-`/v1/chat/completions` 把上游 SSE chunk 逐块透传，而不是 buffer 整段后一次性返回。代码层面已经支持，**但 FC HTTP 触发器必须切到「流式调用」模式**，否则 FC 会把整段响应缓存好再返回（用户视角：等十几秒、然后一整段 push 出来）。
-
-### 在 Aliyun FC 3.0 控制台切流式
-
-1. 控制台 → **函数计算 FC 3.0** → 函数列表 → `chrono-api`
-2. 顶部菜单 → **配置** → 左侧 **触发器**
-3. 找到 HTTP 触发器（通常名字是 `defaultTrigger` 或自定义名）→ **编辑**
-4. **调用方式 / Invocation Method** 下拉：
-   - 默认：`同步调用 (Sync)` ← 当前状态，FC 会 buffer
-   - 改为：**`流式调用 (Stream)`** ← 我们要的
-5. 保存。新调用在几秒内生效（旧实例会复用直到回收，可以再点一次 **执行版本管理 → 发布版本** 触发滚动）
-
-如果在 FC 3.0 控制台找不到「调用方式」字段：
-
-- 路径变体 A：函数详情 → **配置 → 网络与流式响应** → 流式响应：开启
-- 路径变体 B：触发器编辑页 → 高级配置 → 响应模式：流式
-
-阿里云官方文档关键词：「**HTTP 流式响应函数**」、「**stream invocation**」。
-
-### 验证流式是否生效
-
-部署后用 curl 直接看响应 header。响应里现在带两个诊断 header：
+`/v1/chat/completions` 通过 `httpServer.js` 透传上游 SSE。部署后用 curl 看响应 header：
 
 ```bash
-# 先登录拿 JWT
 TOKEN=$(curl -s -X POST https://YOUR-FC-URL/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"you@example.com","password":"xxx"}' | jq -r '.token')
 
-# 用 -N 禁掉 curl 自身的 buffer，-D - 打印 headers
 curl -N -D - -X POST https://YOUR-FC-URL/v1/chat/completions \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"messages":[{"role":"user","content":"hi"}],"stream":true}'
 ```
 
-判读结果：
-- `X-Chrono-Streaming: true` → ✅ FC 触发器已经是流式，代码 ​​已逐 chunk `respObj.write`
-- `X-Chrono-Streaming: false`、`X-Chrono-Stream-Reason: respObj-missing-write` → ❌ FC 触发器还是同步调用，buffered fallback 起作用了；回去再切一次
-- `X-Chrono-Streaming: false`、`X-Chrono-Stream-Reason: no-response-object` → 函数被 FC 当 event 函数调用了（不太可能，但记录下来便于排查）
+成功标志：
 
-curl 输出本身也能直观看：流式的话 `data:` 行会一行一行往下走；buffered 的话最后 EOF 时整段一次性 dump。
+```text
+X-Chrono-Streaming: true
+Transfer-Encoding: chunked
+```
 
-### FC 函数日志能看到什么
-
-部署本版后，每个 `/v1/chat/completions` 请求会打一行：
-- `[stream] respObj.write available — streaming chunks 1:1`（✅）
-- `[stream] respObj.write missing — FC trigger is request-response, buffering full body`（❌ 触发器还没切）
-- `[stream] FC invoked us with no respObj — falling back to buffered relay`（FC 当 event 函数调用了）
-
-FC 控制台 → 函数详情 → **日志** → 按 request id 过滤。
+如果看到 `X-Chrono-Streaming: false`，说明仍在内置运行时或非 Web 函数路径。

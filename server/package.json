@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
+    "start:web": "node dist/httpServer.js",
+    "test": "node --import tsx --test src/*.test.ts src/shared/*.test.ts src/features/*.test.ts",
     "test:local": "node --import tsx src/local-runner.ts"
   },
   "dependencies": {

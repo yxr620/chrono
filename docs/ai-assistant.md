@@ -170,13 +170,15 @@ VITE_AI_API_KEY=sk-...
 VITE_AI_MODEL=qwen3.6-max-preview
 ```
 
-Managed 只需要前端设置 `VITE_AUTH_API_URL=https://chrono-api.fcv3.<region>.fcapp.run`。后端配置 `AI_API_KEY`、`AI_BASE_URL`、`AI_MODEL`、`ALLOWED_AI_EMAILS`，实现位于 `server/src/features/ai.ts`。
+Managed 只需要前端设置 `VITE_AUTH_API_URL=https://<stable-api-url>`。这个值会被打进 Web/Android/iOS 包里，所以生产环境应尽量使用长期稳定的自定义域名或保持现有 FC 公网 URL 不变。后端配置 `AI_API_KEY`、`AI_BASE_URL`、`AI_MODEL`、`ALLOWED_AI_EMAILS`，实现位于 `server/src/features/ai.ts`。
 
 ## Managed 模式的流式状态
 
-代码层面，`server/src/features/ai.ts` 已经按 SSE pass-through 实现（返回 `{ __raw: true, stream: upstream.body }`，`server/src/index.ts` 通过 FC 3.0 stream response 对象逐 chunk 写回）。但**是否真流式还取决于 FC 函数触发器**：
+代码层面，`server/src/features/ai.ts` 已经按 SSE pass-through 实现（返回 `{ __raw: true, stream: upstream.body }`）。`server/src/httpServer.ts` 是 Web/Custom Runtime 的 HTTP server 入口，会用 Node `ServerResponse.write()` 逐 chunk 写回；`server/src/index.ts` 继续保留给 FC 内置运行时。**是否真流式取决于 FC 部署形态**：
 
-- FC 触发器 = **HTTP 流式响应**（FC 3.0 默认）：Managed 用户看到的体验和 BYO 一致，文字一字一字流出 ✓
-- FC 触发器 = **HTTP 请求-响应**（FC 2.x 老配置）：后端代码无法逐 chunk 输出，整段返回；Managed 用户看起来仍是「整段一次 push」的伪流式 —— **功能可用，但体验退化**
+- **Web 函数 / Custom Runtime / Custom Container**：可返回 `text/event-stream` / chunked response，Managed 用户看到的体验和 BYO 一致，文字一字一字流出 ✓
+- **FC 3.0 内置运行时 + `Handler: index.handler`**：HTTP 请求会被映射成 event，函数返回值再被映射成 HTTP 响应；Managed 用户看起来仍是「整段一次 push」的伪流式 —— **功能可用，但体验退化**
+
+如果使用 Qwen 深度思考模型，流里可能先返回 `reasoning_content` 再返回 `content`。这时后端仍是真流式，但主回答气泡会等回答内容开始后才明显滚动。
 
 排查参考 `server/RUNBOOK.md` 的 *Streaming relay (since 2026-05-16)* 章节。无论触发器配置如何，前端代码路径完全一致；切换 BYO 模式可立刻拿到真流式。

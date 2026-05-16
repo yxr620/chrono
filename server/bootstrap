@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="/var/fc/lang/nodejs20/bin:/var/fc/lang/nodejs18/bin:${PATH:-}"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec node "$SCRIPT_DIR/httpServer.js"
