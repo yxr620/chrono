@@ -698,6 +698,24 @@
 
 /* （设置弹窗已移至头部内联，保留空注释以免影响后续选择器） */
 
+/* ── 阶段耗时徽章 ───────────────────────────────────────── */
+.ai-phase-duration {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: hsl(var(--muted) / 0.6);
+  color: hsl(var(--muted-foreground));
+  font-family: var(--app-code-family);
+  font-size: 10px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-phase-active .ai-phase-duration {
+  background: hsl(var(--primary) / 0.12);
+  color: hsl(var(--primary));
+}
+
 /* ── 执行阶段列表 ─────────────────────────────────────────── */
 .ai-phases {
   display: flex;

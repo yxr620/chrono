@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="900" viewBox="0 0 1280 900" role="img" aria-labelledby="title desc">
+  <title id="title">Chrono AI 助手对话执行流程</title>
+  <desc id="desc">展示从用户输入、AIAssistant 页面、toolCallEngine、LLM、Action Registry、本地数据和确认卡片之间的执行流程。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#4b5563" />
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .lane { fill: #ffffff; stroke: #d7dde6; stroke-width: 1.5; rx: 18; }
+      .box { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; rx: 10; }
+      .ui { fill: #eef6ff; stroke: #3b82f6; }
+      .engine { fill: #f4f0ff; stroke: #7c3aed; }
+      .llm { fill: #fff7ed; stroke: #f97316; }
+      .data { fill: #ecfdf5; stroke: #10b981; }
+      .risk { fill: #fff1f2; stroke: #e11d48; }
+      .decision { fill: #ffffff; stroke: #64748b; stroke-width: 1.5; }
+      .title { font: 700 28px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+      .section { font: 700 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #334155; }
+      .label { font: 600 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #111827; }
+      .small { font: 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+      .tiny { font: 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #64748b; }
+      .arrow { stroke: #4b5563; stroke-width: 1.7; fill: none; marker-end: url(#arrow); }
+      .dash { stroke-dasharray: 6 5; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1280" height="900" />
+  <text class="title" x="40" y="52">Chrono AI 助手：一次对话如何执行</text>
+  <text class="small" x="40" y="78">主线：用户提问 → 构建上下文 → LLM 判断 → 本地工具/确认 → 工具结果回填 → 最终回答</text>
+
+  <rect class="lane" x="30" y="110" width="250" height="670" />
+  <text class="section" x="54" y="140">用户与页面</text>
+
+  <rect class="lane" x="310" y="110" width="360" height="670" />
+  <text class="section" x="334" y="140">AIAssistant + toolCallEngine</text>
+
+  <rect class="lane" x="700" y="110" width="245" height="670" />
+  <text class="section" x="724" y="140">LLM Provider</text>
+
+  <rect class="lane" x="975" y="110" width="275" height="670" />
+  <text class="section" x="999" y="140">本地工具与数据</text>
+
+  <rect class="box ui" x="55" y="170" width="200" height="70" />
+  <text class="label" x="82" y="198">用户输入问题</text>
+  <text class="small" x="80" y="219">例如：昨天做了什么？</text>
+
+  <rect class="box ui" x="55" y="325" width="200" height="88" />
+  <text class="label" x="82" y="352">页面可见反馈</text>
+  <text class="small" x="78" y="374">user 气泡 + assistant 占位</text>
+  <text class="small" x="78" y="394">phases、耗时、流式回答</text>
+
+  <rect class="box ui" x="55" y="570" width="200" height="88" />
+  <text class="label" x="92" y="598">确认卡片</text>
+  <text class="small" x="80" y="620">仅 risk != none 时出现</text>
+  <text class="small" x="80" y="640">确认 / 取消都会回到引擎</text>
+
+  <rect class="box engine" x="340" y="170" width="300" height="70" />
+  <text class="label" x="366" y="198">handleSend()</text>
+  <text class="small" x="366" y="219">取最近历史，追加消息，占位 loading</text>
+
+  <rect class="box engine" x="340" y="285" width="300" height="78" />
+  <text class="label" x="366" y="313">preparing</text>
+  <text class="small" x="366" y="334">gateway 获取 AI config</text>
+  <text class="small" x="366" y="354">构建 system prompt + tools</text>
+
+  <rect class="box engine" x="340" y="405" width="300" height="76" />
+  <text class="label" x="366" y="433">thinking</text>
+  <text class="small" x="366" y="454">非流式调用 LLM with tools</text>
+  <text class="small" x="366" y="474">记录 debugInfo 与阶段耗时</text>
+
+  <polygon class="decision" points="490,525 640,590 490,655 340,590" />
+  <text class="label" x="432" y="585">LLM 返回什么？</text>
+  <text class="tiny" x="438" y="606">text / tool_calls / fallback</text>
+
+  <rect class="box engine" x="340" y="705" width="300" height="58" />
+  <text class="label" x="367" y="732">render final answer</text>
+  <text class="small" x="367" y="752">写回 assistant 气泡</text>
+
+  <rect class="box llm" x="730" y="405" width="185" height="76" />
+  <text class="label" x="758" y="433">chatWithTools</text>
+  <text class="small" x="756" y="454">OpenAI-compatible</text>
+  <text class="small" x="756" y="474">非流式 tool decision</text>
+
+  <rect class="box llm" x="730" y="675" width="185" height="78" />
+  <text class="label" x="770" y="703">chatStream</text>
+  <text class="small" x="755" y="724">fallback / 最终流式</text>
+  <text class="small" x="755" y="744">分离 &lt;think&gt; 内容</text>
+
+  <rect class="box data" x="1005" y="170" width="215" height="80" />
+  <text class="label" x="1042" y="198">Action Registry</text>
+  <text class="small" x="1030" y="219">生成 tool definitions</text>
+  <text class="small" x="1030" y="239">按 name 查找 action</text>
+
+  <rect class="box data" x="1005" y="325" width="215" height="98" />
+  <text class="label" x="1045" y="353">Action handler</text>
+  <text class="small" x="1029" y="375">read / write / maintenance</text>
+  <text class="small" x="1029" y="395">返回 ActionResult.message</text>
+  <text class="small" x="1029" y="415">作为 tool message 回填</text>
+
+  <rect class="box risk" x="1005" y="520" width="215" height="88" />
+  <text class="label" x="1045" y="548">risk 判断</text>
+  <text class="small" x="1029" y="570">none：直接 handler</text>
+  <text class="small" x="1029" y="590">low/high：先确认</text>
+
+  <rect class="box data" x="1005" y="675" width="215" height="78" />
+  <text class="label" x="1048" y="703">本地数据层</text>
+  <text class="small" x="1029" y="724">IndexedDB / dataService</text>
+  <text class="small" x="1029" y="744">stores / syncDb / autoPush</text>
+
+  <path class="arrow" d="M255 205 H340" />
+  <path class="arrow" d="M490 240 V285" />
+  <path class="arrow" d="M490 363 V405" />
+  <path class="arrow" d="M640 443 H730" />
+  <path class="arrow" d="M730 480 C690 510 670 545 640 570" />
+  <path class="arrow" d="M490 481 V525" />
+
+  <path class="arrow" d="M640 590 C790 590 850 250 1005 210" />
+  <text class="tiny" x="752" y="330">tool_calls</text>
+
+  <path class="arrow" d="M1112 250 V325" />
+  <path class="arrow" d="M1112 423 V520" />
+  <path class="arrow" d="M1005 564 C840 548 750 542 640 575" />
+  <text class="tiny" x="760" y="540">risk none</text>
+
+  <path class="arrow" d="M1005 580 C790 620 455 650 255 615" />
+  <text class="tiny" x="595" y="650">risk low/high：显示 ConfirmationCard</text>
+  <path class="arrow" d="M255 610 C520 690 830 685 1005 575" />
+  <text class="tiny" x="555" y="715">用户确认 / 取消</text>
+
+  <path class="arrow" d="M1112 608 V675" />
+  <path class="arrow" d="M1005 365 C820 365 760 510 640 580" />
+  <text class="tiny" x="780" y="398">tool result</text>
+
+  <path class="arrow dash" d="M1005 705 C790 790 555 805 490 655" />
+  <text class="tiny" x="724" y="808">回到 thinking，最多 5 轮</text>
+
+  <path class="arrow" d="M490 655 V705" />
+  <text class="tiny" x="510" y="688">直接文本</text>
+
+  <path class="arrow" d="M640 612 C690 625 710 650 730 690" />
+  <text class="tiny" x="660" y="650">fallback</text>
+  <path class="arrow" d="M730 716 C690 730 650 735 640 735" />
+
+  <path class="arrow" d="M340 735 H255" />
+  <path class="arrow" d="M155 240 V325" />
+
+  <rect class="box" x="42" y="810" width="1196" height="56" />
+  <text class="label" x="66" y="833">读图提示</text>
+  <text class="small" x="66" y="855">阶段耗时对应页面 phases：preparing 慢多半是本地上下文/gateway，thinking 慢多半是 LLM，toolCall 慢可能是本地 action 或等待确认，answering 慢多半是流式网络/模型输出。</text>
+</svg>

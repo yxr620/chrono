@@ -1,234 +1,153 @@
-# Action Registry — AI-First 操作注册表
+# Action Registry
 
-> **实现日期：** 2026-04-02 起，已合并到 main。
-> **设计文档（已归档）：** `docs/superpowers/archive/2026-04-02-ai-first-action-registry-design.md`（本地，未入库）。
+Action Registry 是 AI 助手的本地工具层。它把「模型想做什么」和「应用真正怎么读写数据」隔开：模型只看到 OpenAI-compatible tool schema，实际执行由本地 action handler 完成。
 
-## 概述
+最重要的理解是：**Registry 不负责聊天，也不负责决定何时调用工具；它负责登记工具、生成 schema、按风险执行或拦截操作，并把结果交回 `toolCallEngine`。**
 
-Action Registry 是 AI 助手从"只读分析工具"升级为"可读可写智能助手"的核心基础架构。它在 AI 层（`toolCallEngine`）和数据层（`dataService` / stores）之间引入了一个**自描述的 Action 中间层**，使得：
+## 架构图
 
-1. AI 助手能够**创建、修改、删除**时间记录和目标（不再只能查询）
-2. 所有可执行操作统一注册、统一管理，tool definitions **自动从 registry 生成**
-3. 写入操作带有**风险分级 + 用户确认流程**，防止误操作
-4. 架构上与 AI 框架解耦——未来加 MCP/REST adapter 零重构核心
+![Action Registry 架构与确认流程](assets/action-registry-flow.svg)
 
-> 旧文件 `src/services/ai/toolDefinitions.ts` 已标记为 deprecated，仅保留 `ToolDefinition` 类型导出，不再被 toolCallEngine 使用。
+## 它在 AI 对话中的位置
 
----
+完整对话流程见 [AI 助手对话流程](ai-assistant.md)。Registry 位于 `toolCallEngine` 和数据层之间：
 
-## 架构
+1. `toolCallEngine` 启动时调用 `actionRegistry.toToolDefinitions()`。
+2. LLM 在 thinking 阶段返回 `tool_calls`。
+3. `toolCallEngine` 用 tool name 调 `actionRegistry.get(name)`。
+4. Registry 返回自描述的 `ActionDefinition`。
+5. 引擎根据 `risk` 决定直接执行、弹确认卡片，或拒绝无确认机制的写入。
+6. action handler 返回 `ActionResult.message`，作为 tool message 进入下一轮 LLM 综合。
 
-```
-┌───────────────────────────────────────────────────┐
-│                   消费者层                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────┐ │
-│  │ AI 助手      │  │ 未来: MCP    │  │ 未来: UI │ │
-│  │ (toolCall    │  │  Adapter     │  │  快捷操作 │ │
-│  │  Engine)     │  │              │  │          │ │
-│  └──────┬───────┘  └──────┬───────┘  └────┬─────┘ │
-│         └──────────────────┼───────────────┘       │
-│                    ┌───────▼────────┐              │
-│                    │ Action Registry │              │
-│                    │  (17 actions)  │              │
-│                    └───────┬────────┘              │
-│              ┌─────────────┼─────────────┐        │
-│              ▼             ▼             ▼         │
-│          read (4)     write (8)   maintenance (5) │
-│                    ┌───────┴────────┐              │
-│                    │ dataService /  │              │
-│                    │ stores / syncDb│              │
-│                    └────────────────┘              │
-└───────────────────────────────────────────────────┘
-```
+## ActionDefinition 心智模型
 
-### 关键设计决策
-
-| 决策 | 理由 |
-|---|---|
-| Action 中间层而非直接扩展 tool definitions | 与 AI 框架解耦，未来可接 MCP/REST/UI 快捷操作 |
-| 每个 action 一个文件 | 职责清晰、易于增删、避免巨型文件 |
-| 风险分级（none / low / high） | 读操作无需确认，低风险简单确认，高风险详细变更列表 |
-| Promise-based 确认流程 | 暂停 tool call 循环 → 等待用户确认 → 恢复执行，无需修改 LLM 协议 |
-| 不修改 dataService / stores | 零风险，action handler 是现有 API 的消费者 |
-
----
-
-## 文件结构
-
-```
-src/services/actions/
-├── types.ts                 # 核心类型定义
-├── registry.ts              # ActionRegistry 单例
-├── index.ts                 # 注册全部 17 个 action，导出 registry
-├── read/
-│   ├── queryTimeEntries.ts  # 查询时间记录（从旧 toolDefinitions 迁移）
-│   ├── listCategories.ts    # 列出分类
-│   ├── listGoals.ts         # 列出目标
-│   └── searchMemos.ts       # 检索 entry memo（按时间范围/关键字）
-├── write/
-│   ├── addEntry.ts          # 新增时间记录
-│   ├── updateEntry.ts       # 修改时间记录
-│   ├── deleteEntry.ts       # 删除时间记录（软删除）
-│   ├── mergeEntries.ts      # 合并多条记录
-│   ├── splitEntry.ts        # 拆分一条记录
-│   ├── addGoal.ts           # 新增目标
-│   ├── updateGoal.ts        # 修改目标
-│   └── deleteGoal.ts        # 删除目标（软删除）
-└── maintenance/
-    ├── findOverlaps.ts      # 检测时间重叠
-    ├── findGaps.ts          # 检测时间空隙
-    ├── findAnomalies.ts     # 检测异常记录
-    ├── autoCategorize.ts    # 自动分类
-    └── batchUpdate.ts       # 批量修改
-```
-
-**修改的现有文件：**
-
-| 文件 | 改动说明 |
-|---|---|
-| `src/services/ai/toolCallEngine.ts` | 导入 `actionRegistry` 替代 `TOOL_DEFINITIONS` / `executeTool`；新增 `onConfirmRequired` 回调；system prompt 动态注入写操作指引 |
-| `src/services/ai/toolDefinitions.ts` | 标记为 deprecated，仅保留 `ToolDefinition` 类型导出 |
-| `src/components/AIAssistant/AIAssistant.tsx` | 新增 `pendingConfirmation` 状态、确认/取消 handler、渲染 ConfirmationCard |
-| `src/components/AIAssistant/ConfirmationCard.tsx` | 新增：确认卡片组件 |
-| `src/components/AIAssistant/ConfirmationCard.css` | 新增：确认卡片样式 |
-
----
-
-## 核心类型
+每个 action 都是一个小型、可描述、可执行的本地能力：
 
 ```typescript
-// src/services/actions/types.ts
-
-type ActionCategory = 'read' | 'write' | 'maintenance';
-type RiskLevel = 'none' | 'low' | 'high';
-
 interface ActionDefinition {
-  name: string;                    // AI tool name，如 'add_entry'
-  description: string;             // 自然语言描述，供 AI 理解
-  category: ActionCategory;
-  risk: RiskLevel;
-  parameters: Record<string, unknown>;  // JSON Schema 格式
-  handler: (params) => Promise<ActionResult>;
-  confirm?: (params) => Promise<ConfirmationCard>;  // 写操作必须有
-}
-
-interface ActionResult {
-  success: boolean;
-  data?: unknown;
-  message: string;  // 自然语言结果，供 AI 回传给用户
-}
-
-interface ConfirmationCard {
-  title: string;
+  name: string;
   description: string;
-  changes: ConfirmationChange[];   // 具体变更清单
-  risk: RiskLevel;
+  category: 'read' | 'write' | 'maintenance';
+  risk: 'none' | 'low' | 'high';
+  parameters: Record<string, unknown>;
+  handler: (params) => Promise<ActionResult>;
+  confirm?: (params) => Promise<ConfirmationCard>;
 }
 ```
 
----
+字段含义：
 
-## 17 个 Action 一览
-
-### 读取（4 个，risk: none）
-
-| Action | 说明 | 参数 |
+| 字段 | 给谁用 | 作用 |
 |---|---|---|
-| `query_time_entries` | 查询时间记录 + 统计 | `start_date`, `end_date`, `category?`, `goal?` |
-| `list_categories` | 列出全部分类 | 无 |
-| `list_goals` | 列出日期范围内目标 | `start_date`, `end_date` |
-| `search_memos` | 检索带 memo 的 entry（按时间范围/关键字） | `start_date?`, `end_date?`, `query?`, `limit?` |
+| `name` | LLM + registry | tool name，必须唯一 |
+| `description` | LLM | 帮模型判断何时调用 |
+| `parameters` | LLM | JSON Schema，限制和解释入参 |
+| `category` | 开发者 + prompt | 区分读取、写入、维护 |
+| `risk` | `toolCallEngine` | 决定是否需要用户确认 |
+| `confirm` | UI 确认流程 | 把参数转换成用户能看懂的变更卡片 |
+| `handler` | 本地执行 | 读写 IndexedDB、stores、syncDb，返回自然语言结果 |
 
-### 写入（8 个）
+## 三类 Action
 
-| Action | Risk | 说明 | 关键参数 |
-|---|---|---|---|
-| `add_entry` | low | 新增时间记录 | `date`, `startTime`, `endTime`, `categoryName`, `description?` |
-| `update_entry` | low | 修改时间记录 | `entryId`, `startTime?`, `endTime?`, `categoryName?`, `description?` |
-| `delete_entry` | high | 软删除时间记录 | `entryId` |
-| `merge_entries` | high | 合并多条相邻记录 | `entryIds` (数组) |
-| `split_entry` | low | 在指定时间点拆分记录 | `entryId`, `splitTime` |
-| `add_goal` | low | 新增目标 | `date`, `name`, `targetMinutes` |
-| `update_goal` | low | 修改目标 | `goalId`, `name?`, `targetMinutes?` |
-| `delete_goal` | high | 软删除目标 | `goalId` |
+| 分类 | 数量 | 风险特点 | 用途 |
+|---|---:|---|---|
+| read | 4 | `risk: none` | 查询时间记录、分类、目标、memo |
+| write | 8 | `risk: low/high` | 新增、修改、删除、合并、拆分记录或目标 |
+| maintenance | 5 | `none/low/high` 混合 | 检测重叠/空隙/异常，自动分类，批量修改 |
 
-### 维护（5 个）
-
-| Action | Risk | 说明 |
-|---|---|---|
-| `find_overlaps` | none | 检测指定日期范围内时间重叠 |
-| `find_gaps` | none | 检测指定日期范围内时间空隙（>= 阈值分钟） |
-| `find_anomalies` | none | 检测异常记录（超长、超短、未结束） |
-| `auto_categorize` | low | 根据历史记录推断未分类记录的分类 |
-| `batch_update` | high | 批量修改符合条件的记录（分类、描述等） |
-
-### ID 匹配机制
-
-所有写操作的 `entryId` / `goalId` 支持**前缀匹配**（最少 8 字符 UUID 前缀）。`query_time_entries` 返回结果中会带上每条记录的前 8 位 ID，AI 可直接引用。
-
-### 分类名模糊匹配
-
-`addEntry`、`updateEntry`、`autoCategorize`、`batchUpdate` 等操作支持按分类名称模糊查找，无需用户记住分类 ID。
-
----
+当前注册入口是 `src/services/actions/index.ts`，所有 action 文件都在 `src/services/actions/{read,write,maintenance}/` 下。
 
 ## 确认流程
 
-写操作执行前会经过**建议 → 确认 → 执行**三步：
+确认流程是 Registry 最关键的安全设计。它只在 `risk !== 'none'` 时触发。
 
+```text
+LLM tool_call
+  -> actionRegistry.get(name)
+  -> risk === none ? handler(params)
+  -> risk !== none ? confirm(params)
+  -> AIAssistant 显示 ConfirmationCard
+  -> 用户确认：handler(params)
+  -> 用户取消：返回“用户取消了此操作”
+  -> ActionResult.message 作为 tool result 回到模型
 ```
-1. AI 调用 tool（如 delete_entry）
-2. toolCallEngine 检测到 action 有 confirm 方法 → 调用 confirm(params)
-3. confirm() 返回 ConfirmationCard（变更描述 + 风险级别）
-4. toolCallEngine 调用 onConfirmRequired(card) → 返回 Promise<boolean>
-5. AIAssistant 渲染 ConfirmationCard 组件，等待用户点击
-6. 用户点击"确认执行" → Promise resolve(true) → handler 执行
-   用户点击"取消"     → Promise resolve(false) → 返回取消信息给 AI
-7. 卡片显示"✓ 已执行"或"已取消"状态 1.5 秒后消失
-```
 
-### ConfirmationCard UI
+几个边界要记住：
 
-- 根据风险级别显示不同颜色边框（低风险：蓝色，高风险：红色）
-- 列出具体变更清单（创建 ＋ / 修改 ✎ / 删除 ✕）
-- 确认后显示已解决状态（1.5 秒后自动消失）
+- **模型不能绕过确认。** 确认由本地 `toolCallEngine` 根据 action risk 强制执行。
+- **没有确认 UI 时不会静默写入。** 如果调用方没有提供 `onConfirmRequired`，风险操作会被拒绝。
+- **取消也是一种 tool result。** 用户取消后，模型会收到取消信息，并在最终回答中说明未执行。
+- **确认卡片必须面向用户。** `confirm()` 的职责不是复述 JSON，而是把参数转成可理解的变更清单。
 
----
+## 数据变更链路
 
-## 如何新增 Action
-
-1. 在对应分类目录（`read/`、`write/`、`maintenance/`）创建新文件
-2. 定义 `ActionDefinition` 对象，包含 name、description、category、risk、parameters、handler
-3. 如果是写操作，必须实现 `confirm` 方法
-4. 在 `src/services/actions/index.ts` 中 import 并 `actionRegistry.register()`
-5. 完成——toolCallEngine 会自动发现新 action 并生成对应的 AI tool definition
-
-无需修改 `toolCallEngine.ts` 或 `toolDefinitions.ts`。
-
-### 数据变更规范
-
-所有写入 handler 必须遵循现有 mutation chain：
+写入类 handler 必须沿用 Chrono 的数据变更链路：
 
 ```typescript
-// 1. 通过 dataService 写入（内部经 syncDb 追踪变更）
 await dataService.entries.add(newEntry);
-
-// 2. 刷新 store 状态
 await useEntryStore.getState().loadEntries();
-
-// 3. 触发同步
 autoPush('action: add_entry');
 ```
 
----
+原因是：
 
-## 未来扩展方向
+- `dataService` 经 `syncDb` 写入，能维护 `version / deviceId / syncStatus / deleted`。
+- store reload 让页面状态与 IndexedDB 一致。
+- `autoPush()` 让可选同步及时感知本地修改。
 
-此架构为以下扩展预留了空间：
+读取可以直接查 `db`，但必须过滤 `deleted` 记录。
 
-- **MCP Adapter**：实现 `MCPServer` 类，内部调用 `actionRegistry`，暴露为 MCP 工具
-- **REST API Adapter**：Express/Hono 路由映射到 `actionRegistry.get(name).handler()`
-- **UI 快捷操作**：某些高频 action 可直接绑定到 UI 按钮，绕过 AI 对话
-- **移动端支持**：目前仅桌面端，action 本身平台无关，扩展到移动端只需 UI 适配
-- **权限控制**：基于 `risk` 级别实现更细粒度的权限管理
-- **Action 组合**：多个 action 组成 workflow（如"整理今天的记录" = find_overlaps + merge_entries + auto_categorize）
+## Action 列表速查
+
+### Read
+
+| Action | 作用 |
+|---|---|
+| `query_time_entries` | 查询时间记录并统计时长 |
+| `list_categories` | 列出活动分类 |
+| `list_goals` | 列出日期范围内目标 |
+| `search_memos` | 按日期和关键词检索 memo |
+
+### Write
+
+| Action | Risk | 作用 |
+|---|---|---|
+| `add_entry` | low | 新增时间记录 |
+| `update_entry` | low | 修改时间记录 |
+| `delete_entry` | high | 软删除时间记录 |
+| `merge_entries` | high | 合并多条记录 |
+| `split_entry` | low | 拆分记录 |
+| `add_goal` | low | 新增目标 |
+| `update_goal` | low | 修改目标 |
+| `delete_goal` | high | 软删除目标 |
+
+### Maintenance
+
+| Action | Risk | 作用 |
+|---|---|---|
+| `find_overlaps` | none | 检测时间重叠 |
+| `find_gaps` | none | 检测空隙 |
+| `find_anomalies` | none | 检测异常记录 |
+| `auto_categorize` | low | 根据历史推断未分类记录 |
+| `batch_update` | high | 批量修改符合条件的记录 |
+
+## 新增 Action 的检查清单
+
+1. 在 `read/`、`write/` 或 `maintenance/` 下新增一个 action 文件。
+2. 写清楚 `description` 和 `parameters`，让模型知道何时调用、怎么传参。
+3. 正确设置 `risk`：只读为 `none`，会改数据的通常是 `low` 或 `high`。
+4. 写入或高风险维护操作实现 `confirm()`，把参数转成用户能确认的 `ConfirmationCard`。
+5. handler 走 `dataService -> store reload -> autoPush`，不要直接绕过同步链路写 `db`。
+6. 在 `src/services/actions/index.ts` 注册 action。
+7. 用 AI 页面或 `npm run ai:debug` 走一遍：模型是否选对 action，确认卡片是否可理解，tool result 是否足够模型生成最终回答。
+
+## 调试重点
+
+| 现象 | 优先检查 |
+|---|---|
+| 模型不调用工具 | action `description` 是否清楚，system prompt 是否要求查数据 |
+| 参数不稳定 | `parameters` schema 是否限制太松，字段名是否贴近日常语言 |
+| 确认卡片看不懂 | `confirm()` 是否只展示了原始 JSON，应改成变更清单 |
+| 写入后 UI 不刷新 | handler 是否漏了 store reload |
+| 多设备不同步 | handler 是否绕过 `dataService` 或漏了 `autoPush()` |
+| 最终回答没用工具结果 | `ActionResult.message` 是否太结构化或信息不足 |

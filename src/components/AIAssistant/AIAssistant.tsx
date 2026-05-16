@@ -67,50 +67,86 @@ function copyToClipboard(text: string) {
   });
 }
 
+/** 格式化耗时：XXX ms / X.Xs / Xm Ys */
+function formatDuration(ms: number): string {
+  if (!Number.isFinite(ms) || ms < 0) return '';
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
+  const m = Math.floor(ms / 60_000);
+  const s = Math.round((ms % 60_000) / 1000);
+  return `${m}m${s}s`;
+}
+
 const PhasesIndicator: React.FC<{
-  phases: Array<{ key: string; detail?: string; level?: number; failed?: boolean; debugInfo?: string }>;
+  phases: Array<{ key: string; detail?: string; level?: number; failed?: boolean; debugInfo?: string; at?: number }>;
   loading?: boolean;
-}> = ({ phases, loading }) => (
-  <div className="ai-phases">
-    {phases.map((p, i) => {
-      const cfg = PHASE_CONFIG[p.key] || { icon: '⏳', label: '处理中' };
-      const isActive = loading && i === phases.length - 1;
-      const level = p.level || 0;
-      const hasDebug = !!p.debugInfo && !isActive;
+}> = ({ phases, loading }) => {
+  // 活跃阶段：每 200ms 刷新 1 次（仅在还在运行时）
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    if (!loading) return;
+    const t = setInterval(() => forceTick(x => x + 1), 200);
+    return () => clearInterval(t);
+  }, [loading]);
 
-      const statusIcon = isActive
-        ? <span className="ai-phase-spinner" />
-        : p.failed
-          ? <span className="ai-phase-cross">✗</span>
-          : <span className="ai-phase-check">✓</span>;
+  const now = Date.now();
+  return (
+    <div className="ai-phases">
+      {phases.map((p, i) => {
+        const cfg = PHASE_CONFIG[p.key] || { icon: '⏳', label: '处理中' };
+        const isActive = loading && i === phases.length - 1;
+        const level = p.level || 0;
+        const hasDebug = !!p.debugInfo && !isActive;
 
-      const labelText = p.detail || (isActive ? `${cfg.label}...` : cfg.label);
+        // 耗时计算：下一阶段的 at - 本阶段的 at；最后一项且在 loading 中 → now - at
+        const next = phases[i + 1];
+        let durationMs: number | undefined;
+        if (p.at) {
+          if (next?.at) durationMs = next.at - p.at;
+          else if (isActive) durationMs = now - p.at;
+        }
+        const durationLabel = durationMs !== undefined ? formatDuration(durationMs) : '';
 
-      return (
-        <div
-          key={i}
-          className={`ai-phase ${isActive ? 'ai-phase-active' : p.failed ? 'ai-phase-failed' : 'ai-phase-done'}`}
-          style={level > 0 ? { paddingLeft: `${level * 20}px` } : undefined}
-        >
-          {statusIcon}
-          <span className="ai-phase-icon">{cfg.icon}</span>
-          {hasDebug ? (
-            <details className="ai-phase-debug">
-              <summary className="ai-phase-debug-summary">
+        const statusIcon = isActive
+          ? <span className="ai-phase-spinner" />
+          : p.failed
+            ? <span className="ai-phase-cross">✗</span>
+            : <span className="ai-phase-check">✓</span>;
+
+        const labelText = p.detail || (isActive ? `${cfg.label}...` : cfg.label);
+
+        const durationBadge = durationLabel
+          ? <span className="ai-phase-duration">{durationLabel}</span>
+          : null;
+
+        return (
+          <div
+            key={i}
+            className={`ai-phase ${isActive ? 'ai-phase-active' : p.failed ? 'ai-phase-failed' : 'ai-phase-done'}`}
+            style={level > 0 ? { paddingLeft: `${level * 20}px` } : undefined}
+          >
+            {statusIcon}
+            <span className="ai-phase-icon">{cfg.icon}</span>
+            {hasDebug ? (
+              <details className="ai-phase-debug">
+                <summary className="ai-phase-debug-summary">
+                  {labelText}
+                  {durationBadge}
+                </summary>
+                <pre className="ai-phase-debug-content">{p.debugInfo}</pre>
+              </details>
+            ) : (
+              <span className="ai-phase-label">
                 {labelText}
-              </summary>
-              <pre className="ai-phase-debug-content">{p.debugInfo}</pre>
-            </details>
-          ) : (
-            <span className="ai-phase-label">
-              {labelText}
-            </span>
-          )}
-        </div>
-      );
-    })}
-  </div>
-);
+                {durationBadge}
+              </span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 export const AIAssistant: React.FC = () => {
   const { config, messages, addMessage, updateMessage, clearMessages, isConfigured } = useAIStore();
@@ -134,7 +170,7 @@ export const AIAssistant: React.FC = () => {
     ? isAuthenticated
     : aiMode === 'byo' && isConfigured();
   // 阶段累积：每次发送前重置，onPhase 调用时追加
-  const phasesRef = useRef<Array<{ key: string; detail?: string; level?: number; failed?: boolean; debugInfo?: string }>>([]);
+  const phasesRef = useRef<Array<{ key: string; detail?: string; level?: number; failed?: boolean; debugInfo?: string; at?: number }>>([]);
   const handleOpenServices = useCallback(() => {
     navigateToTab('export');
   }, []);
@@ -209,7 +245,7 @@ export const AIAssistant: React.FC = () => {
               updated[updated.length - 1] = { ...updated[updated.length - 1], detail: detail ?? updated[updated.length - 1].detail, debugInfo };
               phasesRef.current = updated;
             } else {
-              phasesRef.current = [...prev, { key: phase, detail, debugInfo }];
+              phasesRef.current = [...prev, { key: phase, detail, debugInfo, at: Date.now() }];
             }
             updateMessage(aiMsgId, { phases: [...phasesRef.current] });
           },

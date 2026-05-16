@@ -23,6 +23,8 @@ export interface ChatMessage {
     failed?: boolean;
     /** 可折叠的详细调试信息（JSON、prompt 文本等） */
     debugInfo?: string;
+    /** 阶段开始时间戳（ms），用于计算耗时 */
+    at?: number;
   }>;
   /** thinking 模型输出的推理过程（流式累积） */
   thinking?: string;
