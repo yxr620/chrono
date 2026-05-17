@@ -85,6 +85,9 @@ test('raw stream responses pipe chunks via respObj.write when FC provides a stre
   assert.equal(status, 200);
   assert.equal(headers['Content-Type'], 'text/event-stream');
   assert.equal(headers['X-Chrono-Streaming'], 'true');
+  assert.equal(headers['Cache-Control'], 'no-cache, no-transform');
+  assert.equal(headers['X-Accel-Buffering'], 'no');
+  assert.equal(headers['Connection'], 'keep-alive');
   assert.equal(writes.length, 2);
   const decoded = writes.map(c => new TextDecoder().decode(c)).join('');
   assert.equal(decoded, 'data: hello\n\ndata: world\n\n');

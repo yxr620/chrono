@@ -167,6 +167,14 @@ export const handler = async (arg1: unknown, arg2: unknown): Promise<unknown> =>
         }
         Object.entries(cors).forEach(([k, v]) => respObj.setHeader(k, v));
         respObj.setHeader('Content-Type', raw.contentType);
+        // SSE 防中间层缓冲。FC 前置代理（nginx 系）默认会 buffer text/event-stream
+        // 直到响应结束才一次性下发；no-transform 同时阻止网关 gzip 重压缩——
+        // gzip 需要凑够字节才能推一帧，是 SSE 卡顿的常见隐藏原因。
+        if (raw.contentType.includes('text/event-stream')) {
+          respObj.setHeader('Cache-Control', 'no-cache, no-transform');
+          respObj.setHeader('X-Accel-Buffering', 'no');
+          respObj.setHeader('Connection', 'keep-alive');
+        }
         respObj.setHeader('X-Chrono-Streaming', canStream ? 'true' : 'false');
         if (!canStream) {
           respObj.setHeader('X-Chrono-Stream-Reason', 'respObj-missing-write');

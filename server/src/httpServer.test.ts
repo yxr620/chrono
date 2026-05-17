@@ -78,6 +78,9 @@ test('custom runtime HTTP server streams raw SSE chunks before the upstream stre
   assert.equal(response.statusCode, 200);
   assert.match(String(response.headers['content-type']), /^text\/event-stream/);
   assert.equal(response.headers['x-chrono-streaming'], 'true');
+  assert.equal(response.headers['cache-control'], 'no-cache, no-transform');
+  assert.equal(response.headers['x-accel-buffering'], 'no');
+  assert.equal(response.headers['connection'], 'keep-alive');
   assert.equal(response.body, 'data: first\n\ndata: second\n\n');
   assert.ok(response.firstChunkAt - startedAt < 100, 'first chunk should arrive before delayed close');
   assert.ok(response.endAt - response.firstChunkAt >= 75, 'response should stay open after first chunk');
