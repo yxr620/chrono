@@ -12,9 +12,9 @@ Action Registry 是 AI 助手的本地工具层。它把「模型想做什么」
 
 完整对话流程见 [AI 助手对话流程](ai-assistant.md)。Registry 位于 `toolCallEngine` 和数据层之间：
 
-1. `toolCallEngine` 启动时调用 `actionRegistry.toToolDefinitions()`。
-2. LLM 在 thinking 阶段返回 `tool_calls`。
-3. `toolCallEngine` 用 tool name 调 `actionRegistry.get(name)`。
+1. `toolCallEngine` 启动时调用 `actionRegistry.toSdkTools(ctx)`，把 action 翻成 SDK Tool 字典。
+2. LLM 在推理后通过 SDK `tool-call` 事件指定调用名 + 参数。
+3. SDK 调用对应 Tool 的 `execute(args)` —— 内部即 `actionRegistry.get(name)` 的 handler 包装（按 risk 决定是否先弹确认）。
 4. Registry 返回自描述的 `ActionDefinition`。
 5. 引擎根据 `risk` 决定直接执行、弹确认卡片，或拒绝无确认机制的写入。
 6. action handler 返回 `ActionResult.message`，作为 tool message 进入下一轮 LLM 综合。
