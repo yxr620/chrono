@@ -193,20 +193,26 @@ export const TimeEntryForm: React.FC = () => {
     return () => clearTimeout(timer);
   }, [activity]);
 
-  // 当从记录列表或时间轴点击时，自动设置开始时间和结束时间
+  // 当从记录列表或时间轴点击时，自动设置开始时间和结束时间。
+  // 直接使用真实时间，跨日点击会同步切换 selectedDate，避免"凌晨穿越"。
   useEffect(() => {
     if (!nextStartTime) return;
 
     const normalizedStart = ensureDate(nextStartTime);
-    setStartTime(alignDateWithTime(normalizedStart, selectedDate));
+    setStartTime(normalizedStart);
+
+    const newDateStr = dayjs(normalizedStart).format('YYYY-MM-DD');
+    if (newDateStr !== selectedDate) {
+      setSelectedDate(newDateStr);
+    }
 
     if (nextEndTime) {
-      setEndTime(alignDateWithTime(ensureDate(nextEndTime), selectedDate));
+      setEndTime(ensureDate(nextEndTime));
     } else {
       setEndTime(null);
     }
     setTimeRange(null, null);
-  }, [nextStartTime, nextEndTime, selectedDate, setTimeRange]);
+  }, [nextStartTime, nextEndTime, selectedDate, setSelectedDate, setTimeRange]);
 
   // 当选中的日期发生变化时，更新开始时间
   useEffect(() => {
@@ -215,7 +221,7 @@ export const TimeEntryForm: React.FC = () => {
 
     const lastEndTime = getLastEntryEndTimeForDate(selectedDate);
     if (lastEndTime) {
-      setStartTime(alignDateWithTime(ensureDate(lastEndTime), selectedDate));
+      setStartTime(ensureDate(lastEndTime));
     } else {
       setStartTime(dayjs(selectedDate).startOf('day').toDate());
     }
@@ -235,7 +241,7 @@ export const TimeEntryForm: React.FC = () => {
       lastTs !== prevTs &&
       Math.abs(startTime.getTime() - prevTs) < 5000
     ) {
-      setStartTime(alignDateWithTime(new Date(lastTs), selectedDate));
+      setStartTime(new Date(lastTs));
     }
 
     lastEndAnchorRef.current = lastTs;
@@ -331,7 +337,7 @@ export const TimeEntryForm: React.FC = () => {
   const getNextStartTime = () => {
     const lastEndTime = getLastEntryEndTimeForDate(selectedDate);
     return lastEndTime
-      ? alignDateWithTime(ensureDate(lastEndTime), selectedDate)
+      ? ensureDate(lastEndTime)
       : alignDateWithTime(new Date(), selectedDate);
   };
 
@@ -357,9 +363,17 @@ export const TimeEntryForm: React.FC = () => {
   };
 
   const handleStopTracking = async () => {
+    const stopDateStr = dayjs().format('YYYY-MM-DD');
     await stopTracking();
     showToast('已停止计时', 'success');
-    setStartTime(getNextStartTime());
+    // 跨午夜停止：切到 endTime 所在的日期，让下一条预设跟着真实活动走，
+    // 而不是把跨夜的 endTime 倒回到起始日凌晨。
+    // selectedDate effect 会基于新日期重设 startTime。
+    if (stopDateStr !== selectedDate) {
+      setSelectedDate(stopDateStr);
+    } else {
+      setStartTime(getNextStartTime());
+    }
   };
 
   const handleSaveManualEntry = async () => {
@@ -601,7 +615,7 @@ export const TimeEntryForm: React.FC = () => {
           {/* 时间显示行：时间 + 箭头对齐 */}
           {(() => {
             const lastEndTime = getLastEntryEndTimeForDate(selectedDate);
-            const lastEndDate = lastEndTime ? alignDateWithTime(ensureDate(lastEndTime), selectedDate) : null;
+            const lastEndDate = lastEndTime ? ensureDate(lastEndTime) : null;
             const startIsLastEnd = lastEndDate !== null &&
               Math.abs(dayjs(startTime).diff(dayjs(lastEndDate), 'second')) < 5;
             return (
