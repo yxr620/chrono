@@ -77,6 +77,8 @@ Per-feature mode (`disabled` / `byo` / `managed`) is stored in `chrono_feature_m
 
 Backend code: `server/src/`. Deploy with `server/deploy.sh` then upload the resulting zip in the Aliyun FC console. Operator runbook: `server/RUNBOOK.md`. Full design (archived): `docs/superpowers/archive/2026-04-21-managed-services.md`.
 
+**Two FC functions exist** for historical reasons: `chrono-api` (legacy, HTTP request-response trigger — buffered) and `chrono-api-web` (Web 函数 / Custom Runtime — supports true SSE streaming, required for accurate AI assistant phase timing). `chrono-api` is kept alive because shipped clients have the old URL compiled into their build; deleting it would break already-installed APKs. New deploys go to `chrono-api-web`; the same zip can be uploaded to both. Both `.env.local` and `.env.production` must point to `chrono-api-web` so dev matches release.
+
 ### Multi-Device Sync
 Optional. Two modes: BYO (user-supplied OSS keys) or Managed (signed STS tokens via the Chrono backend). Architecture: oplog (operation log) + snapshot (full state), LWW merge strategy. Both modes write to the same `sync/{userId}/` prefix and converge across modes. See Managed Services section.
 
