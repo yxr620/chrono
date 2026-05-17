@@ -404,9 +404,15 @@ export const TimeEntryForm: React.FC = () => {
     });
     showToast('记录已保存', 'success');
 
-    const savedEndTime = endTime;
+    // 跨午夜手动补录：切到 endTime 所在日期，让下一条预设跟着真实时间走，
+    // 与 handleStopTracking 走同一路径。
+    const endDateStr = dayjs(endTime).format('YYYY-MM-DD');
     resetForm();
-    setStartTime(alignDateWithTime(savedEndTime, selectedDate));
+    if (endDateStr !== selectedDate) {
+      setSelectedDate(endDateStr);
+    } else {
+      setStartTime(getNextStartTime());
+    }
   };
 
   // ============ 渲染辅助 ============
