@@ -37,7 +37,7 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
   onClose,
   onSave
 }) => {
-  const { entries } = useEntryStore();
+  const { getLastEndTimeBeforeOrAt } = useEntryStore();
   const { goals, loadGoals } = useGoalStore();
   const { categories, loadCategories } = useCategoryStore();
   const [activity, setActivity] = useState('');
@@ -163,29 +163,9 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
     onClose();
   };
 
-  // 获取"上次结束"时间：当前 startTime 之前（含相等），endTime 最大的那条记录的 endTime。
-  // 这样"上次"是相对于正在编辑的这条 entry 在时间轴上的位置，而不是数据库里 startTime 最新的那条。
-  const getLastEndTime = (): Date | null => {
-    if (!entry) return null;
-    const startMs = startTime.getTime();
-    let best: Date | null = null;
-    let bestMs = -Infinity;
-    for (const e of entries) {
-      if (e.id === entry.id) continue;
-      if (e.endTime === null) continue;
-      const end = e.endTime instanceof Date ? e.endTime : new Date(e.endTime);
-      const endMs = end.getTime();
-      if (endMs <= startMs && endMs > bestMs) {
-        bestMs = endMs;
-        best = end;
-      }
-    }
-    return best;
-  };
-
-  // 设置开始时间为"上次结束"
+  // 设置开始时间为"上次结束"：取 startTime 之前（含相等）endTime 最大的那条记录。
   const setStartTimeToLastEnd = () => {
-    const lastEndTime = getLastEndTime();
+    const lastEndTime = getLastEndTimeBeforeOrAt(startTime, entry?.id);
     if (lastEndTime) {
       setStartTime(lastEndTime);
       showToast('已设为上次结束时间', 'success');

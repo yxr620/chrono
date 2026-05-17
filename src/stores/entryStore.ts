@@ -21,6 +21,7 @@ interface EntryStore {
   setTimeRange: (startTime: Date | null, endTime: Date | null) => void;
   getLastEntryEndTime: () => Date | null;
   getLastEntryEndTimeForDate: (date: string) => Date | null;
+  getLastEndTimeBeforeOrAt: (time: Date, excludeId?: string) => Date | null;
   getEarliestEntryDate: () => string | null;
 }
 
@@ -121,22 +122,40 @@ export const useEntryStore = create<EntryStore>((set, get) => ({
     const dayStart = dayjs(date).startOf('day');
     const dayEnd = dayjs(date).endOf('day');
 
-    // 筛选该日期内的已完成记录
-    const dateEntries = entries.filter(e => {
-      if (!e.endTime) return false;
+    // 与当天有交集的已完成记录：endTime 截断到 dayEnd，取最大值。
+    // 这样跨日记录在 endDate 这一侧也能被找到（题主原型：5/17 23:30→5/18 00:30 在 5/18 返回 00:30）；
+    // 跨日去明天的记录在起始日被 clip 到 23:59，避免"凌晨穿越"。
+    let bestMs = -Infinity;
+    for (const e of entries) {
+      if (!e.endTime) continue;
       const entryStart = dayjs(e.startTime);
-      // 记录的开始时间在当天范围内
-      return entryStart.isAfter(dayStart) && entryStart.isBefore(dayEnd);
-    });
+      const entryEnd = dayjs(e.endTime);
+      if (!entryStart.isBefore(dayEnd) || !entryEnd.isAfter(dayStart)) continue;
+      const clipped = Math.min(entryEnd.valueOf(), dayEnd.valueOf());
+      if (clipped > bestMs) bestMs = clipped;
+    }
 
-    if (dateEntries.length === 0) return null;
+    return bestMs === -Infinity ? null : new Date(bestMs);
+  },
 
-    // 按结束时间排序，取最新的
-    const sortedByEndTime = dateEntries.sort((a, b) =>
-      new Date(b.endTime!).getTime() - new Date(a.endTime!).getTime()
-    );
-
-    return sortedByEndTime[0].endTime;
+  // 找出 endTime <= time 的所有已完成记录中，endTime 最大的那条。
+  // 按时间轴前驱衔接，不受 selectedDate 限制，跨日记录也能找到。
+  getLastEndTimeBeforeOrAt: (time: Date, excludeId?: string) => {
+    const { entries } = get();
+    const ts = time.getTime();
+    let best: Date | null = null;
+    let bestMs = -Infinity;
+    for (const e of entries) {
+      if (excludeId && e.id === excludeId) continue;
+      if (!e.endTime) continue;
+      const end = e.endTime instanceof Date ? e.endTime : new Date(e.endTime);
+      const endMs = end.getTime();
+      if (endMs <= ts && endMs > bestMs) {
+        bestMs = endMs;
+        best = end;
+      }
+    }
+    return best;
   },
 
   // 获取最早记录的日期（YYYY-MM-DD 格式）
