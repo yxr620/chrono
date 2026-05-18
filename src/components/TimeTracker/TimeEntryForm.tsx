@@ -29,14 +29,15 @@ import { CategoryPicker, GoalPicker } from '../common/EntryFields';
 const ensureDate = (value: Date | string): Date =>
   value instanceof Date ? value : new Date(value);
 
-const alignDateWithTime = (time: Date, dateStr: string): Date => {
-  const base = dayjs(dateStr);
-  const timePart = dayjs(time);
-  return base
-    .hour(timePart.hour())
-    .minute(timePart.minute())
-    .second(timePart.second())
-    .millisecond(timePart.millisecond())
+// 「dateStr 当天 + 此刻时分秒」的空白回落值——自动 startTime 找不到 lastEndTime 时统一使用。
+// 今天 → now；过去/未来日 → 该日的"当前时刻镜像"。
+const fallbackStartTime = (dateStr: string): Date => {
+  const now = dayjs();
+  return dayjs(dateStr)
+    .hour(now.hour())
+    .minute(now.minute())
+    .second(now.second())
+    .millisecond(now.millisecond())
     .toDate();
 };
 
@@ -164,7 +165,7 @@ export const TimeEntryForm: React.FC = () => {
       await Promise.all([loadGoals(), loadCategories(), loadEntries()]);
       const today = dayjs().format('YYYY-MM-DD');
       const lastEndTime = getLastEntryEndTimeForDate(today);
-      setStartTime(lastEndTime ? ensureDate(lastEndTime) : new Date());
+      setStartTime(lastEndTime ? ensureDate(lastEndTime) : fallbackStartTime(today));
     };
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -223,7 +224,7 @@ export const TimeEntryForm: React.FC = () => {
     if (lastEndTime) {
       setStartTime(ensureDate(lastEndTime));
     } else {
-      setStartTime(dayjs(selectedDate).startOf('day').toDate());
+      setStartTime(fallbackStartTime(selectedDate));
     }
     setEndTime(null);
   }, [selectedDate, startTime, getLastEntryEndTimeForDate]);
@@ -338,7 +339,7 @@ export const TimeEntryForm: React.FC = () => {
     const lastEndTime = getLastEntryEndTimeForDate(selectedDate);
     return lastEndTime
       ? ensureDate(lastEndTime)
-      : alignDateWithTime(new Date(), selectedDate);
+      : fallbackStartTime(selectedDate);
   };
 
   const handleStartTracking = async () => {

@@ -10,11 +10,11 @@
 
 本应用为**个人使用**设计。无论是否联网，都是一个人记录自己日常生活的时间流水。
 
-**设计理念：** 记录生活流水账。例如 11:00-12:18 在学习，12:18-12:47 在吃饭，12:47-13:00 在排队……以此完整还原一天的时间使用。建议利用琐碎时间（排队、等人等）进行记录，保持记录的连续性。
+**设计理念：** 记录生活流水账。例如 11:00-12:18 在学习，12:18-12:47 在吃饭，12:47-13:00 在排队……以此完整还原一天的时间使用。建议利用琐碎时间（排队、坐电梯等）进行记录，保持记录的连续性。
 
 ### 目标管理理念
 
-本应用的目标管理是**基于每天的时间投入统计**。每天创建目标，统计该目标关联了多少时间记录、总共花了多少时间。不存在"完成/未完成/进行中"这类状态指标——核心关注的是**你在每件事上投入了多少时间**。
+本应用的目标管理是**基于每天的时间投入统计**。每天创建目标，统计该目标关联了多少时间记录、总共花了多少时间。不存在"完成/未完成/进行中"这类状态指标——核心关注的是**你在每件事上投入了多少时间**。虽然有打卡的目标，但是这种只是作为提醒的存在，不算重要的目标。
 
 ## 技术栈
 
@@ -23,9 +23,9 @@
 | UI | React 18 + Ionic React 8 + TypeScript |
 | 状态管理 | Zustand 5 |
 | 持久化 | Dexie.js 4（IndexedDB，数据库名 `TimeTrackerDB`） |
-| 构建（Web/Android） | Vite 7 |
-| 构建（macOS） | Electron 26（通过 `@capacitor-community/electron`） |
-| 多平台桥接 | Capacitor 7 |
+| 构建工具 | Vite 7（所有平台共用） |
+| 桌面壳（macOS） | Electron 26（通过 `@capacitor-community/electron`） |
+| 移动壳 | Capacitor 7（Android / iOS） |
 | 日期处理 | Day.js |
 | 图表 | Recharts 3 |
 | 字体 | Fontsource 本地打包：Noto Sans SC Variable + JetBrains Mono Variable |
@@ -96,82 +96,41 @@ window.innerWidth  < 1024 → MobileLayout（底部 tab 栏）
 
 ## 目录结构
 
+> 仅列出目录级结构 + 用途说明。文件级清单以 IDE / `ls` 为准，避免文档与代码漂移。
+
 ```
 src/
-├── App.tsx                    # 根组件：路由、布局切换、启动时 Pull
-├── App.css
-├── types/                     # 共享 TypeScript 类型
+├── App.tsx                # 根组件：路由、布局切换、启动时 Pull
+├── main.tsx               # React 入口
+├── index.css / App.css    # 全局样式 + 字体 token
+├── assets/                # 静态资源（图标等）
 │
-├── stores/                    # Zustand 状态管理（8 个 store）
-│   ├── entryStore.ts          # 时间记录 CRUD + 计时器
-│   ├── goalStore.ts           # 目标 CRUD
-│   ├── categoryStore.ts       # 分类（6 个预设 + 自定义类别 CRUD）
-│   ├── dateStore.ts           # 全局选中日期
-│   ├── syncStore.ts           # 同步状态 + 自动同步开关
-│   ├── aiStore.ts             # AI 配置 + 对话历史
-│   ├── authStore.ts           # Managed 模式登录态、JWT
-│   └── featureModeStore.ts    # 每个付费功能的模式（off / byo / managed）
+├── stores/                # Zustand 状态管理（8 个 store，详见"状态管理"节）
 │
-├── services/                  # 数据层与业务逻辑
-│   ├── db.ts                  # Dexie Schema、Syncable 接口、辅助函数
-│   ├── syncDb.ts              # 同步感知的 CRUD 封装（自动记录 oplog）
-│   ├── dataService.ts         # 高层数据查询 + 维护工具
-│   ├── syncEngine.ts          # 同步引擎（Push / Pull / LWW 合并）
-│   ├── syncConfig.ts          # 同步配置管理（localStorage）
-│   ├── syncToast.ts           # 同步状态通知事件总线
-│   ├── syncDebugTools.ts      # 控制台调试工具（window.syncDebug）
-│   ├── oss.ts                 # 阿里云 OSS 操作封装
-│   ├── export.ts              # JSON 导入导出
-│   ├── goalSuggester.ts       # 晨间目标智能建议（未完成 + 高频目标，Top 5）
-│   ├── metadataPredictor.ts   # 录入时自动预测类别和目标（精确/子串匹配，纯本地）
-│   ├── autoPush.ts            # 数据变更后自动触发增量 Push（封装 sync 协调逻辑）
-│   ├── authService.ts         # Managed 模式 HTTP 客户端（注册/登录/STS/AI 代理）
-│   ├── userDataService.ts     # 设备/存储/账号管理 API 客户端
-│   ├── gateway/               # PaidFeatureGateway 抽象（BYO ↔ Managed 路由）
-│   ├── actions/               # AI-First Action Registry（read / write / maintenance，详见 docs/action-registry.md）
-│   ├── ai/                    # AI 助手（见 ai-assistant.md）
-│   ├── analysis/              # 数据分析处理器
-│   │   ├── processor.ts       # 数据加载 + 转换管道
-│   │   ├── goalAnalysisProcessor.ts
-│   │   └── goalCluster.ts
-│   └── quickCapture/          # 自然语言快速录入解析（LLM tool_calls → PendingEntry[]）
-│       ├── quickCaptureParse.ts
-│       └── conflictDetection.ts
+├── services/              # 数据层与业务逻辑
+│   ├── db.ts / syncDb.ts / dataService.ts   # Dexie 数据层（三层封装：Schema → 同步感知 CRUD → 高层查询）
+│   ├── syncEngine.ts + sync*.ts             # 同步引擎及配置/调试/事件总线/可用性判断/自动合并
+│   ├── oss.ts / authService.ts / userDataService.ts   # 云端 / Managed 后端客户端
+│   ├── autoPush.ts / appNavigation.ts       # 数据变更自动 Push、应用内导航辅助
+│   ├── goalSuggester.ts / metadataPredictor.ts        # 目标建议、录入元数据预测
+│   ├── export.ts          # JSON 导入导出
+│   ├── gateway/           # PaidFeatureGateway 抽象（BYO ↔ Managed 路由）
+│   ├── actions/           # AI-First Action Registry（详见 action-registry.md）
+│   ├── ai/                # AI 助手（详见 ai-assistant.md）
+│   ├── analysis/          # 数据分析处理器（趋势、目标聚类、配色）
+│   └── quickCapture/      # 自然语言快速录入解析（LLM tool_calls → PendingEntry[]）
 │
-├── components/
-│   ├── ErrorBoundary.tsx      # 全局错误边界
-│   ├── RecordsPage/
-│   ├── TimeTracker/           # TimeEntryForm（内嵌 QuickCaptureButton）
-│   ├── TimelineView/          # 24 小时时间轴
-│   ├── EntryList/             # 列表 + 编辑弹窗 + 滑动删除
-│   ├── QuickCapture/          # 自然语言快速录入（按钮 + Sheet + 解析/复审/编辑视图）
-│   ├── GoalManager/           # 目标 CRUD + TimeInjectionMatrix
-│   ├── Dashboard/             # 数据统计总览
-│   ├── TrendPage/             # 趋势分析
-│   ├── GoalAnalysisPage/      # 目标分析
-│   ├── AIAssistant/           # AI 对话 + 设置
-│   ├── MaintenancePage/       # 数据维护（睡觉补录 + 数据校验 + 类别管理）
-│   ├── SyncManagementPage/    # 同步管理面板（嵌入到 SettingsPage）
-│   ├── Settings/              # SettingsPage（导出 tab 的实际组件，含同步/AI/账号子区块）
-│   ├── Auth/                  # SignInPage（Managed 模式登录弹窗）
-│   ├── Migration/             # 一次性 BYO → Managed 迁移弹窗
-│   ├── Desktop/               # DesktopSidebar
-│   ├── SyncButton/            # SyncButton（手动同步按钮，桌面/设置页）
-│   └── common/                # SyncIndicator、SyncToastListener、WheelTimePicker、EntryFields
+├── components/            # 页面 + 共享组件，每个子目录对应一个页面或功能块
+│                          # （RecordsPage / GoalManager / Dashboard / TrendPage / GoalAnalysisPage /
+│                          #  AIAssistant / MaintenancePage / Settings / SyncManagementPage / Migration /
+│                          #  Auth / Desktop / TimeTracker / TimelineView / EntryList / QuickCapture /
+│                          #  SyncButton / common / ErrorBoundary）
 │
-├── config/
-│   └── categoryColors.ts      # 预设类别默认值 + 自定义类别调色板
-│
-├── hooks/
-│   ├── useAppToast.ts         # 封装 useIonToast，自动注入 top-toast 定位 CSS
-│   ├── useDarkMode.ts         # 暗色模式检测
-│   └── useIOSTimePicker.ts    # iOS 原生滚轮时间选择器 Hook
-│
-├── plugins/
-│   └── iosWheelDateTimePicker.ts  # iOS 原生滚轮时间选择器 Capacitor 插件桥接
-│
-└── utils/
-    └── appToast.ts            # Ionic toast 选项装饰工具（注入 app-top-toast CSS 类）
+├── config/                # 静态配置（类别预设色等）
+├── hooks/                 # 共享 React hooks（useAppToast / useDarkMode / useIOSTimePicker / useManagedAiModel）
+├── plugins/               # Capacitor 原生插件桥接（iOS 滚轮时间选择器等）
+├── types/                 # 共享 TypeScript 类型
+└── utils/                 # 纯函数工具
 ```
 
 ## 环境变量
@@ -255,11 +214,12 @@ interface Syncable {
   deviceId?: string;                 // 最后修改设备的 UUID
   syncStatus?: 'synced' | 'pending'; // 同步状态
   deleted?: boolean;                 // 软删除标记（true = 已删除）
-  updatedAt: Date;                   // LWW 冲突解决时间戳
 }
 ```
 
 **软删除**：应用中的"删除"操作将 `deleted` 置为 `true`，记录不会从 DB 中物理移除，以确保删除操作能同步到其他设备。
+
+**`updatedAt` 不在 `Syncable` 上**：LWW 冲突解决用的时间戳由每个实体各自声明（见下方 `TimeEntry / Goal / Category`），不是混入字段。
 
 ### TimeEntry
 
@@ -272,6 +232,7 @@ interface TimeEntry extends Syncable {
   memo?: string;           // 可选感想/备注，与 activity 分离（v7+）
   categoryId: string | null;  // 关联分类 ID
   goalId: string | null;      // 关联目标 ID
+  customFields?: Record<string, any>;  // 预留扩展槽，新增字段无需迁移 schema
   createdAt: Date;
   updatedAt: Date;
 }
@@ -282,15 +243,28 @@ interface TimeEntry extends Syncable {
 ### Goal
 
 ```typescript
+/**
+ *  - 'time'  : 时间投入型目标（默认）。与 entries 关联，按计时累计时长。
+ *  - 'check' : 打卡/提醒型目标。如"吃药""早点睡"，只追踪是否完成，不参与时长统计。
+ *
+ * 兼容性：缺省/未知 type 一律按 'time' 处理；旧版本读到新字段会忽略。
+ */
+type GoalType = 'time' | 'check';
+
 interface Goal extends Syncable {
-  id: string;      // UUID
+  id: string;          // UUID
   name: string;
-  date: string;    // YYYY-MM-DD
+  date: string;        // YYYY-MM-DD
   color?: string;
+  type?: GoalType;     // 缺省视为 'time'
+  completed?: boolean; // 仅 type === 'check' 使用
+  completedAt?: Date;  // 仅 type === 'check' 使用，最近一次完成时间
   createdAt: Date;
   updatedAt: Date;
 }
 ```
+
+打卡型目标（`type: 'check'`）只作为提醒存在，不计入时长统计，也不在 Dashboard / 趋势分析中累计。
 
 ### Category
 
@@ -410,12 +384,12 @@ dataService.categories.list()
 
 | 触发时机 | 设成什么值 | selectedDate 是否同步 |
 |---------|-----------|-----------|
-| 组件挂载 | 今天的 lastEndTime；无则 `now` | — |
-| `selectedDate` 切换 | 该日 lastEndTime；无则该日 `00:00`（同时清空 endTime） | — |
+| 组件挂载 | 今天的 lastEndTime；无则 `fallbackStartTime(today)` | — |
+| `selectedDate` 切换 | 该日 lastEndTime；无则 `fallbackStartTime(selectedDate)`（同时清空 endTime） | — |
 | 列表/时间轴点击某条记录 | 该条 `endTime`（经 `nextStartTime` 中转，**不再剥时分**） | ✅ 若 endTime 日期 ≠ 当前 selectedDate 则同步切日 |
 | 点「上次结束」徽章 | lastEndTime | ✅ |
 | 点「现在」徽章 | `now` | ✅ |
-| 开始计时 / 停止计时 | `getNextStartTime()`（= lastEndTime 或 `align(now, selectedDate)`） | ✅ 跨午夜停止时切到 endTime 所在日 |
+| 开始计时 / 停止计时 | `getNextStartTime()`（= lastEndTime 或 `fallbackStartTime(selectedDate)`） | ✅ 跨午夜停止时切到 endTime 所在日 |
 | 保存手动记录 | 同上（与 stop 同一路径） | ✅ 跨午夜手动条目同上 |
 | `entries` 数据变化 | 若 startTime 仍锚定旧 lastEndTime（5 秒内），跟随新 lastEndTime；否则不动 | — |
 
@@ -443,12 +417,10 @@ else                              setStartTime(getNextStartTime())
 
 这块是长期优化的承重墙，下面列的都是已知偏差，欢迎在未来 PR 中逐项消除：
 
-1. **Fallback 三处不一致**：组件挂载用 `now`、`selectedDate` 切换用 `00:00`、`getNextStartTime` 的 fallback 用 `alignDateWithTime(now, selectedDate)`。同一种"空白状态"用户会看到三种不同值。建议统一为 `align(now, selectedDate)`（今天 = `now`，过去日 = 当天的当前时分）。
-2. **5 秒锚点容差**可能在用户手动选了一个恰好接近 lastEnd ±5s 的时刻时误判为"未手动改过"。建议改成显式 ref：只在自动赋值时记录"精确赋值的时间戳"，用户任何主动改动清空 ref。
-3. **过去空白日启动 live 计时未拦截**：`handleStartTracking` 只校验 `startTime > new Date()`，允许从 5 天前的 00:00 起跳启动计时器。建议加一条"selectedDate 不能是过去日"的拦截。
-4. **`alignDateWithTime(time, dateStr)`** 工具函数（取 `time` 时分秒套到 `dateStr` 当天）仍保留在 `TimeEntryForm.tsx` 顶部，但**自动 startTime 路径中只剩 `getNextStartTime` 的 fallback 还在用**。其它原本用它处理跨日衔接的地方已全部改为直接使用真实时间。该函数本身没有 bug，只是语义脆弱——一旦输入时间与 `dateStr` 不同天就会"穿越"。新增逻辑不要再调用。
-5. **`dataService.queryEntries` 仍使用 startTime 落桶语义**，与 `getLastEntryEndTimeForDate` 已经统一到的 overlap 语义不一致——Dashboard / Trends 等基于 query 的统计会漏算跨日 entry。属于另一处需要后续统一的地方。
-6. **`getLastEntryEndTime`（不带 ForDate 的版本）** 仍是全表最大 endTime，未参与本次重构。它当前只被 `EditEntryDialog` 之外的少数路径使用，但语义上和 `getLastEndTimeBeforeOrAt(new Date())` 重合，可考虑后续合并。
+1. **5 秒锚点容差**可能在用户手动选了一个恰好接近 lastEnd ±5s 的时刻时误判为"未手动改过"。建议改成显式 ref：只在自动赋值时记录"精确赋值的时间戳"，用户任何主动改动清空 ref。
+2. **过去空白日启动 live 计时未拦截**：`handleStartTracking` 只校验 `startTime > new Date()`，允许从 5 天前的 00:00 起跳启动计时器。建议加一条"selectedDate 不能是过去日"的拦截。
+3. **`dataService.queryEntries` 仍使用 startTime 落桶语义**，与 `getLastEntryEndTimeForDate` 已经统一到的 overlap 语义不一致——Dashboard / Trends 等基于 query 的统计会漏算跨日 entry。属于另一处需要后续统一的地方。
+4. **`getLastEntryEndTime`（不带 ForDate 的版本）** 仍是全表最大 endTime，未参与本次重构。它当前只被 `EditEntryDialog` 之外的少数路径使用，但语义上和 `getLastEndTimeBeforeOrAt(new Date())` 重合，可考虑后续合并。
 
 ### 修改这块代码前的建议
 
