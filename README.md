@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/yxr620/chrono/actions/workflows/ci.yml"><img src="https://github.com/yxr620/chrono/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/version-0.0.8-blue" alt="Version 0.0.8">
+  <img src="https://img.shields.io/badge/version-0.0.9-blue" alt="Version 0.0.9">
   <img src="https://img.shields.io/badge/platform-Web%20%7C%20Android%20%7C%20macOS-lightgrey" alt="Supported platforms">
   <img src="https://img.shields.io/badge/stack-React%20%2B%20Ionic%20%2B%20TypeScript-3178c6" alt="Tech stack">
 </p>
