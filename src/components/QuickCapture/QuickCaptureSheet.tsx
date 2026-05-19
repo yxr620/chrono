@@ -167,11 +167,19 @@ export const QuickCaptureSheet: React.FC<Props> = ({ isOpen, onDismiss }) => {
 
         <div className="quick-capture-sheet-body">
           {phase === 'input' && (
-            <TranscriptInput
-              value={transcript}
-              onChange={setTranscript}
-              onSubmit={handleParse}
-            />
+            <>
+              {parsePhases.length > 0 && parsePhases[parsePhases.length - 1].failed && (
+                <details className="quick-capture-process-trace quick-capture-process-trace-failed">
+                  <summary>上次解析失败（{parsePhases.length} 步）— 点击查看</summary>
+                  <PhasesIndicator phases={parsePhases} loading={false} />
+                </details>
+              )}
+              <TranscriptInput
+                value={transcript}
+                onChange={setTranscript}
+                onSubmit={handleParse}
+              />
+            </>
           )}
           {phase === 'parsing' && (
             <div className="quick-capture-parsing">

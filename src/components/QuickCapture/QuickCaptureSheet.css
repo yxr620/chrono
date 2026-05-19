@@ -75,6 +75,11 @@
   margin-bottom: 8px;
 }
 
+.quick-capture-process-trace-failed > summary {
+  color: var(--ion-color-danger, #eb445a);
+  font-weight: 500;
+}
+
 /* reviewing 阶段包裹层：保证 ReviewSequence 在 flex column 中正确收缩 */
 .quick-capture-review-wrap {
   flex: 1 1 auto;
