@@ -55,7 +55,7 @@ Eight Zustand stores, each with a clear domain:
 - `oss.ts` — Aliyun OSS operations (optional cloud backend)
 - `export.ts` — JSON import/export
 - `actions/` — AI-first Action Registry (read/write/maintenance actions, see `docs/action-registry.md`)
-- `ai/` — AI assistant powered by **Vercel AI SDK** (`ai@5.x` + `@ai-sdk/openai-compatible`); `streamChatWithTools` drives the assistant loop (text + tool_calls in one continuous stream), `generateChatOnce` drives quickCapture single-shot parse. Supports Qwen, Gemini, GLM, Kimi, MiniMax, OpenAI, custom.
+- `ai/` — AI assistant powered by **Vercel AI SDK** (`ai@5.x` + `@ai-sdk/openai-compatible`); `streamChatWithTools` (in `llmClient.ts`) drives the SDK stream, `streamingEngine.runStreamingToolCallLoop` translates `fullStream` events into UI phase callbacks. Both AI Assistant (`toolCallEngine.ts`, multi-step + history) and QuickCapture (`parseTranscript`, `maxSteps:1` + inline shim) consume the same streaming engine. Supports Qwen, Gemini, GLM, Kimi, MiniMax, OpenAI, custom.
 - `analysis/` — Data analysis (goal clustering, trend analysis)
 
 All records have `version`, `deviceId`, `syncStatus`, and `deleted` (soft delete) fields for sync support.

@@ -34,7 +34,7 @@ AI 助手是 Chrono 的桌面端自然语言入口。它不是一个单纯的聊
 | 对话状态 | `src/stores/aiStore.ts` | provider 配置、消息列表、每条消息的 phases / loading / 结构化 debugInfo |
 | 流式引擎 | `src/services/ai/streamingEngine.ts` | 纯事件翻译层：消费 SDK `fullStream`，把事件 → 阶段行 / 文字增量 / 工具调用回调。被 AI Assistant 和 QuickCapture 共用 |
 | AI Assistant 入口 | `src/services/ai/toolCallEngine.ts` | 构建系统 prompt、组织历史、配置 `onConfirmRequired` 通道，然后委托给 `streamingEngine.runStreamingToolCallLoop` |
-| LLM 客户端 | `src/services/ai/llmClient.ts` | 基于 `@ai-sdk/openai-compatible` 构造 `LanguageModel`；导出 `streamChatWithTools`、`generateChatOnce` 两个统一入口 |
+| LLM 客户端 | `src/services/ai/llmClient.ts` | 基于 `@ai-sdk/openai-compatible` 构造 `LanguageModel`；导出 `streamChatWithTools`（供 `streamingEngine` 使用）和 `generateChatOnce`（备用一次性入口，当前无调用方） |
 | Gateway | `src/services/gateway/` | 根据 feature mode 选择 BYO 或 Managed AI 配置 |
 | Action Registry | `src/services/actions/` | 注册本地工具，提供 tool schema，执行 read/write/maintenance action |
 
