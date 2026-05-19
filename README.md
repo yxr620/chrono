@@ -65,6 +65,14 @@ Chrono 目前处于 active development 阶段，核心 Web / Android / macOS 工
 | macOS | Download DMG from [GitHub Releases](https://github.com/yxr620/chrono/releases), or build locally with Electron. |
 | Web | Run locally with Vite, or deploy the generated `dist/` directory. |
 
+### macOS: "Chrono is damaged and can't be opened"
+
+未签名构建会被 Gatekeeper 拦截，应用本身没有损坏。把 `Chrono.app` 拖到 `/Applications` 后执行一次：
+
+```bash
+xattr -cr /Applications/Chrono.app
+```
+
 ## Quick Start
 
 ```bash
