@@ -1,6 +1,8 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { IonModal, IonIcon, IonButton } from '@ionic/react';
 import { closeOutline, stopCircleOutline } from 'ionicons/icons';
+import { Capacitor } from '@capacitor/core';
+import { Keyboard, KeyboardResize } from '@capacitor/keyboard';
 import { useAppToast } from '../../hooks/useAppToast';
 import { useDateStore } from '../../stores/dateStore';
 import { TranscriptInput } from './TranscriptInput';
@@ -37,6 +39,35 @@ export const QuickCaptureSheet: React.FC<Props> = ({ isOpen, onDismiss }) => {
   const abortRef = useRef<AbortController | null>(null);
   const [present] = useAppToast();
   const selectedDate = useDateStore(s => s.selectedDate);
+
+  // 原生平台：弹窗打开期间让键盘悬浮覆盖，不顶起整个 sheet（弹窗本身有足够空白容纳键盘）。
+  // 切 resize mode 前必须先收键盘并等 Ionic 处理完 keyboardDidHide，否则会留下 stale 的
+  // --keyboard-offset，造成幽灵空白（与 EditEntryDialog 同一坑）。
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!Capacitor.isNativePlatform()) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        await Keyboard.hide();
+        await new Promise(resolve => setTimeout(resolve, 300));
+        if (cancelled) return;
+        await Keyboard.setResizeMode({ mode: KeyboardResize.None });
+      } catch { /* plugin 不可用就跳过 */ }
+    })();
+
+    return () => {
+      cancelled = true;
+      (async () => {
+        try {
+          await Keyboard.hide();
+          await new Promise(resolve => setTimeout(resolve, 100));
+          await Keyboard.setResizeMode({ mode: KeyboardResize.Ionic });
+        } catch { /* ignore */ }
+      })();
+    };
+  }, [isOpen]);
 
   const reset = useCallback(() => {
     setPhase('input');
@@ -154,8 +185,7 @@ export const QuickCaptureSheet: React.FC<Props> = ({ isOpen, onDismiss }) => {
       isOpen={isOpen}
       onDidDismiss={handleClose}
       className="quick-capture-sheet"
-      breakpoints={[0, 1]}
-      initialBreakpoint={1}
+      backdropDismiss={false}
     >
       <div className="quick-capture-sheet-content">
         <div className="quick-capture-sheet-header">

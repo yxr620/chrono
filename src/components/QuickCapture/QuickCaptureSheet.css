@@ -1,13 +1,17 @@
 .quick-capture-sheet {
-  --height: 50vh;
+  /* 扣掉上下安全区，让 iOS / Android 的可视高度一致；iOS 本来就会让出 home indicator
+     和刘海，Android 没有 inset（值为 0），相当于直接 85vh —— 用同一公式即可对齐两端。 */
+  --height: calc(85vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   --border-radius: 16px 16px 0 0;
+  align-items: flex-end;
 }
 
 @media (min-width: 1024px) {
   .quick-capture-sheet {
-    --height: 520px;
+    --height: 720px;
     --width: 600px;
     --border-radius: 16px;
+    align-items: center;
   }
 }
 
