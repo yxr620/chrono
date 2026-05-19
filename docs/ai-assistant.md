@@ -2,7 +2,9 @@
 
 AI 助手是 Chrono 的桌面端自然语言入口。它不是一个单纯的聊天框，而是一个「对话 UI + tool calling 引擎 + 本地数据工具 + 可选写入确认」组成的流程系统。
 
-理解它时，先抓住一句话：**`toolCallEngine` 用 Vercel AI SDK 的 `streamText` 跟模型保持一条流式连接，SDK 在流里替我们处理工具循环；引擎把 `fullStream` 的事件翻译成阶段行、文字增量和工具调用展示；写入操作必须经过用户确认。**
+理解它时，先抓住一句话：**`toolCallEngine` 负责构建 prompt + 组织历史，然后委托给 `streamingEngine` 用 Vercel AI SDK 的 `streamText` 跟模型保持一条流式连接；`streamingEngine` 把 `fullStream` 的事件翻译成阶段行、文字增量和工具调用展示；写入操作必须经过用户确认。**
+
+自 2026-05-19 起，`streamingEngine` 从 `toolCallEngine` 抽出，成为 AI Assistant 和 QuickCapture 共用的纯事件翻译层。QuickCapture 通过 `parseTranscript` 直接调用它（`maxSteps: 1` + inline add_entry shim tool），让"自动补录"也能复用同样的过程可视化。
 
 > 自 2026-05-16 起，AI 客户端层从手撸 SSE 切换到了 **Vercel AI SDK** (`ai@5.x` + `@ai-sdk/openai-compatible`)。文字与 tool_call 在同一条流里出现，工具执行完后无缝继续 stream（不再有"非流式 thinking → 流式 answering"的二段式）。详见 `docs/superpowers/specs/2026-05-16-streaming-ai-assistant-design.md`。
 
@@ -30,7 +32,8 @@ AI 助手是 Chrono 的桌面端自然语言入口。它不是一个单纯的聊
 |---|---|---|
 | 对话页面 | `src/components/AIAssistant/AIAssistant.tsx` | 输入、消息气泡、阶段展示、停止生成、确认卡片 |
 | 对话状态 | `src/stores/aiStore.ts` | provider 配置、消息列表、每条消息的 phases / loading / 结构化 debugInfo |
-| 调用引擎 | `src/services/ai/toolCallEngine.ts` | 构建 prompt、组织历史、订阅 SDK `fullStream` 并把事件翻译成阶段 / 文字增量 / 工具调用 |
+| 流式引擎 | `src/services/ai/streamingEngine.ts` | 纯事件翻译层：消费 SDK `fullStream`，把事件 → 阶段行 / 文字增量 / 工具调用回调。被 AI Assistant 和 QuickCapture 共用 |
+| AI Assistant 入口 | `src/services/ai/toolCallEngine.ts` | 构建系统 prompt、组织历史、配置 `onConfirmRequired` 通道，然后委托给 `streamingEngine.runStreamingToolCallLoop` |
 | LLM 客户端 | `src/services/ai/llmClient.ts` | 基于 `@ai-sdk/openai-compatible` 构造 `LanguageModel`；导出 `streamChatWithTools`、`generateChatOnce` 两个统一入口 |
 | Gateway | `src/services/gateway/` | 根据 feature mode 选择 BYO 或 Managed AI 配置 |
 | Action Registry | `src/services/actions/` | 注册本地工具，提供 tool schema，执行 read/write/maintenance action |
@@ -58,9 +61,9 @@ AI 助手是 Chrono 的桌面端自然语言入口。它不是一个单纯的聊
 
 ### 3. requesting / reasoning / composingTool / answering：消费 fullStream
 
-引擎调用 `streamChatWithTools({ model, messages, tools, maxSteps: 5, abortSignal })`，订阅 SDK 返回的 `result.fullStream` —— 一个 `AsyncIterable<...>`，按时间顺序产出各种事件。引擎不再自己跑 round 循环：SDK 内部根据 `stopWhen: stepCountIs(5)` 自动处理「调模型 → 看到 tool_call → 执行 execute → 再调模型」的多轮逻辑。
+`streamingEngine` 调用 `streamChatWithTools({ model, messages, tools, maxSteps: 5, abortSignal })`，订阅 SDK 返回的 `result.fullStream` —— 一个 `AsyncIterable<...>`，按时间顺序产出各种事件。`streamingEngine` 不再自己跑 round 循环：SDK 内部根据 `stopWhen: stepCountIs(5)` 自动处理「调模型 → 看到 tool_call → 执行 execute → 再调模型」的多轮逻辑。
 
-引擎的事件→UI 阶段映射（`onPhase` 的 update-in-place 分支保证同一 step 内多次写 debugInfo 时刷新最后一行而不堆出新行）：
+`streamingEngine` 的事件→UI 阶段映射（`onPhase` 的 update-in-place 分支保证同一 step 内多次写 debugInfo 时刷新最后一行而不堆出新行）：
 
 | SDK 事件 | 引擎动作 | 用户看到 |
 |---|---|---|
@@ -90,7 +93,7 @@ SDK 串行执行 `execute`，所以多 tool 在同一轮被调时会按 index �
 
 ### 5. answering：工具后的最终回答
 
-工具结果回到模型，模型继续输出 —— SDK 把那一段输出当作新一批 `text-delta` 事件发出，引擎在收到工具后的第一个 `text-delta` 时 push `answering` 阶段，开始累加文字。
+工具结果回到模型，模型继续输出 —— SDK 把那一段输出当作新一批 `text-delta` 事件发出，`streamingEngine` 在收到工具后的第一个 `text-delta` 时 push `answering` 阶段，开始累加文字。
 
 阶段顺序通常是（推理模型；instruct 模型把 `模型推理中` 行省略）：
 
