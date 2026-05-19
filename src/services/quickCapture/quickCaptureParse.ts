@@ -6,8 +6,15 @@
 import dayjs from 'dayjs';
 import { db, type TimeEntry, type Category, type Goal } from '../db';
 import { gateway } from '../gateway';
-import { createLanguageModel, generateChatOnce, type CoreMessage } from '../ai/llmClient';
-import { actionRegistry } from '../actions';
+import { createLanguageModel, type CoreMessage } from '../ai/llmClient';
+import { tool, jsonSchema } from 'ai';
+import { addEntryAction } from '../actions/write/addEntry';
+import { runStreamingToolCallLoop } from '../ai/streamingEngine';
+import {
+  createSystemPromptDebug,
+  createTextDebug,
+  type AssistantDebugInfoPayload,
+} from '../ai/debugInfo';
 import { predictMetadata } from '../metadataPredictor';
 import { detectConflicts, type ConflictInfo } from './conflictDetection';
 
@@ -187,42 +194,62 @@ export interface ParseResult {
   rawTranscript: string;
 }
 
+export interface ParseCallbacks {
+  onPhase?: (
+    phase: string,
+    detail?: string,
+    debugInfo?: AssistantDebugInfoPayload,
+    failed?: boolean,
+  ) => void;
+}
+
 export async function parseTranscript(
   transcript: string,
   ctx: ParseContext,
+  callbacks?: ParseCallbacks,
   signal?: AbortSignal,
 ): Promise<ParseResult> {
+  callbacks?.onPhase?.('preparing', '构建提示词');
+  const systemPrompt = buildSystemPrompt(ctx);
+  callbacks?.onPhase?.('preparing', undefined, createSystemPromptDebug(systemPrompt));
+
   const config = await gateway.getAiClientConfig();
   const model = createLanguageModel(config);
-  // add_entry is risk:none, so no confirmation gating is needed; passing {}
-  // keeps the API identical to the AI Assistant call site.
-  const allTools = actionRegistry.toSdkTools({});
-  // Restrict to the add_entry tool only — quickCapture must never trigger queries / writes / deletes.
-  const tools = Object.fromEntries(
-    Object.entries(allTools).filter(([name]) => name === 'add_entry'),
-  );
+
+  // Inline shim: 不走 registry 的真实 addEntryAction.handler()。
+  // 解析阶段只需捕获 LLM 提议的参数，写库在用户 ReviewSequence 确认后才做。
+  // 让 execute 总是返回 success，避免任何 tool result 干扰模型（虽然
+  // maxSteps:1 已保证模型看不到 tool result，但显式 success 更稳）。
+  const tools = {
+    add_entry: tool({
+      description: addEntryAction.description,
+      inputSchema: jsonSchema(addEntryAction.parameters as any),
+      execute: async () => ({ success: true, message: 'captured for user review' }),
+    }),
+  };
 
   const messages: CoreMessage[] = [
-    { role: 'system', content: buildSystemPrompt(ctx) },
+    { role: 'system', content: systemPrompt },
     { role: 'user', content: transcript.trim() },
   ];
 
-  const response = await generateChatOnce({
+  const noopOnPhase = () => {};
+  const onPhase = callbacks?.onPhase ?? noopOnPhase;
+
+  const { toolCalls } = await runStreamingToolCallLoop({
     model,
     messages,
     tools,
+    callbacks: { onPhase },
+    maxSteps: 1,
     abortSignal: signal,
+    modelLabel: config.model,
   });
 
-  // SDK exposes executed tool calls as `response.toolCalls`. Each entry has
-  // `{ toolName, input }` (already JSON-parsed) instead of OpenAI's nested
-  // `function.name` / `function.arguments` strings.
-  const calls = response.toolCalls ?? [];
-
   const entries: PendingEntry[] = [];
-  for (const call of calls) {
-    if (call.toolName !== 'add_entry') continue;
-    const params = call.input as AddEntryParams;
+  for (const call of toolCalls) {
+    if (call.name !== 'add_entry') continue;
+    const params = call.args as unknown as AddEntryParams;
     if (!params.date || !params.start_time || !params.end_time || !params.activity) {
       continue;
     }
@@ -242,9 +269,9 @@ export async function parseTranscript(
     });
   }
 
-  // 本地 predictMetadata 基于用户历史（活动名 → 类别频率 + 目标 token 匹配），
-  // 个人化准确度优于 LLM 的常识推断，所以让它覆盖 AI 给出的 category/goal。
-  // AI 的建议仅在本地预测返回 null 时保留作为 fallback。
+  // 本地 predictMetadata 基于用户历史，个人化准确度优于 LLM 常识。
+  // 让它覆盖 AI 给出的 category/goal。
+  callbacks?.onPhase?.('enriching', '本地补全 category/goal');
   await Promise.all(
     entries.map(async entry => {
       try {
@@ -261,6 +288,14 @@ export async function parseTranscript(
         // 预测失败不阻塞解析；AI 的字段原样保留
       }
     }),
+  );
+  callbacks?.onPhase?.(
+    'enriching',
+    undefined,
+    createTextDebug(
+      'ENRICH',
+      `entries=${entries.length}\n本地预测覆盖了 AI 给出的 category/goal（失败的条目保留 AI 原始字段）`,
+    ),
   );
 
   return { entries, rawTranscript: transcript };
