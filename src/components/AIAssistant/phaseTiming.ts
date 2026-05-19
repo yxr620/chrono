@@ -47,3 +47,18 @@ export function markFinalPhaseEnded(
   next[next.length - 1] = { ...last, endedAt };
   return next;
 }
+
+export function markFinalPhaseFailed(
+  phases: AssistantPhaseTiming[],
+  endedAt = Date.now(),
+): AssistantPhaseTiming[] {
+  if (phases.length === 0) return phases;
+  const last = phases[phases.length - 1];
+  const next = [...phases];
+  next[next.length - 1] = {
+    ...last,
+    endedAt: last.endedAt ?? endedAt,
+    failed: true,
+  };
+  return next;
+}

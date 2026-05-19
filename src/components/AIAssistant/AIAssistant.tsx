@@ -26,6 +26,7 @@ import { DebugInfoPanel } from './DebugInfoPanel';
 import {
   getPhaseDurationMs,
   markFinalPhaseEnded,
+  markFinalPhaseFailed,
   type AssistantPhaseTiming,
 } from './phaseTiming';
 import {
@@ -343,9 +344,12 @@ export const AIAssistant: React.FC = () => {
         phases: [...finalizedPhases],
       });
     } catch (error: unknown) {
-      const finalizedPhases = markFinalPhaseEnded(phasesRef.current);
+      const isAbort = error instanceof Error && error.name === 'AbortError';
+      const finalizedPhases = isAbort
+        ? markFinalPhaseEnded(phasesRef.current)
+        : markFinalPhaseFailed(phasesRef.current);
       phasesRef.current = finalizedPhases;
-      if (error instanceof Error && error.name === 'AbortError') {
+      if (isAbort) {
         updateMessage(aiMsgId, { loading: false, phases: [...finalizedPhases] });
       } else {
         const errorMsg = error instanceof Error ? error.message : '请求失败';
