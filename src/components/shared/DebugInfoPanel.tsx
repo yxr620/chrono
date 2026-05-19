@@ -1,4 +1,5 @@
 import React from 'react';
+import './DebugInfoPanel.css';
 import type {
   AssistantDebugInfo,
   AssistantDebugInfoPayload,

@@ -1,0 +1,146 @@
+/* ── 阶段耗时徽章 ───────────────────────────────────────── */
+.ai-phase-duration {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: hsl(var(--muted) / 0.6);
+  color: hsl(var(--muted-foreground));
+  font-family: var(--app-code-family);
+  font-size: 10px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-phase-active .ai-phase-duration {
+  background: hsl(var(--primary) / 0.12);
+  color: hsl(var(--primary));
+}
+
+/* ── 执行阶段列表 ─────────────────────────────────────────── */
+.ai-phases {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.ai-phase {
+  display: grid;
+  grid-template-columns: 12px 18px minmax(0, 1fr);
+  align-items: start;
+  column-gap: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* 已完成的阶段：灰色淡化 */
+.ai-phase-done {
+  color: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* 当前进行中的阶段 */
+.ai-phase-active {
+  color: hsl(var(--muted-foreground));
+}
+
+/* 旋转动画（当前阶段） */
+.ai-phase-spinner {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  margin-top: 3px;
+  border: 2px solid hsl(var(--border));
+  border-top-color: hsl(var(--primary));
+  border-radius: 50%;
+  animation: ai-spin 0.8s linear infinite;
+}
+
+@keyframes ai-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 完成勾号 */
+.ai-phase-check {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: hsl(var(--primary));
+}
+
+/* 失败叉号（正则未命中） */
+.ai-phase-failed {
+  color: hsl(var(--muted-foreground) / 0.4);
+}
+
+.ai-phase-cross {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: hsl(var(--muted-foreground) / 0.5);
+}
+
+.ai-phase-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  min-height: 18px;
+  font-family: var(--app-code-family);
+  font-size: 12px;
+  line-height: 1;
+  color: currentColor;
+}
+
+.ai-phase-label {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.ai-phase-detail {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+/* 可折叠的调试信息面板 */
+.ai-phase-debug {
+  display: block;
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-phase-debug-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+
+.ai-phase-debug-summary::-webkit-details-marker {
+  display: none;
+}
+
+.ai-phase-debug-summary::after {
+  content: ' ▶';
+  font-size: 9px;
+  opacity: 0.6;
+  transition: transform 0.15s ease;
+}
+
+details[open].ai-phase-debug .ai-phase-debug-summary::after {
+  content: ' ▼';
+}

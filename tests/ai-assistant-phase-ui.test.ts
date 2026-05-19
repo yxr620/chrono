@@ -17,7 +17,8 @@ const cssBlock = (source: string, selector: string) => {
 };
 
 test('AI phase indicators use flat text glyphs instead of emoji icons', async () => {
-  const source = await readProjectFile('src/components/AIAssistant/AIAssistant.tsx');
+  // PHASE_CONFIG is now in the shared PhasesIndicator module
+  const source = await readProjectFile('src/components/shared/PhasesIndicator.tsx');
   const phaseConfig = source.match(/const PHASE_CONFIG[\s\S]*?\n\};/)?.[0] || '';
 
   assert.doesNotMatch(phaseConfig, /📋|💭|🔧|✍️|⏳/u);
@@ -30,7 +31,8 @@ test('AI phase indicators use flat text glyphs instead of emoji icons', async ()
 });
 
 test('AI phase rows keep status and icon aligned with the summary line when expanded', async () => {
-  const css = await readProjectFile('src/components/AIAssistant/AIAssistant.css');
+  // Phase CSS is now in the shared PhasesIndicator.css
+  const css = await readProjectFile('src/components/shared/PhasesIndicator.css');
 
   assert.match(cssBlock(css, '.ai-phase'), /display:\s*grid;/);
   assert.match(cssBlock(css, '.ai-phase'), /align-items:\s*start;/);

@@ -10,9 +10,10 @@ const readProjectFile = (relativePath: string) =>
   readFile(path.join(rootDir, relativePath), 'utf8');
 
 test('AI assistant phase debug uses the structured DebugInfoPanel', async () => {
-  const source = await readProjectFile('src/components/AIAssistant/AIAssistant.tsx');
+  // PhasesIndicator is now the canonical home of DebugInfoPanel usage
+  const source = await readProjectFile('src/components/shared/PhasesIndicator.tsx');
 
-  assert.match(source, /from '\.\.\/shared\/DebugInfoPanel'/);
+  assert.match(source, /from '\.\/DebugInfoPanel'/);
   assert.match(source, /<DebugInfoPanel\s+debugInfo=\{p\.debugInfo!?\}/);
   assert.doesNotMatch(source, /<pre className="ai-phase-debug-content">\{p\.debugInfo\}<\/pre>/);
 });

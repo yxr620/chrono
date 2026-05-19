@@ -1,0 +1,145 @@
+.ai-debug-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  color: hsl(var(--foreground));
+  user-select: text;
+}
+
+.ai-debug-section {
+  border: 1px solid hsl(var(--border) / 0.6);
+  border-radius: 6px;
+  background: hsl(var(--muted) / 0.28);
+  overflow: hidden;
+}
+
+.ai-debug-section-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 9px;
+  border-bottom: 1px solid hsl(var(--border) / 0.45);
+  font-size: 11px;
+  font-weight: 700;
+  color: hsl(var(--foreground));
+}
+
+.ai-debug-section-meta {
+  font-family: var(--app-code-family);
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+}
+
+.ai-debug-meta {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 10px;
+  margin: 0;
+  padding: 8px 9px;
+  font-size: 11px;
+  border-bottom: 1px solid hsl(var(--border) / 0.35);
+}
+
+.ai-debug-meta dt {
+  color: hsl(var(--muted-foreground));
+}
+
+.ai-debug-meta dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--app-code-family);
+  color: hsl(var(--foreground));
+}
+
+.ai-debug-subsection {
+  padding: 8px 9px;
+  border-top: 1px solid hsl(var(--border) / 0.28);
+}
+
+.ai-debug-subtitle {
+  margin-bottom: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+
+.ai-debug-message,
+.ai-debug-tool,
+.ai-debug-tool-call {
+  margin-top: 6px;
+  border: 1px solid hsl(var(--border) / 0.45);
+  border-radius: 6px;
+  background: hsl(var(--background) / 0.72);
+  overflow: hidden;
+}
+
+.ai-debug-message-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid hsl(var(--border) / 0.35);
+  font-size: 10px;
+  color: hsl(var(--muted-foreground));
+}
+
+.ai-debug-role {
+  font-family: var(--app-code-family);
+  font-weight: 700;
+  color: hsl(var(--foreground));
+}
+
+.ai-debug-tool-name {
+  padding: 7px 8px 0;
+  font-family: var(--app-code-family);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ai-debug-tool-description {
+  padding: 4px 8px 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: hsl(var(--muted-foreground));
+}
+
+.ai-debug-details {
+  padding: 8px 9px;
+  border-top: 1px solid hsl(var(--border) / 0.28);
+}
+
+.ai-debug-details summary {
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  color: hsl(var(--muted-foreground));
+}
+
+.ai-debug-tools {
+  margin-top: 6px;
+}
+
+.ai-debug-code {
+  margin: 0;
+  padding: 8px;
+  max-height: 260px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+  line-height: 1.5;
+  font-family: var(--app-code-family);
+  color: hsl(var(--foreground));
+  background: transparent;
+}
+
+.ai-debug-empty {
+  padding: 8px;
+  font-size: 11px;
+  color: hsl(var(--muted-foreground));
+}
