@@ -22,13 +22,13 @@ import { shouldSendAssistantMessageFromKeyboard } from './keyboardShortcuts';
 import { getAssistantTextareaLayout } from './textareaAutosize';
 import type { ConfirmationCard as ConfirmationCardType } from '../../services/actions/types';
 import { debugInfoToText } from '../../services/ai/debugInfo';
-import { DebugInfoPanel } from './DebugInfoPanel';
+import { DebugInfoPanel } from '../shared/DebugInfoPanel';
 import {
   getPhaseDurationMs,
   markFinalPhaseEnded,
   markFinalPhaseFailed,
   type AssistantPhaseTiming,
-} from './phaseTiming';
+} from '../shared/phaseTiming';
 import {
   isAssistantMessagesNearBottom,
   scrollAssistantMessagesToBottom,

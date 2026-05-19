@@ -5,7 +5,7 @@ import {
   markFinalPhaseEnded,
   markFinalPhaseFailed,
   type AssistantPhaseTiming,
-} from '../src/components/AIAssistant/phaseTiming';
+} from '../src/components/shared/phaseTiming';
 
 test('last completed phase keeps its finished duration after loading ends', () => {
   const phases: AssistantPhaseTiming[] = [
