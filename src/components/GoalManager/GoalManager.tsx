@@ -717,7 +717,7 @@ export const GoalManager: React.FC = () => {
                 >
                   <IonText>
                     <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold' }}>
-                      打卡 / 提醒
+                      提醒
                     </h3>
                   </IonText>
                   <IonText color="medium" style={{ fontSize: '13px', fontWeight: 600 }}>
