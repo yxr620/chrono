@@ -25,6 +25,16 @@ cd electron && npm run electron:make    # Build distributable (.dmg/.app)
 
 Linting is the primary code quality check. A small number of `node --test` suites exist (`npm run test:app-checks`, `npm run test:font-system`, defined in `tests/`); there is no full test suite.
 
+## Browser Verification (浏览器验证) — MANDATORY workflow
+
+When verifying UI/interaction in a real browser (via the `chrome-devtools` MCP), you MUST follow `docs/browser-testing.md`. Non-negotiable rules:
+
+- **Use `npm run dev:test` (port 5180, strictPort) — your own dedicated server.** NEVER start, restart, or point tests at the user's `npm run dev` (port 5173); that is their live session and real data. Treat 5173 as off-limits.
+- Test in the MCP-launched Chrome (its own isolated profile) at `http://localhost:5180/`. Data isolation is automatic (separate profile + origin).
+- Default to `disabled` feature mode for UI work. For **BYO sync** tests, first set `localStorage.userId = 'claude-test'` to isolate the OSS prefix — never write to the user's real `sync/{userId}/`. For **Managed** tests, use a dedicated test account only (it costs real backend/LLM calls).
+- Seed/reset test data per `docs/browser-testing.md` (import `tests/fixtures/sample-entries.json`; reset via `indexedDB.deleteDatabase('TimeTrackerDB')`).
+- **When done, stop the `dev:test` background process you started** (don't leave orphan servers); never touch the user's `npm run dev` (5173).
+
 ## Architecture
 
 **Chrono** is a multiplatform time tracker (web, Android, iOS, macOS) built with React + Ionic + Capacitor. The same web codebase targets all platforms.

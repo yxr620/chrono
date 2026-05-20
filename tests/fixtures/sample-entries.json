@@ -1,0 +1,37 @@
+{
+  "exportTime": "2026-05-20T22:30:00.000+08:00",
+  "exportType": "full",
+  "data": {
+    "categories": [
+      { "id": "study", "name": "学习", "color": "#1890FF", "order": 1, "isPreset": true, "version": 1, "syncStatus": "synced", "deleted": false, "createdAt": "2026-05-20T00:00:00.000+08:00", "updatedAt": "2026-05-20T00:00:00.000+08:00" },
+      { "id": "work", "name": "工作", "color": "#40A9FF", "order": 2, "isPreset": true, "version": 1, "syncStatus": "synced", "deleted": false, "createdAt": "2026-05-20T00:00:00.000+08:00", "updatedAt": "2026-05-20T00:00:00.000+08:00" },
+      { "id": "daily", "name": "日常", "color": "#FFA940", "order": 3, "isPreset": true, "version": 1, "syncStatus": "synced", "deleted": false, "createdAt": "2026-05-20T00:00:00.000+08:00", "updatedAt": "2026-05-20T00:00:00.000+08:00" },
+      { "id": "exercise", "name": "运动", "color": "#FF7A45", "order": 4, "isPreset": true, "version": 1, "syncStatus": "synced", "deleted": false, "createdAt": "2026-05-20T00:00:00.000+08:00", "updatedAt": "2026-05-20T00:00:00.000+08:00" },
+      { "id": "rest", "name": "休息", "color": "#9254DE", "order": 5, "isPreset": true, "version": 1, "syncStatus": "synced", "deleted": false, "createdAt": "2026-05-20T00:00:00.000+08:00", "updatedAt": "2026-05-20T00:00:00.000+08:00" },
+      { "id": "entertainment", "name": "娱乐", "color": "#B37FEB", "order": 6, "isPreset": true, "version": 1, "syncStatus": "synced", "deleted": false, "createdAt": "2026-05-20T00:00:00.000+08:00", "updatedAt": "2026-05-20T00:00:00.000+08:00" }
+    ],
+    "goals": [
+      { "id": "fixture-goal-work", "name": "完成 Q2 需求文档", "date": "2026-05-20", "color": "#40A9FF", "type": "time", "version": 1, "syncStatus": "synced", "deleted": false, "createdAt": "2026-05-20T07:00:00.000+08:00", "updatedAt": "2026-05-20T07:00:00.000+08:00" },
+      { "id": "fixture-goal-learn", "name": "每天学习 3 小时", "date": "2026-05-20", "color": "#1890FF", "type": "time", "version": 1, "syncStatus": "synced", "deleted": false, "createdAt": "2026-05-20T07:00:00.000+08:00", "updatedAt": "2026-05-20T07:00:00.000+08:00" },
+      { "id": "fixture-goal-meds", "name": "晚上记得吃药", "date": "2026-05-20", "color": "#9254DE", "type": "check", "completed": true, "completedAt": "2026-05-20T21:05:00.000+08:00", "version": 1, "syncStatus": "synced", "deleted": false, "createdAt": "2026-05-20T07:00:00.000+08:00", "updatedAt": "2026-05-20T21:05:00.000+08:00" }
+    ],
+    "entries": [
+      { "id": "fixture-entry-01", "startTime": "2026-05-20T07:00:00.000+08:00", "endTime": "2026-05-20T07:30:00.000+08:00", "activity": "晨跑", "memo": "天气不错，跑了 4 公里", "categoryId": "exercise", "goalId": null, "version": 1, "syncStatus": "synced", "deleted": false, "createdAt": "2026-05-20T07:30:00.000+08:00", "updatedAt": "2026-05-20T07:30:00.000+08:00" },
+      { "id": "fixture-entry-02", "startTime": "2026-05-20T07:30:00.000+08:00", "endTime": "2026-05-20T09:00:00.000+08:00", "activity": "早餐 + 通勤", "categoryId": "daily", "goalId": null, "version": 1, "syncStatus": "synced", "deleted": false, "createdAt": "2026-05-20T09:00:00.000+08:00", "updatedAt": "2026-05-20T09:00:00.000+08:00" },
+      { "id": "fixture-entry-03", "startTime": "2026-05-20T09:00:00.000+08:00", "endTime": "2026-05-20T12:00:00.000+08:00", "activity": "写 Q2 需求文档", "memo": "完成了大纲和前两章", "categoryId": "work", "goalId": "fixture-goal-work", "version": 1, "syncStatus": "synced", "deleted": false, "createdAt": "2026-05-20T12:00:00.000+08:00", "updatedAt": "2026-05-20T12:00:00.000+08:00" },
+      { "id": "fixture-entry-04", "startTime": "2026-05-20T12:00:00.000+08:00", "endTime": "2026-05-20T13:00:00.000+08:00", "activity": "午饭 + 午休", "categoryId": "rest", "goalId": null, "version": 1, "syncStatus": "synced", "deleted": false, "createdAt": "2026-05-20T13:00:00.000+08:00", "updatedAt": "2026-05-20T13:00:00.000+08:00" },
+      { "id": "fixture-entry-05", "startTime": "2026-05-20T13:00:00.000+08:00", "endTime": "2026-05-20T15:30:00.000+08:00", "activity": "Code review + 改 bug", "categoryId": "work", "goalId": "fixture-goal-work", "version": 1, "syncStatus": "synced", "deleted": false, "createdAt": "2026-05-20T15:30:00.000+08:00", "updatedAt": "2026-05-20T15:30:00.000+08:00" },
+      { "id": "fixture-entry-06", "startTime": "2026-05-20T15:30:00.000+08:00", "endTime": "2026-05-20T16:00:00.000+08:00", "activity": "喝咖啡放空", "categoryId": "rest", "goalId": null, "version": 1, "syncStatus": "synced", "deleted": false, "createdAt": "2026-05-20T16:00:00.000+08:00", "updatedAt": "2026-05-20T16:00:00.000+08:00" },
+      { "id": "fixture-entry-07", "startTime": "2026-05-20T16:00:00.000+08:00", "endTime": "2026-05-20T18:00:00.000+08:00", "activity": "看 React 源码", "memo": "读了 fiber 调度部分", "categoryId": "study", "goalId": "fixture-goal-learn", "version": 1, "syncStatus": "synced", "deleted": false, "createdAt": "2026-05-20T18:00:00.000+08:00", "updatedAt": "2026-05-20T18:00:00.000+08:00" },
+      { "id": "fixture-entry-08", "startTime": "2026-05-20T18:00:00.000+08:00", "endTime": "2026-05-20T19:30:00.000+08:00", "activity": "晚饭", "categoryId": "daily", "goalId": null, "version": 1, "syncStatus": "synced", "deleted": false, "createdAt": "2026-05-20T19:30:00.000+08:00", "updatedAt": "2026-05-20T19:30:00.000+08:00" },
+      { "id": "fixture-entry-09", "startTime": "2026-05-20T19:30:00.000+08:00", "endTime": "2026-05-20T21:00:00.000+08:00", "activity": "写个人项目", "memo": "Chrono 的浏览器测试流程", "categoryId": "study", "goalId": "fixture-goal-learn", "version": 1, "syncStatus": "synced", "deleted": false, "createdAt": "2026-05-20T21:00:00.000+08:00", "updatedAt": "2026-05-20T21:00:00.000+08:00" },
+      { "id": "fixture-entry-10", "startTime": "2026-05-20T21:00:00.000+08:00", "endTime": "2026-05-20T22:00:00.000+08:00", "activity": "看剧", "categoryId": "entertainment", "goalId": null, "version": 1, "syncStatus": "synced", "deleted": false, "createdAt": "2026-05-20T22:00:00.000+08:00", "updatedAt": "2026-05-20T22:00:00.000+08:00" }
+    ]
+  },
+  "metadata": {
+    "totalEntries": 10,
+    "totalGoals": 3,
+    "totalCategories": 6,
+    "version": "1.0"
+  }
+}
