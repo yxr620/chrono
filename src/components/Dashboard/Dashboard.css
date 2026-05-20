@@ -157,28 +157,6 @@
   color: #1d1712;
 }
 
-.dashboard-lead-copy {
-  max-width: 280px;
-  padding-bottom: 10px;
-}
-
-.dashboard-lead-label {
-  display: inline-block;
-  margin-bottom: 10px;
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #95897c;
-  font-weight: 700;
-}
-
-.dashboard-lead-copy p {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.75;
-  color: #60564c;
-}
-
 .dashboard-metric-strip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

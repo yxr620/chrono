@@ -261,10 +261,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div className="dashboard-cover-main">
             <div className="dashboard-lead-band">
               <div className="dashboard-lead-value">{formatDuration(metrics?.totalTime ?? 0)}</div>
-              <div className="dashboard-lead-copy">
-                <span className="dashboard-lead-label">Lead Metric</span>
-                <p>这一页是分析系统的封面，先回答“这段时间总共投入了多少”，再进入趋势与目标两个章节。</p>
-              </div>
             </div>
 
             {metrics && <EditorialMetricStrip metrics={metrics} goalCoverage={goalCoverage} />}
