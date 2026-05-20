@@ -261,26 +261,103 @@
   align-items: center;
 }
 
-/* ── 时间选择区域 ── */
-.edit-dialog-time-row {
-  display: flex;
-  gap: 8px;
+/* ── 时间选择区域（对齐主页面：大号时间 + 箭头 + 徽章）── */
+.edit-dialog-time {
+  padding: 2px 0 0;
 }
 
-.edit-dialog-time-col {
+.edit-dialog-time-display {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.edit-dialog-time-value {
   flex: 1;
-}
-
-.edit-dialog-time-label {
-  margin-bottom: 4px;
-  font-weight: bold;
-  font-size: 13px;
-}
-
-.edit-dialog-time-actions {
-  margin-top: 4px;
+  min-width: 0;
   display: flex;
-  gap: 4px;
+  align-items: baseline;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: hsl(var(--foreground));
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.edit-dialog-time-value:focus,
+.edit-dialog-time-value:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.edit-dialog-time-value.end {
+  justify-content: flex-end;
+}
+
+.edit-dialog-time-date {
+  font-size: 13px;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+  font-variant-numeric: tabular-nums;
+}
+
+.edit-dialog-time-clock {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+  font-family: var(--app-number-family);
+  font-variant-numeric: tabular-nums;
+}
+
+.edit-dialog-time-clock.ongoing {
+  color: #10b981;
+}
+
+.edit-dialog-time-arrow {
+  flex: 0 0 auto;
+  color: hsl(var(--muted-foreground) / 0.5);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.edit-dialog-time-badges {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.edit-dialog-time-badge-group {
+  display: flex;
+  gap: 6px;
+}
+
+.edit-dialog-time-badge {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--muted) / 0.5);
+  transition: all 0.2s;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.edit-dialog-time-badge:focus,
+.edit-dialog-time-badge:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.edit-dialog-time-badge.ongoing {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
 }
 
 /* ── 底部按钮 ── */

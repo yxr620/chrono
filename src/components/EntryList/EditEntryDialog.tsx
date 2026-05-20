@@ -311,37 +311,61 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
             </IonCard>
 
             {/* 时间选择 */}
-            <div className="edit-dialog-time-row">
-              <div className="edit-dialog-time-col">
-                <div className="edit-dialog-time-label">开始时间</div>
-                <IonButton expand="block" fill="outline" size="small" onClick={() => {
-                  if (isIOS) { void openIOSTimePicker(startTime, (pickedDate) => {
-                    if (pickedDate > new Date()) { showToast('开始时间不能晚于当前', 'danger'); return; }
-                    setStartTime(pickedDate);
-                  }); return; }
-                  setStartPickerVisible(true);
-                }}>
-                  {dayjs(startTime).format('MM-DD HH:mm')}
-                </IonButton>
-                <div className="edit-dialog-time-actions">
-                  <IonButton size="small" fill="outline" onClick={() => setToNow(true)}>现在</IonButton>
-                  <IonButton size="small" fill="outline" color="primary" onClick={setStartTimeToLastEnd}>上次结束</IonButton>
+            <IonCard className="edit-dialog-card">
+              <IonCardContent className="edit-dialog-card-body">
+                <div className="edit-dialog-time">
+              <div className="edit-dialog-time-display">
+                {/* 开始时间 */}
+                <button
+                  type="button"
+                  className="edit-dialog-time-value"
+                  onClick={() => {
+                    if (isIOS) { void openIOSTimePicker(startTime, (pickedDate) => {
+                      if (pickedDate > new Date()) { showToast('开始时间不能晚于当前', 'danger'); return; }
+                      setStartTime(pickedDate);
+                    }); return; }
+                    setStartPickerVisible(true);
+                  }}
+                >
+                  <span className="edit-dialog-time-date">{dayjs(startTime).format('MM-DD')}</span>
+                  <span className="edit-dialog-time-clock">{dayjs(startTime).format('HH:mm')}</span>
+                </button>
+
+                <span className="edit-dialog-time-arrow" aria-hidden="true">→</span>
+
+                {/* 结束时间 */}
+                <button
+                  type="button"
+                  className="edit-dialog-time-value end"
+                  onClick={() => {
+                    if (isIOS) { void openIOSTimePicker(endTime ?? new Date(), setEndTime); return; }
+                    setEndPickerVisible(true);
+                  }}
+                >
+                  {endTime ? (
+                    <>
+                      <span className="edit-dialog-time-date">{dayjs(endTime).format('MM-DD')}</span>
+                      <span className="edit-dialog-time-clock">{dayjs(endTime).format('HH:mm')}</span>
+                    </>
+                  ) : (
+                    <span className="edit-dialog-time-clock ongoing">进行中</span>
+                  )}
+                </button>
+              </div>
+
+              <div className="edit-dialog-time-badges">
+                <div className="edit-dialog-time-badge-group">
+                  <button type="button" className="edit-dialog-time-badge" onClick={() => setToNow(true)}>现在</button>
+                  <button type="button" className="edit-dialog-time-badge" onClick={setStartTimeToLastEnd}>上次结束</button>
+                </div>
+                <div className="edit-dialog-time-badge-group">
+                  <button type="button" className="edit-dialog-time-badge" onClick={() => setToNow(false)}>现在</button>
+                  <button type="button" className="edit-dialog-time-badge ongoing" onClick={setEndTimeToOngoing}>进行中</button>
                 </div>
               </div>
-              <div className="edit-dialog-time-col">
-                <div className="edit-dialog-time-label">结束时间</div>
-                <IonButton expand="block" fill="outline" size="small" onClick={() => {
-                  if (isIOS) { void openIOSTimePicker(endTime ?? new Date(), setEndTime); return; }
-                  setEndPickerVisible(true);
-                }}>
-                  {endTime ? dayjs(endTime).format('MM-DD HH:mm') : '进行中'}
-                </IonButton>
-                <div className="edit-dialog-time-actions">
-                  <IonButton size="small" fill="outline" onClick={() => setToNow(false)}>现在</IonButton>
-                  <IonButton size="small" fill="outline" color="warning" onClick={setEndTimeToOngoing}>进行中</IonButton>
                 </div>
-              </div>
-            </div>
+              </IonCardContent>
+            </IonCard>
           </div>
 
           {/* 底部按钮 */}
