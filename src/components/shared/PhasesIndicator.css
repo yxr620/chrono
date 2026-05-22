@@ -33,6 +33,23 @@
   line-height: 1.4;
 }
 
+/* 中间 answering 段正文：内联展示在「生成回答」行下方，对齐第三列、用正常前景色（不随阶段淡化） */
+.ai-phase-answer {
+  grid-column: 3;
+  margin-top: 4px;
+  color: hsl(var(--foreground));
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.ai-phase-answer > :first-child {
+  margin-top: 0;
+}
+
+.ai-phase-answer > :last-child {
+  margin-bottom: 0;
+}
+
 /* 已完成的阶段：灰色淡化 */
 .ai-phase-done {
   color: hsl(var(--muted-foreground) / 0.5);

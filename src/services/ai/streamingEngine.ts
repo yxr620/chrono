@@ -61,6 +61,11 @@ export interface StreamingEngineCallbacks {
     detail?: string,
     debugInfo?: AssistantDebugInfoPayload,
     failed?: boolean,
+    /**
+     * 中间 answering 段的正文。当一段「生成回答」被后续工具调用 / 推理 / 续轮打断时，
+     * 引擎以 phase='answering' + inlineText 回填该段，由调用方挂到对应阶段行并清空底部正文缓冲。
+     */
+    inlineText?: string,
   ) => void;
   onChunk?: (delta: string) => void;
   onToolCall?: (info: StreamingToolCallInfo) => void;
@@ -124,10 +129,23 @@ export async function runStreamingToolCallLoop(
   let stepIdx = 0;
   let requestingEmittedThisStep = false;
   let reasoningEmittedThisStep = false;
-  let textBuf = '';
+  // 当前 answering 段的正文缓冲。一段被打断时回填到其阶段行 → 重置；流结束时残留的即最终段。
+  let answeringSegBuf = '';
   let stepReasoningBuf = '';
   const toolCallLabels = new Map<string, string>();
   const collectedToolCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
+
+  /**
+   * 若当前正处于一段「生成回答」中且有正文，说明它被后续动作（工具 / 推理 / 续轮）打断，
+   * 即一段中间前言。把它回填给对应阶段行内联展示，并重置段缓冲，让下一段从头累积。
+   * 调用方据 inlineText 同步清空底部正文。空段为 no-op（纯多步、无前言场景行为不变）。
+   */
+  const flushAnsweringSegment = () => {
+    if (currentPhaseKind === 'answering' && answeringSegBuf) {
+      callbacks.onPhase('answering', undefined, undefined, undefined, answeringSegBuf);
+      answeringSegBuf = '';
+    }
+  };
 
   const modelReqDebug = createTextDebug(
     'MODEL REQUEST',
@@ -160,7 +178,7 @@ export async function runStreamingToolCallLoop(
             callbacks.onPhase('answering', '生成回答');
             currentPhaseKind = 'answering';
           }
-          textBuf += delta;
+          answeringSegBuf += delta;
           callbacks.onChunk?.(delta);
           break;
         }
@@ -168,6 +186,7 @@ export async function runStreamingToolCallLoop(
         case 'reasoning-delta': {
           const delta = readTextDelta(event);
           if (delta) {
+            flushAnsweringSegment();
             if (!reasoningEmittedThisStep) {
               callbacks.onPhase('reasoning', '模型推理中');
               currentPhaseKind = 'reasoning';
@@ -184,6 +203,7 @@ export async function runStreamingToolCallLoop(
         }
 
         case 'start-step': {
+          flushAnsweringSegment();
           if (!requestingEmittedThisStep) {
             const label = stepIdx === 0 ? '请求模型' : '请求模型 (继续)';
             const stepDebug = createTextDebug(
@@ -198,6 +218,7 @@ export async function runStreamingToolCallLoop(
         }
 
         case 'tool-input-start': {
+          flushAnsweringSegment();
           const name = (event.toolName ?? '') as string;
           callbacks.onPhase('composingTool', `构造工具调用：${name}`);
           currentPhaseKind = 'composingTool';
@@ -213,6 +234,8 @@ export async function runStreamingToolCallLoop(
         }
 
         case 'tool-call': {
+          // 兜底：少数 provider 不发 tool-input-start，直接来 tool-call。
+          flushAnsweringSegment();
           const name = (event.toolName ?? event.tool_name ?? '') as string;
           const args = (event.input ?? event.args ?? {}) as Record<string, unknown>;
           const label = formatToolLabel(name, args);
@@ -309,5 +332,6 @@ export async function runStreamingToolCallLoop(
     throw err;
   }
 
-  return { content: textBuf, toolCalls: collectedToolCalls };
+  // 流结束时未被打断的最后一段即最终答案（前言段已通过 flush 回填到各自阶段行）。
+  return { content: answeringSegBuf, toolCalls: collectedToolCalls };
 }

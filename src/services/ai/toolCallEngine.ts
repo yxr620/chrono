@@ -32,6 +32,8 @@ export interface ToolCallEngineCallbacks {
     detail?: string,
     debugInfo?: AssistantDebugInfoPayload,
     failed?: boolean,
+    /** 中间 answering 段正文回填，见 streamingEngine 同名参数。 */
+    inlineText?: string,
   ) => void;
   onChunk: (delta: string) => void;
   onToolCall?: (info: ToolCallInfo) => void;

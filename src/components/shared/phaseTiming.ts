@@ -6,6 +6,11 @@ export interface AssistantPhaseTiming {
   level?: number;
   failed?: boolean;
   debugInfo?: AssistantDebugInfoPayload;
+  /**
+   * 中间 answering 段的正文。当一段「生成回答」被后续工具调用打断时，
+   * 该段文本回填到它自己的阶段行内联展示（默认展开），底部正文只保留最终段。
+   */
+  inlineText?: string;
   at?: number;
   endedAt?: number;
 }

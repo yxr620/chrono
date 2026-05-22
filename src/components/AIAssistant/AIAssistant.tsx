@@ -6,8 +6,6 @@
 import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { IonIcon } from '@ionic/react';
 import { sendOutline, trashOutline, stopCircleOutline } from 'ionicons/icons';
-import { marked } from 'marked';
-import DOMPurify from 'dompurify';
 import { useAIStore } from '../../stores/aiStore';
 import { useFeatureModeStore } from '../../stores/featureModeStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -28,17 +26,12 @@ import {
   type AssistantPhaseTiming,
 } from '../shared/phaseTiming';
 import { PhasesIndicator, PHASE_CONFIG } from '../shared/PhasesIndicator';
+import { renderMarkdown } from '../shared/renderMarkdown';
 import {
   isAssistantMessagesNearBottom,
   scrollAssistantMessagesToBottom,
 } from './scrollBehavior';
 import './AIAssistant.css';
-
-// 配置 marked：关闭 mangle/headerIds 避免不必要的输出
-marked.setOptions({
-  breaks: true,       // 换行符 → <br>
-  gfm: true,          // GitHub Flavored Markdown（表格、删除线等）
-});
 
 // 快捷问题预设
 const QUICK_PROMPTS = [
@@ -46,12 +39,6 @@ const QUICK_PROMPTS = [
   '昨天做了什么',
   '对比本周和上周',
 ];
-
-/** Markdown → 安全 HTML */
-function renderMarkdown(text: string): string {
-  const raw = marked.parse(text, { async: false }) as string;
-  return DOMPurify.sanitize(raw);
-}
 
 /** 复制文本到剪贴板 */
 function copyToClipboard(text: string) {
@@ -203,8 +190,20 @@ export const AIAssistant: React.FC = () => {
         query,
         recentHistory,
         {
-          onPhase: (phase, detail, debugInfo, failed) => {
+          onPhase: (phase, detail, debugInfo, failed, inlineText) => {
             const prev = phasesRef.current;
+            // 中间 answering 段回填：挂到最近一条 answering 行内联展示，并清空底部正文（迎接下一段）。
+            if (inlineText !== undefined && phase === 'answering') {
+              const lastIdx = prev.map(p => p.key).lastIndexOf('answering');
+              if (lastIdx !== -1) {
+                const updated = [...prev];
+                updated[lastIdx] = { ...updated[lastIdx], inlineText };
+                phasesRef.current = updated;
+              }
+              accumulated = '';
+              updateMessage(aiMsgId, { phases: [...phasesRef.current], content: '' });
+              return;
+            }
             // 如果最后一项 key 相同且当前带 debugInfo，则更新最后一项（补充调试信息 / 失败态）
             if (debugInfo && prev.length > 0 && prev[prev.length - 1].key === phase) {
               const updated = [...prev];
@@ -315,7 +314,8 @@ export const AIAssistant: React.FC = () => {
         const phaseName = PHASE_CONFIG[phase.key]?.label || phase.key;
         const title = phase.detail || phaseName;
         const debug = phase.debugInfo ? `\n${debugInfoToText(phase.debugInfo)}` : '';
-        return `${index + 1}. ${title}${debug}`;
+        const inline = phase.inlineText ? `\n${phase.inlineText}` : '';
+        return `${index + 1}. ${title}${debug}${inline}`;
       }).join('\n\n');
       sections.push(`过程日志\n${phaseText}`);
     }

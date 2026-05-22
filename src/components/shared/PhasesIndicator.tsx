@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import type { AssistantPhaseTiming } from './phaseTiming';
 import { getPhaseDurationMs } from './phaseTiming';
 import { DebugInfoPanel } from './DebugInfoPanel';
+import { renderMarkdown } from './renderMarkdown';
 import './PhasesIndicator.css';
 
 // 阶段配置：label 和 icon
@@ -93,6 +94,12 @@ export const PhasesIndicator: React.FC<{
                 {durationBadge}
               </span>
             )}
+            {p.inlineText ? (
+              <div
+                className="ai-phase-answer"
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(p.inlineText) }}
+              />
+            ) : null}
           </div>
         );
       })}
