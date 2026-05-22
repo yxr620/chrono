@@ -24,7 +24,8 @@ import {
   calendarOutline,
   checkmarkCircle,
   ellipseOutline,
-  chatbubbleEllipsesOutline
+  chatbubbleEllipsesOutline,
+  sparklesOutline
 } from 'ionicons/icons';
 import { Capacitor } from '@capacitor/core';
 import { useGoalStore } from '../../stores/goalStore';
@@ -464,7 +465,10 @@ export const GoalManager: React.FC = () => {
                             fontSize: '14px'
                           }}
                         >
-                          {loadingSuggestions ? '加载中...' : '🪄 建议今日目标'}
+                          {!loadingSuggestions && (
+                            <IonIcon icon={sparklesOutline} slot="start" />
+                          )}
+                          {loadingSuggestions ? '加载中...' : '建议今日目标'}
                         </IonButton>
                       )}
                     </div>

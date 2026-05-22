@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { IonSpinner, IonIcon } from '@ionic/react';
-import { calendarOutline, analyticsOutline } from 'ionicons/icons';
+import { calendarOutline, analyticsOutline, chatbubbleEllipsesOutline } from 'ionicons/icons';
 import {
   BarChart,
   Bar,
@@ -304,7 +304,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         {recentMemos.length > 0 && (
           <div className="dashboard-section dashboard-memo-card">
-            <h3 className="dashboard-memo-title">💭 最近感想</h3>
+            <h3 className="dashboard-memo-title">
+              <IonIcon icon={chatbubbleEllipsesOutline} aria-hidden="true" />
+              最近感想
+            </h3>
             <ul className="dashboard-memo-list">
               {recentMemos.map(e => (
                 <li

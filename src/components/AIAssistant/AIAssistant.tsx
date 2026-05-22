@@ -5,7 +5,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { IonIcon } from '@ionic/react';
-import { sendOutline, trashOutline, stopCircleOutline } from 'ionicons/icons';
+import { sendOutline, trashOutline, stopCircleOutline, sparklesOutline } from 'ionicons/icons';
 import { useAIStore } from '../../stores/aiStore';
 import { useFeatureModeStore } from '../../stores/featureModeStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -253,7 +253,7 @@ export const AIAssistant: React.FC = () => {
         updateMessage(aiMsgId, { loading: false, phases: [...finalizedPhases] });
       } else {
         const errorMsg = error instanceof Error ? error.message : '请求失败';
-        updateMessage(aiMsgId, { content: `❌ ${errorMsg}`, loading: false, error: true, phases: [...finalizedPhases] });
+        updateMessage(aiMsgId, { content: errorMsg, loading: false, error: true, phases: [...finalizedPhases] });
       }
     } finally {
       setSending(false);
@@ -407,7 +407,9 @@ export const AIAssistant: React.FC = () => {
       >
         {messages.length === 0 ? (
           <div className="ai-welcome">
-            <div className="ai-welcome-icon">✨</div>
+            <div className="ai-welcome-icon">
+              <IonIcon icon={sparklesOutline} aria-hidden="true" />
+            </div>
             <h2>{welcomeTitle}</h2>
             <p>{welcomeDescription}</p>
             {aiConfigured ? (

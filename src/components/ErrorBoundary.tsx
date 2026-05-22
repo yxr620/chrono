@@ -1,5 +1,6 @@
 import React from 'react';
-import { IonButton } from '@ionic/react';
+import { IonButton, IonIcon } from '@ionic/react';
+import { warningOutline } from 'ionicons/icons';
 
 interface Props {
   children: React.ReactNode;
@@ -44,7 +45,8 @@ export class ErrorBoundary extends React.Component<Props, State> {
             backgroundColor: '#f5f5f5'
           }}
         >
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
+          <IonIcon icon={warningOutline} style={{ fontSize: '48px', marginBottom: '16px', color: '#999' }} aria-hidden="true" />
+
           <h2 style={{ marginBottom: '8px', color: '#333' }}>应用出现了问题</h2>
           <p style={{ color: '#666', marginBottom: '24px', fontSize: '14px' }}>
             {this.state.error?.message || '未知错误'}
