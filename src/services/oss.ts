@@ -108,7 +108,7 @@ export interface OSSObject {
 /**
  * 分页列出指定前缀下的所有 OSS 对象
  */
-async function listAllObjects(prefix: string): Promise<OSSObject[]> {
+export async function listAllObjects(prefix: string): Promise<OSSObject[]> {
   const { client } = await getOSSClient();
   const allObjects: OSSObject[] = [];
   let marker: string | undefined;
@@ -286,6 +286,30 @@ export async function listOwnOplogFiles(): Promise<OSSObject[]> {
 
   files.sort((a, b) => extractTimestamp(a.name) - extractTimestamp(b.name));
   return files;
+}
+
+/**
+ * 列出当前命名空间下所有设备的快照（**不**过滤本设备）。
+ * 用于设备管理面板，需要把本机也展示出来。
+ */
+export async function listAllSnapshotObjects(): Promise<OSSObject[]> {
+  const userId = await getCurrentUserId();
+  return listAllObjects(`sync/${userId}/snapshots/`);
+}
+
+/**
+ * 列出当前命名空间下所有设备的 oplog（**不**过滤本设备）。
+ */
+export async function listAllOplogObjects(): Promise<OSSObject[]> {
+  const userId = await getCurrentUserId();
+  return listAllObjects(`sync/${userId}/oplog/`);
+}
+
+/**
+ * 仅获取当前同步 userId（供面板拼装 namespace 字符串使用）。
+ */
+export async function getSyncUserId(): Promise<string> {
+  return getCurrentUserId();
 }
 
 // ===========================
