@@ -101,3 +101,19 @@ test('aggregateDevices skips files with unparseable names', () => {
   assert.equal(devices.length, 1);
   assert.equal(devices[0].deviceId, 'dev-A');
 });
+
+test('aggregateDevices returns empty for empty inputs', () => {
+  assert.deepEqual(aggregateDevices([], [], Date.now(), 'sync/u1'), []);
+});
+
+test('aggregateDevices last-wins on duplicate snapshot for same device', () => {
+  const now = Date.now();
+  const snapshots = [
+    { name: 'sync/u1/snapshots/dev-A.json', size: 100, lastModified: new Date(now - 2 * 86_400_000).toISOString() },
+    { name: 'sync/u1/snapshots/dev-A.json', size: 999, lastModified: new Date(now - 1 * 86_400_000).toISOString() },
+  ];
+  const devices = aggregateDevices(snapshots, [], now, 'sync/u1');
+  assert.equal(devices.length, 1);
+  // last-iteration snapshot wins for snapshotBytes (current implementation contract)
+  assert.equal(devices[0].snapshotBytes, 999);
+});

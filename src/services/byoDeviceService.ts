@@ -108,9 +108,8 @@ export const byoDeviceService = {
   },
 
   removeDevice: async (deviceId: string): Promise<{ ok: true }> => {
-    const { getSyncUserId, listAllSnapshotObjects, listAllOplogObjects, deleteOSSFiles } =
+    const { listAllSnapshotObjects, listAllOplogObjects, deleteOSSFiles } =
       await import('./oss');
-    const userId = await getSyncUserId();
     const [snapshots, oplogs] = await Promise.all([
       listAllSnapshotObjects(),
       listAllOplogObjects(),
@@ -122,11 +121,7 @@ export const byoDeviceService = {
     for (const obj of oplogs) {
       if (parseDeviceIdFromOplogName(obj.name) === deviceId) names.push(obj.name);
     }
-    if (names.length === 0) {
-      // Caller treats this as success — device row will disappear on next refresh
-      void userId;
-      return { ok: true };
-    }
+    if (names.length === 0) return { ok: true };
     await deleteOSSFiles(names);
     return { ok: true };
   },
@@ -137,6 +132,8 @@ export const byoDeviceService = {
     const all = await listAllObjects(`sync/${userId}/`);
     let snapshotsBytes = 0;
     let oplogBytes = 0;
+    // Only snapshots/ and oplog/ live under sync/{userId}/; if other files
+    // ever exist there they will not be counted toward totalBytes.
     for (const obj of all) {
       if (obj.name.includes('/snapshots/')) snapshotsBytes += obj.size;
       else if (obj.name.includes('/oplog/')) oplogBytes += obj.size;
