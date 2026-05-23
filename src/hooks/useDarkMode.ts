@@ -14,7 +14,8 @@ const getInitialDark = () => {
   if (saved !== null) {
     return saved === 'true';
   }
-  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  // 暂停跟随系统：默认浅色，等深色模式稳定后恢复 window.matchMedia('(prefers-color-scheme: dark)').matches
+  return false;
 };
 
 const useDarkModeStore = create<DarkModeState>((set, get) => ({

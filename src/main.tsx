@@ -43,10 +43,9 @@ if (viewport) {
 // 初始化状态栏（会被 useDarkMode hook 更新）
 if (Capacitor.isNativePlatform()) {
   try {
-    // 检查用户偏好或系统偏好
+    // 检查用户偏好（暂停跟随系统：未设置时默认浅色）
     const savedDarkMode = localStorage.getItem('darkMode');
-    const prefersDark = savedDarkMode === 'true' ||
-      (savedDarkMode === null && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const prefersDark = savedDarkMode === 'true';
 
     StatusBar.setStyle({
       style: prefersDark ? Style.Dark : Style.Light
