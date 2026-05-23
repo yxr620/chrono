@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
-import { IonItem, IonLabel, IonRadio, IonRadioGroup, IonIcon } from '@ionic/react';
-import { chevronDownOutline, sparklesOutline } from 'ionicons/icons';
+import {
+  IonAccordion,
+  IonAccordionGroup,
+  IonIcon,
+  IonItem,
+  IonLabel,
+  IonRadio,
+  IonRadioGroup,
+} from '@ionic/react';
+import { sparklesOutline } from 'ionicons/icons';
 import { useFeatureModeStore } from '../../stores/featureModeStore';
 import type { FeatureMode } from '../../services/gateway/types';
 import { AiProviderForm } from './AiProviderForm';
@@ -15,6 +23,8 @@ const AI_OPTIONS: Array<{ mode: FeatureMode; label: string; hint: string }> = [
   { mode: 'managed',  label: '使用 Chrono 托管 AI',         hint: '需要登录 Chrono 账号' },
 ];
 
+const AI_ACCORDION_VALUE = 'ai-service';
+
 interface Props {
   onRequestSignIn: () => void;
 }
@@ -23,7 +33,8 @@ export const AiServiceSection: React.FC<Props> = ({ onRequestSignIn }) => {
   const mode = useFeatureModeStore((s) => s.modes.ai);
   const setMode = useFeatureModeStore((s) => s.setMode);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const [expanded, setExpanded] = useState(false);
+  const [expandedValue, setExpandedValue] = useState<string | undefined>(undefined);
+  const expanded = expandedValue === AI_ACCORDION_VALUE;
 
   const managedAvailable = !!import.meta.env.VITE_AUTH_API_URL;
   const managedAiModel = useManagedAiModel(managedAvailable && (expanded || mode === 'managed'));
@@ -65,53 +76,52 @@ export const AiServiceSection: React.FC<Props> = ({ onRequestSignIn }) => {
   };
 
   return (
-    <section className={`service-section service-section--collapsible${expanded ? ' service-section--expanded' : ''}`}>
-      <button
-        type="button"
-        className="service-section__summary"
-        onClick={() => setExpanded((current) => !current)}
-        aria-expanded={expanded}
-        aria-controls="ai-service-settings"
+    <div className="settings-accordion-wrap service-section-accordion">
+      <IonAccordionGroup
+        value={expandedValue}
+        onIonChange={(event) => {
+          const next = event.detail.value;
+          setExpandedValue(typeof next === 'string' ? next : undefined);
+        }}
       >
-        <span className="service-section__heading">
-          <IonIcon icon={sparklesOutline} className="service-section__icon" />
-          <span className="service-section__title-block">
-            <span className="service-section__title">AI 助手</span>
-            <span className="service-section__subtitle">{currentSubtitle}</span>
-          </span>
-        </span>
-        <IonIcon icon={chevronDownOutline} className="service-section__chevron" aria-hidden="true" />
-      </button>
+        <IonAccordion value={AI_ACCORDION_VALUE}>
+          <IonItem slot="header" lines="none">
+            <IonIcon icon={sparklesOutline} slot="start" aria-hidden="true" />
+            <IonLabel>
+              <h3>AI 助手</h3>
+              <p>{currentSubtitle}</p>
+            </IonLabel>
+          </IonItem>
 
-      {expanded && (
-        <div className="service-section__content" id="ai-service-settings">
-          <IonRadioGroup
-            value={mode}
-            onIonChange={(event) => handleSelect(event.detail.value as FeatureMode)}
-            className="service-section__radios"
-            aria-label="AI 模式"
-          >
-            {AI_OPTIONS.filter((opt) => {
-              if (opt.mode !== 'managed') return true;
-              return managedAvailable && isAuthenticated;
-            }).map((opt) => (
-              <IonItem key={opt.mode} lines="none">
-                <IonRadio slot="start" value={opt.mode} />
-                <IonLabel>
-                  <h3>{opt.label}</h3>
-                  <p>{opt.mode === 'managed' ? `当前模型：${managedAiModelLabel}` : opt.hint}</p>
-                </IonLabel>
-              </IonItem>
-            ))}
-          </IonRadioGroup>
+          <div className="settings-accordion-content" slot="content">
+            <IonRadioGroup
+              value={mode}
+              onIonChange={(event) => handleSelect(event.detail.value as FeatureMode)}
+              className="service-section__radios"
+              aria-label="AI 模式"
+            >
+              {AI_OPTIONS.filter((opt) => {
+                if (opt.mode !== 'managed') return true;
+                return managedAvailable && isAuthenticated;
+              }).map((opt) => (
+                <IonItem key={opt.mode} lines="none">
+                  <IonRadio slot="start" value={opt.mode} />
+                  <IonLabel>
+                    <h3>{opt.label}</h3>
+                    <p>{opt.mode === 'managed' ? `当前模型：${managedAiModelLabel}` : opt.hint}</p>
+                  </IonLabel>
+                </IonItem>
+              ))}
+            </IonRadioGroup>
 
-          {mode === 'byo' && (
-            <div className="service-section__byo-form">
-              <AiProviderForm />
-            </div>
-          )}
-        </div>
-      )}
-    </section>
+            {mode === 'byo' && (
+              <div className="service-section__byo-form">
+                <AiProviderForm />
+              </div>
+            )}
+          </div>
+        </IonAccordion>
+      </IonAccordionGroup>
+    </div>
   );
 };

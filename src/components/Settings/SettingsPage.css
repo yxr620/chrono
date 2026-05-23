@@ -291,79 +291,33 @@
 }
 
 /* ─── Service sections (sync mode picker, AI mode picker) ─── */
+/* Header layout: icon at slot="start" + 2-line label (h3 title / p subtitle).
+   Animation, chevron, and a11y come from IonAccordion. */
 
-.service-section {
-  margin-bottom: 0;
-}
-.service-section__summary {
-  appearance: none;
-  -webkit-tap-highlight-color: transparent;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 0;
-  width: 100%;
-  text-align: left;
-  font: inherit;
-}
-.service-section__summary:focus,
-.service-section__summary:focus-visible {
-  outline: none;
-  box-shadow: none;
-}
-.service-section__heading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-.service-section__icon {
+.service-section-accordion ion-accordion ion-item[slot='header'] ion-icon[slot='start'] {
   font-size: 17px;
-  display: inline-flex;
-  align-items: center;
   color: hsl(var(--foreground));
-  flex-shrink: 0;
+  margin-inline-end: 10px;
+  margin-inline-start: 0;
 }
-.service-section__title-block {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
+
+.service-section-accordion ion-accordion ion-item[slot='header'] ion-label h3 {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: hsl(var(--foreground)) !important;
+  margin: 0 !important;
 }
-.service-section__title {
-  font-size: 15px;
-  line-height: 1.3;
-  font-weight: 600;
-  color: hsl(var(--foreground));
-}
-.service-section__subtitle {
-  font-size: 13px;
-  line-height: 1.35;
-  font-weight: 400;
-  color: hsl(var(--muted-foreground));
+
+.service-section-accordion ion-accordion ion-item[slot='header'] ion-label p {
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  color: hsl(var(--muted-foreground)) !important;
+  margin-top: 3px !important;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.service-section__chevron {
-  color: hsl(var(--muted-foreground));
-  flex-shrink: 0;
-  font-size: 17px;
-  transition: transform 0.16s ease;
-}
-.service-section--expanded .service-section__chevron {
-  transform: rotate(180deg);
-}
-.service-section__content {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px dashed var(--ion-color-step-150, #e0e0e0);
-}
+
 .service-section__radios {
   display: flex;
   flex-direction: column;
