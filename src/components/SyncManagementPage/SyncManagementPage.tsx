@@ -16,6 +16,7 @@ import type { SyncDirection } from '../../services/syncToast';
 import { useFeatureModeStore } from '../../stores/featureModeStore';
 import { useSyncStore } from '../../stores/syncStore';
 import './SyncManagementPage.css';
+import { ByoDevicePanel } from './ByoDevicePanel';
 
 import { formatTimestamp, formatRelativeTime } from '../../utils/formatTime';
 
@@ -365,6 +366,27 @@ export const SyncManagementPage: React.FC = () => {
           </IonAccordion>
         </IonAccordionGroup>
       </div>
+
+      {syncMode === 'byo' && (
+        <div className="settings-accordion-wrap">
+          <IonAccordionGroup>
+            <IonAccordion value="sync-devices">
+              <IonItem slot="header" lines="none">
+                <IonLabel>同步设备</IonLabel>
+              </IonItem>
+              <div className="settings-accordion-content" slot="content">
+                {isConfigured ? (
+                  <ByoDevicePanel />
+                ) : (
+                  <p className="settings-button-hint">
+                    请先在「多设备同步」完成 OSS 凭据配置后，再查看设备列表。
+                  </p>
+                )}
+              </div>
+            </IonAccordion>
+          </IonAccordionGroup>
+        </div>
+      )}
 
       <div className="settings-accordion-wrap">
         <IonAccordionGroup>
