@@ -71,7 +71,7 @@ export const DeviceListView: React.FC<DeviceListViewProps> = ({
               {isSelf && <span className="my-data__self-badge">本机</span>}
               {d.stale && <span className="my-data__stale-badge">已超过 90 天未同步</span>}
               <div className="my-data__row-meta">
-                快照 {fmtBytes(d.snapshotBytes)} · oplog {d.oplogCount} 个 ({fmtBytes(d.oplogBytes)}) · 最后同步 {formatRelativeTime(new Date(d.lastSeenAt).getTime())}
+                快照 {fmtBytes(d.snapshotBytes)} · oplog {d.oplogCount} 个 ({fmtBytes(d.oplogBytes)}) · 最后推送 {formatRelativeTime(new Date(d.lastSeenAt).getTime())}
               </div>
             </div>
             <button
