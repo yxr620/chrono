@@ -34,3 +34,31 @@
   cursor: pointer;
 }
 .my-data__danger-btn:disabled { opacity: 0.5; }
+.my-data__self-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--ion-color-primary-tint);
+  color: var(--ion-color-primary-contrast);
+  font-size: 11px;
+}
+.my-data__empty {
+  color: var(--ion-color-medium);
+  padding: 12px 0;
+}
+.my-data__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+}
+.my-data__refresh-btn {
+  background: transparent;
+  color: var(--ion-color-primary);
+  border: 1px solid var(--ion-color-primary);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.my-data__refresh-btn:disabled { opacity: 0.5; }
