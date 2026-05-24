@@ -25,9 +25,9 @@ test('wheel date labels stay English when the global dayjs locale is Chinese', a
   }
 });
 
-test('sync management relative time does not mutate the global dayjs locale', async () => {
+test('formatRelativeTime does not mutate the global dayjs locale', async () => {
   const source = await readFile(
-    path.join(rootDir, 'src/components/SyncManagementPage/SyncManagementPage.tsx'),
+    path.join(rootDir, 'src/utils/formatTime.ts'),
     'utf8'
   );
 
