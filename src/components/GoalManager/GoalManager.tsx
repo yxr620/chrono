@@ -75,10 +75,13 @@ export const GoalManager: React.FC = () => {
   const editInputRef = useRef<HTMLIonInputElement>(null);
 
   // Platform-specific modal breakpoints
-  // iOS: keyboard overlays content, need taller modal (0.42) to keep button + segment visible above keyboard
-  // Android: adjustResize compresses entire WebView, smaller modal (0.30) to avoid excess whitespace
+  // Both platforms now have keyboard-overlay behaviour (iOS natively; Android
+  // via windowSoftInputMode=adjustNothing set in AndroidManifest). Use 0.42
+  // on iOS and 0.55 on Android — Android keyboards tend to be taller, so the
+  // modal needs to occupy more vertical space for the input + button to stay
+  // visible above the keyboard.
   const isIOS = Capacitor.getPlatform() === 'ios';
-  const modalBreakpoint = isIOS ? 0.42 : 0.30;
+  const modalBreakpoint = isIOS ? 0.42 : 0.55;
 
   const { goals, loadGoals, addGoal, updateGoal, deleteGoal, toggleCompletion } = useGoalStore();
   const { entries, loadEntries, getEarliestEntryDate } = useEntryStore();
