@@ -112,28 +112,6 @@
   background: hsl(var(--primary) / 0.08);
 }
 
-.ai-service-link-inline {
-  min-width: auto;
-}
-
-.ai-service-banner {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  margin-bottom: 12px;
-  border-radius: 12px;
-  background: hsl(var(--primary) / 0.08);
-  border: 1px solid hsl(var(--primary) / 0.12);
-}
-
-.ai-service-banner-text {
-  font-size: 13px;
-  line-height: 1.5;
-  color: hsl(var(--muted-foreground));
-}
-
 .ai-icon-btn {
   display: flex;
   align-items: center;
@@ -860,13 +838,6 @@
   font-weight: 500;
 }
 
-@media (max-width: 640px) {
-  .ai-service-banner {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-}
-
 /* ─── Mobile overrides ─────────────────────────────────────────── */
 @media (max-width: 1023px) {
   /* The AI page needs a definite parent height so .ai-assistant's
@@ -895,12 +866,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .ai-service-banner {
-    flex-wrap: wrap;
-    padding: 8px 10px;
-    gap: 6px;
   }
 
   .ai-quick-prompts,

@@ -346,15 +346,6 @@ export const AIAssistant: React.FC = () => {
       : aiConfigured
         ? '向我提问关于你的时间记录的任何问题'
         : '供应商凭据现在在「设置」页面配置。';
-  const serviceBannerText = aiConfigured
-    ? aiMode === 'managed'
-      ? `${managedAiUsageLabel}。`
-      : '供应商凭据现在在「设置」页面配置。'
-    : aiMode === 'disabled'
-      ? 'AI 助手当前处于关闭模式。'
-      : aiMode === 'managed'
-        ? '请先在「设置」页面登录 Chrono 账号。'
-        : '请先在「设置」页面填写 provider / API Key / model。';
   const inputPlaceholder = aiMode === 'disabled'
     ? 'AI 助手已关闭，请先在设置页面启用 →'
     : aiMode === 'managed' && !isAuthenticated
@@ -390,13 +381,6 @@ export const AIAssistant: React.FC = () => {
             </button>
           )}
         </div>
-      </div>
-
-      <div className="ai-service-banner">
-        <span className="ai-service-banner-text">{serviceBannerText}</span>
-        <button className="ai-service-link ai-service-link-inline" onClick={handleOpenServices}>
-          打开设置
-        </button>
       </div>
 
       {/* 消息区 */}
