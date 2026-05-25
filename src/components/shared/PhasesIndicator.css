@@ -16,6 +16,18 @@
   color: hsl(var(--primary));
 }
 
+@media (max-width: 1023px) {
+  .ai-phase-duration {
+    font-size: 0;
+  }
+
+  .ai-phase-duration::before {
+    content: attr(data-compact-label);
+    font-size: 10px;
+    line-height: 1.4;
+  }
+}
+
 /* ── 执行阶段列表 ─────────────────────────────────────────── */
 .ai-phases {
   display: flex;

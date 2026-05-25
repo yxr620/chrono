@@ -3,28 +3,8 @@ import type { AssistantPhaseTiming } from './phaseTiming';
 import { getPhaseDurationMs } from './phaseTiming';
 import { DebugInfoPanel } from './DebugInfoPanel';
 import { renderMarkdown } from './renderMarkdown';
+import { formatCompactDuration, formatDuration, PHASE_CONFIG } from './phaseDisplay';
 import './PhasesIndicator.css';
-
-// 阶段配置：label 和 icon
-export const PHASE_CONFIG: Record<string, { label: string; icon: string }> = {
-  preparing:     { icon: '[]', label: '准备上下文' },
-  requesting:    { icon: '>',  label: '请求模型' },
-  reasoning:     { icon: '~',  label: '模型推理中' },
-  composingTool: { icon: '{}', label: '构造工具调用' },
-  toolCall:      { icon: '$',  label: '调用工具' },
-  answering:     { icon: '>>', label: '生成回答' },
-  enriching:     { icon: '@',  label: '本地补全字段' },
-};
-
-/** 格式化耗时：XXX ms / X.Xs / Xm Ys */
-export function formatDuration(ms: number): string {
-  if (!Number.isFinite(ms) || ms < 0) return '';
-  if (ms < 1000) return `${Math.round(ms)}ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
-  const m = Math.floor(ms / 60_000);
-  const s = Math.round((ms % 60_000) / 1000);
-  return `${m}m${s}s`;
-}
 
 /**
  * 阶段列表指示器
@@ -56,6 +36,7 @@ export const PhasesIndicator: React.FC<{
 
         const durationMs = getPhaseDurationMs(phases, i, { loading, now });
         const durationLabel = durationMs !== undefined ? formatDuration(durationMs) : '';
+        const compactDurationLabel = durationMs !== undefined ? formatCompactDuration(durationMs) : '';
 
         const statusIcon = isActive
           ? <span className="ai-phase-spinner" />
@@ -66,7 +47,7 @@ export const PhasesIndicator: React.FC<{
         const labelText = p.detail || (isActive ? `${cfg.label}...` : cfg.label);
 
         const durationBadge = durationLabel
-          ? <span className="ai-phase-duration">{durationLabel}</span>
+          ? <span className="ai-phase-duration" data-compact-label={compactDurationLabel}>{durationLabel}</span>
           : null;
 
         return (

@@ -25,7 +25,8 @@ import {
   markFinalPhaseFailed,
   type AssistantPhaseTiming,
 } from '../shared/phaseTiming';
-import { PhasesIndicator, PHASE_CONFIG } from '../shared/PhasesIndicator';
+import { PHASE_CONFIG } from '../shared/phaseDisplay';
+import { PhasesIndicator } from '../shared/PhasesIndicator';
 import { renderMarkdown } from '../shared/renderMarkdown';
 import {
   isAssistantMessagesNearBottom,
