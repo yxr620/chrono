@@ -869,8 +869,16 @@
 
 /* ─── Mobile overrides ─────────────────────────────────────────── */
 @media (max-width: 1023px) {
+  /* The AI page needs a definite parent height so .ai-assistant's
+     height: 100% resolves; otherwise the input bar sits mid-page. */
+  .mobile-page-stage[data-mobile-page="ai"] {
+    height: 100%;
+  }
+
   .ai-assistant {
     max-width: none;
+    padding: 12px 12px 8px;
+    box-sizing: border-box;
   }
 
   .ai-header {
@@ -907,8 +915,13 @@
   }
 
   .ai-input-bar {
-    padding: 6px 8px;
+    padding: 8px 0 0;
     gap: 6px;
+  }
+
+  .ai-input {
+    min-height: 36px;
+    padding: 8px 12px;
   }
 
   /* Prevent debug blocks inside the phases panel from forcing the
