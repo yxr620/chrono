@@ -5,7 +5,7 @@ import {
   IonTabBar,
   IonTabButton,
 } from '@ionic/react';
-import { checkmarkDoneOutline, settingsOutline } from 'ionicons/icons';
+import { checkmarkDoneOutline, settingsOutline, sparklesOutline } from 'ionicons/icons';
 import { RecordsPage } from './components/RecordsPage/RecordsPage';
 import { Dashboard } from './components/Dashboard/Dashboard';
 import { TrendPage } from './components/TrendPage/TrendPage';
@@ -51,6 +51,10 @@ const mobileTabConfigs = [
   {
     tab: 'goals',
     icon: <IonIcon icon={checkmarkDoneOutline} />,
+  },
+  {
+    tab: 'ai',
+    icon: <IonIcon icon={sparklesOutline} />,
   },
   {
     tab: 'export',
