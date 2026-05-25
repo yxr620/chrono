@@ -889,6 +889,12 @@
     padding: 8px 12px;
   }
 
+  .ai-send-btn,
+  .ai-stop-btn {
+    width: 36px;
+    height: 36px;
+  }
+
   /* Prevent debug blocks inside the phases panel from forcing the
      whole page to scroll horizontally on narrow screens. */
   .ai-phases pre,
