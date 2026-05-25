@@ -28,6 +28,8 @@ import {
   sparklesOutline
 } from 'ionicons/icons';
 import { Capacitor } from '@capacitor/core';
+import { Keyboard } from '@capacitor/keyboard';
+import type { PluginListenerHandle } from '@capacitor/core';
 import { useGoalStore } from '../../stores/goalStore';
 import { useEntryStore } from '../../stores/entryStore';
 import { useDateStore } from '../../stores/dateStore';
@@ -73,15 +75,43 @@ export const GoalManager: React.FC = () => {
 
   const addInputRef = useRef<HTMLIonInputElement>(null);
   const editInputRef = useRef<HTMLIonInputElement>(null);
+  const addModalRef = useRef<HTMLIonModalElement>(null);
+  const editModalRef = useRef<HTMLIonModalElement>(null);
 
-  // Platform-specific modal breakpoints
-  // Both platforms now have keyboard-overlay behaviour (iOS natively; Android
-  // via windowSoftInputMode=adjustNothing set in AndroidManifest). Use 0.42
-  // on iOS and 0.55 on Android — Android keyboards tend to be taller, so the
-  // modal needs to occupy more vertical space for the input + button to stay
-  // visible above the keyboard.
+  // Both platforms have keyboard-overlay behaviour (iOS natively; Android via
+  // windowSoftInputMode=adjustNothing in AndroidManifest). iOS at 0.42 fits
+  // the content above the native keyboard. Android keyboards vary in height,
+  // so on Android we start at 0.55 and grow to KEYBOARD_UP_BREAKPOINT while
+  // the keyboard is visible (see effect below).
   const isIOS = Capacitor.getPlatform() === 'ios';
+  const isAndroid = Capacitor.getPlatform() === 'android';
   const modalBreakpoint = isIOS ? 0.42 : 0.55;
+  const KEYBOARD_UP_BREAKPOINT = 0.9;
+
+  useEffect(() => {
+    if (!isAndroid) return;
+    const handles: PluginListenerHandle[] = [];
+
+    const liftAll = () => {
+      void addModalRef.current?.setCurrentBreakpoint(KEYBOARD_UP_BREAKPOINT);
+      void editModalRef.current?.setCurrentBreakpoint(KEYBOARD_UP_BREAKPOINT);
+    };
+    const restoreAll = () => {
+      void addModalRef.current?.setCurrentBreakpoint(modalBreakpoint);
+      void editModalRef.current?.setCurrentBreakpoint(modalBreakpoint);
+    };
+
+    Keyboard.addListener('keyboardWillShow', liftAll)
+      .then((h) => handles.push(h))
+      .catch((err) => console.error('[GoalManager] keyboardWillShow listener failed:', err));
+    Keyboard.addListener('keyboardWillHide', restoreAll)
+      .then((h) => handles.push(h))
+      .catch((err) => console.error('[GoalManager] keyboardWillHide listener failed:', err));
+
+    return () => {
+      handles.forEach((h) => { void h.remove(); });
+    };
+  }, [isAndroid, modalBreakpoint]);
 
   const { goals, loadGoals, addGoal, updateGoal, deleteGoal, toggleCompletion } = useGoalStore();
   const { entries, loadEntries, getEarliestEntryDate } = useEntryStore();
@@ -831,11 +861,12 @@ export const GoalManager: React.FC = () => {
 
       {/* 添加目标弹窗 (Ionic Sheet Modal) */}
       <IonModal
+        ref={addModalRef}
         isOpen={showAddGoal}
         onDidDismiss={() => { setShowAddGoal(false); setNewGoalType('time'); setNewGoalName(''); }}
         // balanced height to keep button visible above keyboard
         initialBreakpoint={modalBreakpoint}
-        breakpoints={[0, modalBreakpoint]}
+        breakpoints={[0, modalBreakpoint, KEYBOARD_UP_BREAKPOINT]}
         style={{ '--border-radius': '24px' }}
         onDidPresent={() => {
           setTimeout(() => {
@@ -908,6 +939,7 @@ export const GoalManager: React.FC = () => {
 
       {/* 编辑目标弹窗 (Ionic Sheet Modal) */}
       <IonModal
+        ref={editModalRef}
         isOpen={showEditGoal}
         onDidDismiss={() => {
           setShowEditGoal(false);
@@ -916,7 +948,7 @@ export const GoalManager: React.FC = () => {
         }}
         // balanced height to keep button visible above keyboard
         initialBreakpoint={modalBreakpoint}
-        breakpoints={[0, modalBreakpoint]}
+        breakpoints={[0, modalBreakpoint, KEYBOARD_UP_BREAKPOINT]}
         style={{ '--border-radius': '24px' }}
         onDidPresent={() => {
           setTimeout(() => {
