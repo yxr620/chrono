@@ -884,6 +884,25 @@
     font-size: 12px;
   }
 
+  .ai-msg-assistant .ai-msg-bubble {
+    max-width: 100%;
+    width: 100%;
+    padding: 4px 0 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+  }
+
+  .ai-msg-confirmation .ai-msg-bubble {
+    max-width: 96%;
+    width: auto;
+    padding: 10px 14px;
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: 12px;
+    border-bottom-left-radius: 4px;
+  }
+
   .ai-input-bar {
     padding: 8px 0 0;
     gap: 6px;

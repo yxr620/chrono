@@ -453,7 +453,7 @@ export const AIAssistant: React.FC = () => {
               </div>
             ))}
             {pendingConfirmation && (
-              <div className="ai-msg ai-msg-assistant">
+              <div className="ai-msg ai-msg-assistant ai-msg-confirmation">
                 <div className="ai-msg-bubble">
                   <ConfirmationCard
                     card={pendingConfirmation.card}
