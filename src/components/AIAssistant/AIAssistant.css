@@ -848,8 +848,11 @@
 
   .ai-assistant {
     max-width: none;
-    padding: 12px 12px 8px;
+    /* Bottom padding lifts the input bar above the Android keyboard;
+       --keyboard-height is set by the main.tsx listener (0 elsewhere). */
+    padding: 12px 12px calc(8px + var(--keyboard-height, 0px));
     box-sizing: border-box;
+    transition: padding-bottom 180ms ease;
   }
 
   .ai-header {

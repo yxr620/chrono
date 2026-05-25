@@ -26,6 +26,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { useFeatureModeStore } from './stores/featureModeStore'
 import { useAuthStore } from './stores/authStore'
 import { StatusBar, Style } from '@capacitor/status-bar'
+import { Keyboard } from '@capacitor/keyboard'
 import { Capacitor } from '@capacitor/core'
 
 // 初始化 Ionic
@@ -57,6 +58,23 @@ if (Capacitor.isNativePlatform()) {
   } catch (error) {
     console.error('[Init] 状态栏初始化失败:', error);
   }
+}
+
+// Android: AndroidManifest uses adjustNothing so the keyboard overlays the
+// WebView instead of resizing it. Expose the keyboard height as a CSS
+// variable so input bars can lift themselves above the keyboard.
+// iOS keeps its existing Capacitor Keyboard.resize='ionic' handling.
+if (Capacitor.getPlatform() === 'android') {
+  const setHeight = (h: number) => {
+    document.documentElement.style.setProperty('--keyboard-height', `${h}px`);
+  };
+  setHeight(0);
+  Keyboard.addListener('keyboardWillShow', (info) => setHeight(info.keyboardHeight)).catch((err) => {
+    console.error('[Init] keyboardWillShow listener failed:', err);
+  });
+  Keyboard.addListener('keyboardWillHide', () => setHeight(0)).catch((err) => {
+    console.error('[Init] keyboardWillHide listener failed:', err);
+  });
 }
 
 // 全局错误处理
