@@ -866,3 +866,56 @@
     flex-direction: column;
   }
 }
+
+/* ─── Mobile overrides ─────────────────────────────────────────── */
+@media (max-width: 1023px) {
+  .ai-assistant {
+    max-width: none;
+  }
+
+  .ai-header {
+    padding: 0 0 8px;
+    gap: 6px;
+  }
+
+  .ai-header-title {
+    font-size: 15px;
+  }
+
+  .ai-header-subtitle {
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ai-service-banner {
+    flex-wrap: wrap;
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .ai-quick-prompts,
+  .ai-quick-bar {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .ai-quick-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .ai-input-bar {
+    padding: 6px 8px;
+    gap: 6px;
+  }
+
+  /* Prevent debug blocks inside the phases panel from forcing the
+     whole page to scroll horizontally on narrow screens. */
+  .ai-phases pre,
+  .ai-phases code {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
