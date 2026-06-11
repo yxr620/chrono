@@ -186,6 +186,7 @@ export const AIAssistant: React.FC = () => {
     try {
 
       let accumulated = '';
+      let toolCallCount = 0;
 
       const { content } = await runToolCallLoop(
         query,
@@ -225,7 +226,8 @@ export const AIAssistant: React.FC = () => {
             updateMessage(aiMsgId, { content: accumulated, loading: true });
           },
           onToolCall: () => {
-            // 工具调用信息已通过 onPhase 显示
+            // 工具调用信息已通过 onPhase 显示，这里仅计数用于空回答兜底文案
+            toolCallCount++;
           },
           onConfirmRequired: (card) => {
             return new Promise<boolean>((resolve) => {
@@ -239,8 +241,13 @@ export const AIAssistant: React.FC = () => {
 
       const finalizedPhases = markFinalPhaseEnded(phasesRef.current);
       phasesRef.current = finalizedPhases;
+      // 兜底：流正常结束但没有任何回答正文。最常见原因是模型把 maxSteps
+      // 全部耗在工具调用上（stopWhen 截断后不会再有生成回答的步骤）。
+      const emptyFallback = toolCallCount > 0
+        ? '已达到工具调用步数上限，未能生成最终回答。请尝试换个问法或缩小问题范围后重试。'
+        : '模型未返回内容，请重试。';
       updateMessage(aiMsgId, {
-        content: content || accumulated,
+        content: content || accumulated || emptyFallback,
         loading: false,
         phases: [...finalizedPhases],
       });
