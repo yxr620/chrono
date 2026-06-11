@@ -40,6 +40,7 @@ import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import type { Goal } from '../../services/db';
 import { suggestGoals } from '../../services/goalSuggester';
 import { TimeInjectionMatrix } from './TimeInjectionMatrix';
+import { shouldSubmitGoalFromKeyboard } from './keyboardShortcuts';
 import './GoalManager.css';
 
 dayjs.extend(isSameOrBefore);
@@ -912,7 +913,7 @@ export const GoalManager: React.FC = () => {
                   '--highlight-height': '0px',
                 } as React.CSSProperties}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (shouldSubmitGoalFromKeyboard(e)) {
                     handleAddGoal();
                   }
                 }}
@@ -978,7 +979,7 @@ export const GoalManager: React.FC = () => {
                   '--highlight-height': '0px'
                 } as React.CSSProperties}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (shouldSubmitGoalFromKeyboard(e)) {
                     handleSaveEdit();
                   }
                 }}
