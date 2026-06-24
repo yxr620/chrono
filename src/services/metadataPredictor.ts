@@ -345,6 +345,7 @@ function findHistoricalGoalNameMatch(
     }
 
     let best: { goal: GoalProfile; count: number; score: number } | null = null;
+    let topGoalIds = new Set<string>();
     for (const historical of ranked) {
         const historicalProfile = toTextProfile(historical.key);
         for (const candidate of candidateGoals) {
@@ -359,12 +360,27 @@ function findHistoricalGoalNameMatch(
                 (historical.count === best.count && score > best.score)
             ) {
                 best = { goal: candidate, count: historical.count, score };
+                topGoalIds = new Set([candidate.goal.id!]);
+            } else if (
+                historical.count === best.count &&
+                score === best.score
+            ) {
+                topGoalIds.add(candidate.goal.id!);
             }
         }
     }
 
     if (!best) {
         return null;
+    }
+
+    if (topGoalIds.size > 1) {
+        return {
+            id: null,
+            confidence: 'medium',
+            reason: activityMatch === 'exact' ? 'exactActivity' : 'strongActivityMatch',
+            score: best.score,
+        };
     }
 
     return {

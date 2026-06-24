@@ -93,6 +93,24 @@ test('exact historical activity can map to a strongly related current goal name'
   assert.equal(result.goal.reason, 'exactActivity');
 });
 
+test('exact activity does not auto-select when historical goal fuzzy remap ties', async () => {
+  const historicalGoal = makeGoal('hist-paper', '论文阅读', '2026-06-20');
+  const summaryGoal = makeGoal('today-summary', '论文总结');
+  const readingGoal = makeGoal('today-reading', '读论文');
+  await db.goals.bulkPut([historicalGoal, summaryGoal, readingGoal]);
+  await db.entries.put(makeEntry({
+    id: 'entry-1',
+    activity: '写论文',
+    goalId: historicalGoal.id!,
+    endTime: new Date(Date.now() - 1 * day),
+  }));
+
+  const result = await predictMetadata('写论文', [summaryGoal, readingGoal]);
+
+  assert.equal(result.goalId, null);
+  assert.notEqual(result.goal.confidence, 'high');
+});
+
 test('strong activity match only selects target when historical goal name exactly exists today', async () => {
   const historicalGoal = makeGoal('hist-paper', '论文阅读', '2026-06-20');
   const todayGoal = makeGoal('today-paper', '论文阅读');
