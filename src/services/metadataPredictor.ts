@@ -174,8 +174,11 @@ async function ensureCache(): Promise<void> {
     }
 
     const cutoff = Date.now() - HISTORY_WINDOW_MS;
-    const allEntries = await db.entries.toArray();
-    const validEntries = allEntries.filter(entry => {
+    const recentEntries = await db.entries
+        .where('endTime')
+        .aboveOrEqual(new Date(cutoff))
+        .toArray();
+    const validEntries = recentEntries.filter(entry => {
         if (entry.deleted || entry.endTime === null) {
             return false;
         }
@@ -374,6 +377,7 @@ function findHistoricalGoalNameMatch(
 
 function predictDirectGoal(input: TextProfile, candidateGoals: GoalProfile[]): MetadataPredictionField | null {
     let best: { goal: GoalProfile; score: number } | null = null;
+    let topScoreMatches = 0;
 
     for (const candidate of candidateGoals) {
         const score = overlapScore(input.fragments, candidate.name.fragments);
@@ -383,11 +387,23 @@ function predictDirectGoal(input: TextProfile, candidateGoals: GoalProfile[]): M
 
         if (!best || score > best.score) {
             best = { goal: candidate, score };
+            topScoreMatches = 1;
+        } else if (score === best.score) {
+            topScoreMatches += 1;
         }
     }
 
     if (!best) {
         return null;
+    }
+
+    if (topScoreMatches > 1) {
+        return {
+            id: null,
+            confidence: 'medium',
+            reason: 'directGoalToken',
+            score: best.score,
+        };
     }
 
     return {

@@ -145,6 +145,18 @@ test('direct goal token match supports Chinese bigram and project tokens', async
   assert.equal(comp.goal.reason, 'directGoalToken');
 });
 
+test('direct goal match does not auto-select when top fragment score ties', async () => {
+  const summaryGoal = makeGoal('today-summary', '论文总结');
+  const readingGoal = makeGoal('today-reading', '读论文');
+  await db.goals.bulkPut([summaryGoal, readingGoal]);
+
+  const result = await predictMetadata('看论文', [summaryGoal, readingGoal]);
+
+  assert.equal(result.goalId, null);
+  assert.equal(result.goal.id, null);
+  assert.notEqual(result.goal.confidence, 'high');
+});
+
 test('history older than 60 days is ignored', async () => {
   const historicalGoal = makeGoal('hist-old', '旧项目', '2026-04-01');
   const todayGoal = makeGoal('today-old', '旧项目');
