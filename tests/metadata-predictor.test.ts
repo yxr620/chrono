@@ -111,6 +111,23 @@ test('strong activity match only selects target when historical goal name exactl
   assert.equal(result.goal.reason, 'strongActivityMatch');
 });
 
+test('strong activity match does not auto-select a merely similar current goal name', async () => {
+  const historicalGoal = makeGoal('hist-paper', '论文阅读', '2026-06-20');
+  const todayGoal = makeGoal('today-paper-summary', '论文总结');
+  await db.goals.bulkPut([historicalGoal, todayGoal]);
+  await db.entries.put(makeEntry({
+    id: 'entry-1',
+    activity: '读论文',
+    goalId: historicalGoal.id!,
+    endTime: new Date(Date.now() - 1 * day),
+  }));
+
+  const result = await predictMetadata('看论文', [todayGoal]);
+
+  assert.equal(result.goalId, null);
+  assert.notEqual(result.goal.confidence, 'high');
+});
+
 test('direct goal token match supports Chinese bigram and project tokens', async () => {
   const paperGoal = makeGoal('today-paper', '读论文');
   const compGoal = makeGoal('today-comp', '学习 COMP8015 课程');
@@ -134,13 +151,13 @@ test('history older than 60 days is ignored', async () => {
   await db.goals.bulkPut([historicalGoal, todayGoal]);
   await db.entries.put(makeEntry({
     id: 'old-entry',
-    activity: '整理旧项目',
+    activity: '整理归档资料',
     goalId: historicalGoal.id!,
     categoryId: 'work',
     endTime: new Date(Date.now() - 70 * day),
   }));
 
-  const result = await predictMetadata('整理旧项目', [todayGoal]);
+  const result = await predictMetadata('整理归档资料', [todayGoal]);
 
   assert.equal(result.goalId, null);
   assert.equal(result.categoryId, null);
