@@ -270,7 +270,7 @@ export async function parseTranscript(
   }
 
   // 本地 predictMetadata 基于用户历史，但只允许高置信度结果覆盖 AI 字段。
-  // 中/低置信度预测保留为诊断信息，不覆盖用户口述解析结果。
+  // 中/低置信度或无命中的预测不覆盖用户口述解析结果。
   callbacks?.onPhase?.('enriching', '本地补全 category/goal');
   await Promise.all(
     entries.map(async entry => {
