@@ -55,6 +55,16 @@ interface RankedFrequency {
     count: number;
 }
 
+type GoalNameRemapType = 'exactName' | 'fuzzyName';
+
+interface GoalNameRemapCandidate {
+    goal: GoalProfile;
+    count: number;
+    remapType: GoalNameRemapType;
+    typeRank: number;
+    score: number;
+}
+
 // ============ Text normalization ============
 
 const PUNCTUATION_OR_SPACE = /[\s\p{P}\p{S}]+/gu;
@@ -328,66 +338,73 @@ function findHistoricalGoalNameMatch(
     candidateGoals: GoalProfile[],
     activityMatch: Extract<ActivityMatch, 'exact' | 'strong'>,
 ): MetadataPredictionField | null {
-    const ranked = rankedFrequencies(goalNameFreq);
+    const candidates: GoalNameRemapCandidate[] = [];
 
-    for (const historical of ranked) {
-        const exactGoal = candidateGoals.find(
-            candidate => candidate.name.normalized === historical.key,
-        );
-        if (exactGoal) {
-            return {
-                id: exactGoal.goal.id!,
-                confidence: 'high',
-                reason: activityMatch === 'exact' ? 'exactActivity' : 'strongActivityMatch',
-                score: historical.count,
-            };
-        }
-    }
-
-    let best: { goal: GoalProfile; count: number; score: number } | null = null;
-    let topGoalIds = new Set<string>();
-    for (const historical of ranked) {
+    for (const historical of rankedFrequencies(goalNameFreq)) {
         const historicalProfile = toTextProfile(historical.key);
         for (const candidate of candidateGoals) {
+            if (candidate.name.normalized === historical.key) {
+                candidates.push({
+                    goal: candidate,
+                    count: historical.count,
+                    remapType: 'exactName',
+                    typeRank: 2,
+                    score: 0,
+                });
+                continue;
+            }
+
             const score = overlapScore(historicalProfile.fragments, candidate.name.fragments);
             if (score <= 0) {
                 continue;
             }
 
-            if (
-                !best ||
-                historical.count > best.count ||
-                (historical.count === best.count && score > best.score)
-            ) {
-                best = { goal: candidate, count: historical.count, score };
-                topGoalIds = new Set([candidate.goal.id!]);
-            } else if (
-                historical.count === best.count &&
-                score === best.score
-            ) {
-                topGoalIds.add(candidate.goal.id!);
-            }
+            candidates.push({
+                goal: candidate,
+                count: historical.count,
+                remapType: 'fuzzyName',
+                typeRank: 1,
+                score,
+            });
         }
     }
 
-    if (!best) {
+    if (candidates.length === 0) {
         return null;
     }
+
+    candidates.sort((a, b) =>
+        b.count - a.count ||
+        b.typeRank - a.typeRank ||
+        b.score - a.score,
+    );
+
+    const [best] = candidates;
+    const topGoalIds = new Set(
+        candidates
+            .filter(candidate =>
+                candidate.count === best.count &&
+                candidate.typeRank === best.typeRank &&
+                candidate.score === best.score,
+            )
+            .map(candidate => candidate.goal.goal.id!),
+    );
+    const resultScore = best.remapType === 'exactName' ? best.count : best.score;
 
     if (topGoalIds.size > 1) {
         return {
             id: null,
             confidence: 'medium',
             reason: activityMatch === 'exact' ? 'exactActivity' : 'strongActivityMatch',
-            score: best.score,
+            score: resultScore,
         };
     }
 
     return {
         id: best.goal.goal.id!,
-        confidence: activityMatch === 'exact' ? 'high' : 'medium',
+        confidence: activityMatch === 'exact' || best.remapType === 'exactName' ? 'high' : 'medium',
         reason: activityMatch === 'exact' ? 'exactActivity' : 'strongActivityMatch',
-        score: best.score,
+        score: resultScore,
     };
 }
 

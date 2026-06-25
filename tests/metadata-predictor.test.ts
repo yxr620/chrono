@@ -108,7 +108,87 @@ test('exact activity does not auto-select when historical goal fuzzy remap ties'
   const result = await predictMetadata('写论文', [summaryGoal, readingGoal]);
 
   assert.equal(result.goalId, null);
+  assert.equal(result.goal.id, null);
   assert.notEqual(result.goal.confidence, 'high');
+});
+
+test('exact activity does not auto-select when equally frequent exact historical goal names both exist today', async () => {
+  const historicalPaperGoal = makeGoal('hist-paper', '论文阅读', '2026-06-20');
+  const historicalSummaryGoal = makeGoal('hist-summary', '论文总结', '2026-06-20');
+  const todayPaperGoal = makeGoal('today-paper', '论文阅读');
+  const todaySummaryGoal = makeGoal('today-summary', '论文总结');
+  await db.goals.bulkPut([
+    historicalPaperGoal,
+    historicalSummaryGoal,
+    todayPaperGoal,
+    todaySummaryGoal,
+  ]);
+  await db.entries.bulkPut([
+    makeEntry({
+      id: 'entry-paper',
+      activity: '写论文',
+      goalId: historicalPaperGoal.id!,
+      endTime: new Date(Date.now() - 1 * day),
+    }),
+    makeEntry({
+      id: 'entry-summary',
+      activity: '写论文',
+      goalId: historicalSummaryGoal.id!,
+      endTime: new Date(Date.now() - 1 * day),
+    }),
+  ]);
+
+  const result = await predictMetadata('写论文', [todayPaperGoal, todaySummaryGoal]);
+
+  assert.equal(result.goalId, null);
+  assert.equal(result.goal.id, null);
+  assert.notEqual(result.goal.confidence, 'high');
+});
+
+test('exact activity prefers a higher-frequency fuzzy historical goal remap over lower-frequency exact name match', async () => {
+  const historicalExactGoal = makeGoal('hist-exact', '杂项整理', '2026-06-20');
+  const historicalRecogemGoal = makeGoal('hist-recogem', 'recogem文章', '2026-06-20');
+  const todayExactGoal = makeGoal('today-exact', '杂项整理');
+  const todayRecogemGoal = makeGoal('today-recogem', '读recogem文章');
+  await db.goals.bulkPut([
+    historicalExactGoal,
+    historicalRecogemGoal,
+    todayExactGoal,
+    todayRecogemGoal,
+  ]);
+  await db.entries.bulkPut([
+    makeEntry({
+      id: 'entry-exact',
+      activity: '写recogem文章',
+      goalId: historicalExactGoal.id!,
+      endTime: new Date(Date.now() - 1 * day),
+    }),
+    makeEntry({
+      id: 'entry-recogem-1',
+      activity: '写recogem文章',
+      goalId: historicalRecogemGoal.id!,
+      endTime: new Date(Date.now() - 2 * day),
+    }),
+    makeEntry({
+      id: 'entry-recogem-2',
+      activity: '写recogem文章',
+      goalId: historicalRecogemGoal.id!,
+      endTime: new Date(Date.now() - 3 * day),
+    }),
+    makeEntry({
+      id: 'entry-recogem-3',
+      activity: '写recogem文章',
+      goalId: historicalRecogemGoal.id!,
+      endTime: new Date(Date.now() - 4 * day),
+    }),
+  ]);
+
+  const result = await predictMetadata('写recogem文章', [todayExactGoal, todayRecogemGoal]);
+
+  assert.equal(result.goalId, 'today-recogem');
+  assert.equal(result.goal.id, 'today-recogem');
+  assert.equal(result.goal.confidence, 'high');
+  assert.equal(result.goal.reason, 'exactActivity');
 });
 
 test('strong activity match only selects target when historical goal name exactly exists today', async () => {
