@@ -427,3 +427,7 @@ else                              setStartTime(getNextStartTime())
 - 改之前先在脑里跑一遍：**5/17 23:30 → 5/18 00:30 这条跨日记录在 5/17 和 5/18 各自的 EntryList / 主表单"上次结束" / Timeline 上分别是什么行为**。这是历史上多次出 bug 的标准测试用例。
 - 任何让 startTime 自动被覆盖的新触发点都必须考虑：(1) lastEndTime 的来源（哪个查询函数）；(2) selectedDate 是否需要跟随；(3) 跨午夜情况下的行为；(4) 用户手动改过 startTime 后是否还会被这个新触发点覆盖（锚点机制）。
 - 不要再引入"剥时分套到 selectedDate"这种 align 操作——startTime 设置应该永远基于真实时间轴。selectedDate 只决定"显示哪一天"，不应反过来污染时刻信息。
+
+## 智能预选（metadataPredictor）
+
+录入活动时的类别/目标自动预选由 `src/services/metadataPredictor.ts` 提供，主表单和 Quick Capture 都会调用。当前策略、已知误选问题（如“上厕所”→“recogem文章”）和优化方向已抽到独立文档：[智能预选（metadataPredictor）](metadata-predictor.md)。
