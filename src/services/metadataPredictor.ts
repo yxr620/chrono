@@ -154,7 +154,7 @@ function classifyActivityMatch(input: TextProfile, historical: TextProfile): Act
     }
 
     if (input.normalized === historical.normalized) {
-        return 'exact';
+        return input.fragments.size > 0 ? 'exact' : 'weak';
     }
 
     if (hasFragmentOverlap(input, historical)) {

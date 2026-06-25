@@ -73,6 +73,26 @@ test('single Chinese character does not select target through historical substri
   assert.notEqual(result.goal.confidence, 'high');
 });
 
+test('single Chinese character exact historical activity does not auto-select target', async () => {
+  const historicalGoal = makeGoal('hist-project-a', '项目A', '2026-06-20');
+  const todayGoal = makeGoal('today-project-a', '项目A');
+  await db.goals.bulkPut([historicalGoal, todayGoal]);
+  await db.entries.put(makeEntry({
+    id: 'entry-1',
+    activity: '上',
+    goalId: historicalGoal.id!,
+    categoryId: 'work',
+    endTime: new Date(Date.now() - 2 * day),
+  }));
+
+  const result = await predictMetadata('上', [todayGoal]);
+
+  assert.equal(result.goalId, null);
+  assert.equal(result.goal.id, null);
+  assert.notEqual(result.goal.confidence, 'high');
+  assert.equal(result.categoryId, null);
+});
+
 test('exact historical activity can map to a strongly related current goal name', async () => {
   const historicalGoal = makeGoal('hist-recogem', 'recogem文章', '2026-06-20');
   const todayGoal = makeGoal('today-recogem', '读recogem文章');
