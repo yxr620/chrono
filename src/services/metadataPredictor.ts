@@ -46,6 +46,7 @@ interface ActivityStats {
 }
 
 interface GoalProfile {
+    id: string;
     goal: Goal;
     name: TextProfile;
 }
@@ -127,25 +128,8 @@ function overlapScore(a: Set<string>, b: Set<string>): number {
     return score;
 }
 
-function codePointLength(value: string): number {
-    return Array.from(value.replace(/\s+/g, '')).length;
-}
-
-function isSingleChineseChar(value: string): boolean {
-    return /^\p{Script=Han}$/u.test(value.trim());
-}
-
 function hasSubstringRelationship(a: string, b: string): boolean {
     return a.includes(b) || b.includes(a);
-}
-
-function hasSafeSubstringRelationship(a: string, b: string): boolean {
-    if (!hasSubstringRelationship(a, b)) {
-        return false;
-    }
-
-    const shorter = codePointLength(a) <= codePointLength(b) ? a : b;
-    return codePointLength(shorter) >= 2 && !isSingleChineseChar(shorter);
 }
 
 function classifyActivityMatch(input: TextProfile, historical: TextProfile): ActivityMatch {
@@ -162,9 +146,7 @@ function classifyActivityMatch(input: TextProfile, historical: TextProfile): Act
     }
 
     if (hasSubstringRelationship(input.normalized, historical.normalized)) {
-        return hasSafeSubstringRelationship(input.normalized, historical.normalized)
-            ? 'strong'
-            : 'weak';
+        return 'weak';
     }
 
     return 'none';
@@ -204,6 +186,13 @@ async function ensureCache(): Promise<void> {
         }
     }
 
+    const activeCategories = await db.categories.toArray();
+    const activeCategoryIds = new Set(
+        activeCategories
+            .filter(category => !category.deleted)
+            .map(category => category.id),
+    );
+
     const nextCache = new Map<string, ActivityStats>();
 
     for (const entry of validEntries) {
@@ -222,7 +211,7 @@ async function ensureCache(): Promise<void> {
             nextCache.set(activity.normalized, stats);
         }
 
-        if (entry.categoryId) {
+        if (entry.categoryId && activeCategoryIds.has(entry.categoryId)) {
             increment(stats.categoryFreq, entry.categoryId);
         }
 
@@ -295,7 +284,16 @@ function splitActivityMatches(input: TextProfile): {
 
 function predictCategoryFromMatches(matches: ReturnType<typeof splitActivityMatches>): MetadataPredictionField {
     if (matches.exact && matches.exact.categoryFreq.size > 0) {
-        const [top] = rankedFrequencies(matches.exact.categoryFreq);
+        const [top, second] = rankedFrequencies(matches.exact.categoryFreq);
+        if (second && top.count === second.count) {
+            return {
+                id: null,
+                confidence: 'medium',
+                reason: 'exactActivity',
+                score: top.count,
+            };
+        }
+
         return {
             id: top.key,
             confidence: 'high',
@@ -325,11 +323,17 @@ function predictCategoryFromMatches(matches: ReturnType<typeof splitActivityMatc
 
 function toGoalProfiles(todayGoals: Goal[]): GoalProfile[] {
     return todayGoals
-        .filter(goal => goal.id && !goal.deleted && (goal.type ?? 'time') !== 'check')
-        .map(goal => ({
-            goal,
-            name: toTextProfile(goal.name),
-        }))
+        .flatMap(goal => {
+            if (!goal.id || goal.deleted || (goal.type ?? 'time') === 'check') {
+                return [];
+            }
+
+            return [{
+                id: goal.id,
+                goal,
+                name: toTextProfile(goal.name),
+            }];
+        })
         .filter(profile => profile.name.normalized);
 }
 
@@ -387,7 +391,7 @@ function findHistoricalGoalNameMatch(
                 candidate.typeRank === best.typeRank &&
                 candidate.score === best.score,
             )
-            .map(candidate => candidate.goal.goal.id!),
+            .map(candidate => candidate.goal.id),
     );
     const resultScore = best.remapType === 'exactName' ? best.count : best.score;
 
@@ -401,7 +405,7 @@ function findHistoricalGoalNameMatch(
     }
 
     return {
-        id: best.goal.goal.id!,
+        id: best.goal.id,
         confidence: activityMatch === 'exact' || best.remapType === 'exactName' ? 'high' : 'medium',
         reason: activityMatch === 'exact' ? 'exactActivity' : 'strongActivityMatch',
         score: resultScore,
@@ -440,7 +444,7 @@ function predictDirectGoal(input: TextProfile, candidateGoals: GoalProfile[]): M
     }
 
     return {
-        id: best.goal.goal.id!,
+        id: best.goal.id,
         confidence: 'high',
         reason: 'directGoalToken',
         score: best.score,

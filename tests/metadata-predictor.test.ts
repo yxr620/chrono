@@ -3,7 +3,7 @@ import 'fake-indexeddb/auto';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { db, type Goal, type TimeEntry } from '../src/services/db';
+import { db, type Category, type Goal, type TimeEntry } from '../src/services/db';
 import { invalidatePredictionCache, predictMetadata } from '../src/services/metadataPredictor';
 
 const now = () => new Date();
@@ -22,13 +22,26 @@ function makeGoal(id: string, name: string, date = today): Goal {
   };
 }
 
+function makeCategory(id: string, name = id, overrides: Partial<Category> = {}): Category {
+  const t = now();
+  return {
+    id,
+    name,
+    color: overrides.color ?? '#40A9FF',
+    order: overrides.order ?? 1,
+    createdAt: overrides.createdAt ?? t,
+    updatedAt: overrides.updatedAt ?? t,
+    deleted: overrides.deleted,
+  };
+}
+
 function makeEntry(overrides: Partial<TimeEntry> & { id: string; activity: string }): TimeEntry {
   const t = now();
   return {
     id: overrides.id,
     activity: overrides.activity,
     startTime: overrides.startTime ?? new Date(t.getTime() - 60 * 60 * 1000),
-    endTime: overrides.endTime ?? t,
+    endTime: overrides.endTime === undefined ? t : overrides.endTime,
     categoryId: overrides.categoryId ?? null,
     goalId: overrides.goalId ?? null,
     createdAt: overrides.createdAt ?? t,
@@ -246,6 +259,106 @@ test('strong activity match does not auto-select a merely similar current goal n
   assert.notEqual(result.goal.confidence, 'high');
 });
 
+test('short alphanumeric substring does not auto-select through historical substring fallback', async () => {
+  const work = makeCategory('work', '工作');
+  const historicalGoal = makeGoal('hist-email', 'email处理', '2026-06-20');
+  const todayGoal = makeGoal('today-email', 'email处理');
+  await db.categories.put(work);
+  await db.goals.bulkPut([historicalGoal, todayGoal]);
+  await db.entries.put(makeEntry({
+    id: 'entry-email',
+    activity: 'email处理',
+    goalId: historicalGoal.id!,
+    categoryId: work.id,
+    endTime: new Date(Date.now() - 1 * day),
+  }));
+
+  const result = await predictMetadata('ai', [todayGoal]);
+
+  assert.equal(result.categoryId, null);
+  assert.equal(result.category.id, null);
+  assert.equal(result.goalId, null);
+  assert.equal(result.goal.id, null);
+  assert.notEqual(result.category.confidence, 'high');
+  assert.notEqual(result.goal.confidence, 'high');
+});
+
+test('exact activity category tie does not auto-select a category', async () => {
+  const work = makeCategory('work', '工作', { order: 1 });
+  const study = makeCategory('study', '学习', { color: '#1890FF', order: 2 });
+  await db.categories.bulkPut([work, study]);
+  await db.entries.bulkPut([
+    makeEntry({
+      id: 'entry-work',
+      activity: '整理资料',
+      categoryId: work.id,
+      endTime: new Date(Date.now() - 1 * day),
+    }),
+    makeEntry({
+      id: 'entry-study',
+      activity: '整理资料',
+      categoryId: study.id,
+      endTime: new Date(Date.now() - 2 * day),
+    }),
+  ]);
+
+  const result = await predictMetadata('整理资料', []);
+
+  assert.equal(result.categoryId, null);
+  assert.equal(result.category.id, null);
+  assert.notEqual(result.category.confidence, 'high');
+});
+
+test('deleted category IDs are ignored for category predictions', async () => {
+  const oldCategory = makeCategory('old-cat', '旧类别', { deleted: true });
+  await db.categories.put(oldCategory);
+  await db.entries.put(makeEntry({
+    id: 'entry-old-category',
+    activity: '整理旧资料',
+    categoryId: oldCategory.id,
+    endTime: new Date(Date.now() - 1 * day),
+  }));
+
+  const result = await predictMetadata('整理旧资料', []);
+
+  assert.notEqual(result.categoryId, oldCategory.id);
+  assert.notEqual(result.category.id, oldCategory.id);
+  assert.equal(result.categoryId, null);
+  assert.equal(result.category.id, null);
+});
+
+test('recent deleted and ongoing entries do not influence predictions', async () => {
+  const work = makeCategory('work', '工作');
+  const historicalGoal = makeGoal('hist-client', '客户项目', '2026-06-20');
+  const todayGoal = makeGoal('today-client', '客户项目');
+  await db.categories.put(work);
+  await db.goals.bulkPut([historicalGoal, todayGoal]);
+  await db.entries.bulkPut([
+    makeEntry({
+      id: 'deleted-entry',
+      activity: '整理会议资料',
+      categoryId: work.id,
+      goalId: historicalGoal.id!,
+      endTime: new Date(Date.now() - 1 * day),
+      deleted: true,
+    }),
+    makeEntry({
+      id: 'ongoing-entry',
+      activity: '整理会议资料',
+      categoryId: work.id,
+      goalId: historicalGoal.id!,
+      endTime: null,
+    }),
+  ]);
+
+  const result = await predictMetadata('整理会议资料', [todayGoal]);
+
+  assert.equal(result.categoryId, null);
+  assert.equal(result.category.id, null);
+  assert.equal(result.goalId, null);
+  assert.equal(result.goal.id, null);
+});
+
 test('direct goal token match supports Chinese bigram and project tokens', async () => {
   const paperGoal = makeGoal('today-paper', '读论文');
   const compGoal = makeGoal('today-comp', '学习 COMP8015 课程');
@@ -295,14 +408,16 @@ test('history older than 60 days is ignored', async () => {
 });
 
 test('recent exact activity can still predict category and goal', async () => {
+  const work = makeCategory('work', '工作');
   const historicalGoal = makeGoal('hist-app', 'APP优化', '2026-06-20');
   const todayGoal = makeGoal('today-app', 'APP优化');
+  await db.categories.put(work);
   await db.goals.bulkPut([historicalGoal, todayGoal]);
   await db.entries.put(makeEntry({
     id: 'recent-entry',
     activity: '优化 APP',
     goalId: historicalGoal.id!,
-    categoryId: 'work',
+    categoryId: work.id,
     endTime: new Date(Date.now() - 5 * day),
   }));
 
