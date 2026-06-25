@@ -21,6 +21,10 @@ import dayjs from 'dayjs';
 import { WheelTimePicker } from '../common/WheelTimePicker';
 import { useIOSTimePicker } from '../../hooks/useIOSTimePicker';
 import { predictMetadata, invalidatePredictionCache } from '../../services/metadataPredictor';
+import {
+  applyMetadataPredictionToSelection,
+  clearAutoFilledMetadataSelection,
+} from '../../services/metadataPredictionFormState';
 import { QuickCaptureButton } from '../QuickCapture/QuickCaptureButton';
 import { CategoryPicker, GoalPicker } from '../common/EntryFields';
 
@@ -151,6 +155,11 @@ export const TimeEntryForm: React.FC = () => {
   // 智能预选：追踪用户是否手动选过（手动选过就不再覆盖）
   const userPickedCategoryRef = useRef(false);
   const userPickedGoalRef = useRef(false);
+  const predictionSeqRef = useRef(0);
+  const autoFilledCategoryIdRef = useRef<string | null>(null);
+  const autoFilledGoalIdRef = useRef<string | null>(null);
+  const selectedCategoryIdRef = useRef(selectedCategoryId);
+  const selectedGoalIdRef = useRef(selectedGoalId);
 
   // 锚点：当前 startTime 跟随的 lastEndTime 时间戳。
   // entries 变化（例如编辑了最后一条记录的结束时间）时，若 startTime 仍锚定在旧值（用户没有手动改过），
@@ -171,21 +180,67 @@ export const TimeEntryForm: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    selectedCategoryIdRef.current = selectedCategoryId;
+  }, [selectedCategoryId]);
+
+  useEffect(() => {
+    selectedGoalIdRef.current = selectedGoalId;
+  }, [selectedGoalId]);
+
   // 智能预选：当活动名称变化时，防抖调用预测
   const currentGoalsRef = useRef<typeof goals>([]);
   useEffect(() => {
-    if (!activity.trim()) return;
+    const seq = predictionSeqRef.current + 1;
+    predictionSeqRef.current = seq;
+
+    if (!activity.trim()) {
+      const update = clearAutoFilledMetadataSelection({
+        selectedCategoryId: selectedCategoryIdRef.current,
+        selectedGoalId: selectedGoalIdRef.current,
+        autoFilledCategoryId: autoFilledCategoryIdRef.current,
+        autoFilledGoalId: autoFilledGoalIdRef.current,
+        userPickedCategory: userPickedCategoryRef.current,
+        userPickedGoal: userPickedGoalRef.current,
+      });
+
+      if (update.selectedCategoryId !== selectedCategoryIdRef.current) {
+        setSelectedCategoryId(update.selectedCategoryId);
+        selectedCategoryIdRef.current = update.selectedCategoryId;
+      }
+      if (update.selectedGoalId !== selectedGoalIdRef.current) {
+        setSelectedGoalId(update.selectedGoalId);
+        selectedGoalIdRef.current = update.selectedGoalId;
+      }
+      autoFilledCategoryIdRef.current = update.autoFilledCategoryId;
+      autoFilledGoalIdRef.current = update.autoFilledGoalId;
+      return;
+    }
 
     const timer = setTimeout(async () => {
       try {
         const result = await predictMetadata(activity, currentGoalsRef.current);
-        // 只在用户尚未手动选择时自动填充
-        if (result.categoryId && !userPickedCategoryRef.current) {
-          setSelectedCategoryId(result.categoryId);
+        if (predictionSeqRef.current !== seq) return;
+
+        const update = applyMetadataPredictionToSelection(result, {
+          selectedCategoryId: selectedCategoryIdRef.current,
+          selectedGoalId: selectedGoalIdRef.current,
+          autoFilledCategoryId: autoFilledCategoryIdRef.current,
+          autoFilledGoalId: autoFilledGoalIdRef.current,
+          userPickedCategory: userPickedCategoryRef.current,
+          userPickedGoal: userPickedGoalRef.current,
+        });
+
+        if (update.selectedCategoryId !== selectedCategoryIdRef.current) {
+          setSelectedCategoryId(update.selectedCategoryId);
+          selectedCategoryIdRef.current = update.selectedCategoryId;
         }
-        if (result.goalId && !userPickedGoalRef.current) {
-          setSelectedGoalId(result.goalId);
+        if (update.selectedGoalId !== selectedGoalIdRef.current) {
+          setSelectedGoalId(update.selectedGoalId);
+          selectedGoalIdRef.current = update.selectedGoalId;
         }
+        autoFilledCategoryIdRef.current = update.autoFilledCategoryId;
+        autoFilledGoalIdRef.current = update.autoFilledGoalId;
       } catch {
         // 静默忽略预测错误
       }
@@ -332,6 +387,11 @@ export const TimeEntryForm: React.FC = () => {
     setMemoExpanded(false);
     userPickedCategoryRef.current = false;
     userPickedGoalRef.current = false;
+    autoFilledCategoryIdRef.current = null;
+    autoFilledGoalIdRef.current = null;
+    selectedCategoryIdRef.current = '';
+    selectedGoalIdRef.current = null;
+    predictionSeqRef.current += 1;
     invalidatePredictionCache();
   };
 
@@ -424,6 +484,8 @@ export const TimeEntryForm: React.FC = () => {
       selectedId={selectedCategoryId}
       onChange={(id) => {
         userPickedCategoryRef.current = true;
+        autoFilledCategoryIdRef.current = null;
+        selectedCategoryIdRef.current = id;
         setSelectedCategoryId(id);
       }}
     />
@@ -435,6 +497,8 @@ export const TimeEntryForm: React.FC = () => {
       selectedId={selectedGoalId}
       onChange={(id) => {
         userPickedGoalRef.current = true;
+        autoFilledGoalIdRef.current = null;
+        selectedGoalIdRef.current = id;
         setSelectedGoalId(id);
       }}
     />
