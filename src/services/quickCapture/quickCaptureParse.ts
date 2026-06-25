@@ -269,19 +269,19 @@ export async function parseTranscript(
     });
   }
 
-  // 本地 predictMetadata 基于用户历史，个人化准确度优于 LLM 常识。
-  // 让它覆盖 AI 给出的 category/goal。
+  // 本地 predictMetadata 基于用户历史，但只允许高置信度结果覆盖 AI 字段。
+  // 中/低置信度预测保留为诊断信息，不覆盖用户口述解析结果。
   callbacks?.onPhase?.('enriching', '本地补全 category/goal');
   await Promise.all(
     entries.map(async entry => {
       try {
         const local = await predictMetadata(entry.params.activity, ctx.pageDateGoals);
-        if (local.categoryId) {
-          const cat = ctx.categories.find(c => c.id === local.categoryId);
+        if (local.category.confidence === 'high' && local.category.id) {
+          const cat = ctx.categories.find(c => c.id === local.category.id);
           if (cat) entry.params.category = cat.name;
         }
-        if (local.goalId) {
-          const goal = ctx.pageDateGoals.find(g => g.id === local.goalId);
+        if (local.goal.confidence === 'high' && local.goal.id) {
+          const goal = ctx.pageDateGoals.find(g => g.id === local.goal.id);
           if (goal) entry.params.goal = goal.name;
         }
       } catch {
@@ -294,7 +294,7 @@ export async function parseTranscript(
     undefined,
     createTextDebug(
       'ENRICH',
-      `entries=${entries.length}\n本地预测覆盖了 AI 给出的 category/goal（失败的条目保留 AI 原始字段）`,
+      `entries=${entries.length}\n仅高置信度本地预测会覆盖 AI 给出的 category/goal（中/低置信度或失败的条目保留 AI 原始字段）`,
     ),
   );
 
