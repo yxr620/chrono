@@ -11,13 +11,13 @@ const sourcePath = path.resolve(
 
 const source = await readFile(sourcePath, 'utf8');
 
-test('quick capture only applies high-confidence local category predictions', () => {
+test('quick capture enrichment source uses structured high-confidence category guard', () => {
   assert.match(source, /local\.category\.confidence\s*===\s*'high'/);
   assert.match(source, /local\.category\.id/);
   assert.doesNotMatch(source, /\blocal\.categoryId\b/);
 });
 
-test('quick capture only applies high-confidence local goal predictions', () => {
+test('quick capture enrichment source uses structured high-confidence goal guard', () => {
   assert.match(source, /local\.goal\.confidence\s*===\s*'high'/);
   assert.match(source, /local\.goal\.id/);
   assert.doesNotMatch(source, /\blocal\.goalId\b/);
