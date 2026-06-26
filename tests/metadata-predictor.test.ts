@@ -394,13 +394,13 @@ test('history older than 60 days is ignored', async () => {
   await db.goals.bulkPut([historicalGoal, todayGoal]);
   await db.entries.put(makeEntry({
     id: 'old-entry',
-    activity: '整理归档资料',
+    activity: '每周归档',
     goalId: historicalGoal.id!,
     categoryId: 'work',
     endTime: new Date(Date.now() - 70 * day),
   }));
 
-  const result = await predictMetadata('整理归档资料', [todayGoal]);
+  const result = await predictMetadata('每周归档', [todayGoal]);
 
   assert.equal(result.goalId, null);
   assert.equal(result.categoryId, null);
