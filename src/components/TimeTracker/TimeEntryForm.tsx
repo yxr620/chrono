@@ -265,7 +265,7 @@ export const TimeEntryForm: React.FC = () => {
     if (nextEndTime) {
       setEndTime(ensureDate(nextEndTime));
     } else {
-      setEndTime(null);
+      setEndTime(new Date());
     }
     setTimeRange(null, null);
   }, [nextStartTime, nextEndTime, selectedDate, setSelectedDate, setTimeRange]);
@@ -312,9 +312,9 @@ export const TimeEntryForm: React.FC = () => {
 
   useEffect(() => {
     if (endPickerVisible) {
-      setEndDraftValue(endTime ?? new Date());
+      setEndDraftValue(endTime ?? startTime);
     }
-  }, [endPickerVisible, endTime]);
+  }, [endPickerVisible, endTime, startTime]);
 
   // 更新计时器显示
   useEffect(() => {
@@ -382,7 +382,7 @@ export const TimeEntryForm: React.FC = () => {
     setActivity('');
     setSelectedCategoryId('');
     setSelectedGoalId(null);
-    setEndTime(new Date());
+    setEndTime(dayjs(selectedDate).isSame(dayjs(), 'day') ? new Date() : null);
     setMemo('');
     setMemoExpanded(false);
     userPickedCategoryRef.current = false;
@@ -723,7 +723,7 @@ export const TimeEntryForm: React.FC = () => {
                     style={{ flex: 1, textAlign: 'right', cursor: 'pointer', minWidth: '80px' }}
                     onClick={() => {
                       if (isIOS) {
-                        void openIOSTimePicker(endTime ?? new Date(), (pickedDate) => {
+                        void openIOSTimePicker(endTime ?? startTime, (pickedDate) => {
                           if (pickedDate <= startTime) {
                             showToast('结束时间须晚于开始', 'danger');
                             return;
@@ -882,6 +882,7 @@ export const TimeEntryForm: React.FC = () => {
               value={startDraftValue}
               onChange={setStartDraftValue}
               isDark={isDark}
+              dateRangeBase={startTime}
             />
           </div>
         </IonModal>
@@ -919,6 +920,7 @@ export const TimeEntryForm: React.FC = () => {
               value={endDraftValue}
               onChange={setEndDraftValue}
               isDark={isDark}
+              dateRangeBase={endTime ?? startTime}
             />
           </div>
         </IonModal>

@@ -204,10 +204,15 @@ interface WheelTimePickerProps {
   value: Date;
   onChange: (date: Date) => void;
   isDark: boolean;
+  dateRangeBase?: Date;
 }
 
-export const WheelTimePicker = forwardRef<WheelTimePickerHandle, WheelTimePickerProps>(({ value, onChange, isDark }, ref) => {
-  const dateItems = useMemo(() => generateDateItems(), []);
+export const WheelTimePicker = forwardRef<WheelTimePickerHandle, WheelTimePickerProps>(({ value, onChange, isDark, dateRangeBase }, ref) => {
+  const rangeBaseDate = dayjs(dateRangeBase ?? value).format('YYYY-MM-DD');
+  const dateItems = useMemo(
+    () => generateDateItems(dayjs(rangeBaseDate), dayjs()),
+    [rangeBaseDate]
+  );
   // 用 ref 持有最新 value，使回调函数引用稳定
   const valueRef = useRef(value);
   valueRef.current = value;

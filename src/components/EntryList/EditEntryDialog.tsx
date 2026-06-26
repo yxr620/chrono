@@ -127,9 +127,9 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
 
   useEffect(() => {
     if (endPickerVisible) {
-      setEndDraftValue(endTime ?? new Date());
+      setEndDraftValue(endTime ?? startTime);
     }
-  }, [endPickerVisible, endTime]);
+  }, [endPickerVisible, endTime, startTime]);
 
   // Toast helper
   const showToast = (message: string, color: 'success' | 'danger' | 'warning') => {
@@ -338,7 +338,7 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
                   type="button"
                   className="edit-dialog-time-value end"
                   onClick={() => {
-                    if (isIOS) { void openIOSTimePicker(endTime ?? new Date(), setEndTime); return; }
+                    if (isIOS) { void openIOSTimePicker(endTime ?? startTime, setEndTime); return; }
                     setEndPickerVisible(true);
                   }}
                 >
@@ -397,7 +397,13 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
               <IonButton fill="clear" onClick={() => setStartPickerVisible(false)}>取消</IonButton>
               <IonButton fill="clear" onClick={() => { const liveValue = startPickerRef.current?.getCurrentValue() ?? startDraftValue; if (liveValue > new Date()) { showToast('开始时间不能晚于当前', 'danger'); return; } setStartTime(liveValue); setStartPickerVisible(false); }}>确定</IonButton>
             </div>
-            <WheelTimePicker ref={startPickerRef} value={startDraftValue} onChange={setStartDraftValue} isDark={isDark} />
+            <WheelTimePicker
+              ref={startPickerRef}
+              value={startDraftValue}
+              onChange={setStartDraftValue}
+              isDark={isDark}
+              dateRangeBase={startTime}
+            />
           </div>
         </IonModal>
       )}
@@ -421,7 +427,13 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
               <IonButton fill="clear" onClick={() => setEndPickerVisible(false)}>取消</IonButton>
               <IonButton fill="clear" onClick={() => { const liveValue = endPickerRef.current?.getCurrentValue() ?? endDraftValue; setEndTime(liveValue); setEndPickerVisible(false); }}>确定</IonButton>
             </div>
-            <WheelTimePicker ref={endPickerRef} value={endDraftValue} onChange={setEndDraftValue} isDark={isDark} />
+            <WheelTimePicker
+              ref={endPickerRef}
+              value={endDraftValue}
+              onChange={setEndDraftValue}
+              isDark={isDark}
+              dateRangeBase={endTime ?? startTime}
+            />
           </div>
         </IonModal>
       )}

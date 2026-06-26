@@ -30,3 +30,14 @@ test('manual category and goal changes clear auto-filled refs', () => {
   assert.match(source, /autoFilledCategoryIdRef\.current\s*=\s*null/);
   assert.match(source, /autoFilledGoalIdRef\.current\s*=\s*null/);
 });
+
+test('clicking an existing entry defaults the end time to now instead of ongoing', () => {
+  const effectStart = source.indexOf('// 当从记录列表或时间轴点击时，自动设置开始时间和结束时间。');
+  const effectEnd = source.indexOf('// 当选中的日期发生变化时，更新开始时间');
+  assert.notEqual(effectStart, -1);
+  assert.notEqual(effectEnd, -1);
+
+  const effectSource = source.slice(effectStart, effectEnd);
+  assert.match(effectSource, /else\s*\{\s*setEndTime\(new Date\(\)\);\s*\}/);
+  assert.doesNotMatch(effectSource, /else\s*\{\s*setEndTime\(null\);\s*\}/);
+});

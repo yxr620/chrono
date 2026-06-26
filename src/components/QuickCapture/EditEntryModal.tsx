@@ -79,6 +79,9 @@ export const EditEntryModal: React.FC<Props> = ({ isOpen, initial, onSave, onDel
     present({ message: msg, duration: 1500, position: 'top', color: 'danger' });
   };
 
+  const startPickerDateRangeBase = date && startTime ? hmToDate(date, startTime) : startDraft;
+  const endPickerDateRangeBase = date && endTime ? hmToDate(date, endTime) : endDraft;
+
   // 起始 picker 同时决定日期；终止 picker 只取时间，沿用当前 date
   const applyStart = (picked: Date) => {
     setDate(dateToYmd(picked));
@@ -195,6 +198,7 @@ export const EditEntryModal: React.FC<Props> = ({ isOpen, initial, onSave, onDel
               value={startDraft}
               onChange={setStartDraft}
               isDark={isDark}
+              dateRangeBase={startPickerDateRangeBase}
             />
           </div>
         </IonModal>
@@ -231,6 +235,7 @@ export const EditEntryModal: React.FC<Props> = ({ isOpen, initial, onSave, onDel
               value={endDraft}
               onChange={setEndDraft}
               isDark={isDark}
+              dateRangeBase={endPickerDateRangeBase}
             />
           </div>
         </IonModal>
