@@ -94,7 +94,24 @@ function formatToolLabel(name: string, args: Record<string, unknown>): string {
       const parts = [`${args.start_date} ~ ${args.end_date}`];
       if (args.category) parts.push(`类别: ${args.category}`);
       if (args.goal) parts.push(`目标: ${args.goal}`);
+      if (args.offset !== undefined || args.limit !== undefined) {
+        parts.push(`offset: ${args.offset ?? 'latest'}`);
+        parts.push(`limit: ${args.limit ?? 'default'}`);
+      }
+      if (args.include_details === false) parts.push('仅摘要');
       return `查询记录 (${parts.join(', ')})`;
+    }
+    case 'search_memos': {
+      const parts = [];
+      if (args.start_date || args.end_date) {
+        parts.push(`${args.start_date ?? '不限'} ~ ${args.end_date ?? '不限'}`);
+      }
+      if (args.query) parts.push(`关键词: ${args.query}`);
+      if (args.offset !== undefined || args.limit !== undefined) {
+        parts.push(`offset: ${args.offset ?? 0}`);
+        parts.push(`limit: ${args.limit ?? 'default'}`);
+      }
+      return `检索 memo${parts.length > 0 ? ` (${parts.join(', ')})` : ''}`;
     }
     case 'list_categories':
       return '获取类别列表';

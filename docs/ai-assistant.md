@@ -61,7 +61,7 @@ AI 助手是 Chrono 的桌面端自然语言入口。它不是一个单纯的聊
 
 ### 3. requesting / reasoning / composingTool / answering：消费 fullStream
 
-`streamingEngine` 调用 `streamChatWithTools({ model, messages, tools, maxSteps: 5, abortSignal })`，订阅 SDK 返回的 `result.fullStream` —— 一个 `AsyncIterable<...>`，按时间顺序产出各种事件。`streamingEngine` 不再自己跑 round 循环：SDK 内部根据 `stopWhen: stepCountIs(5)` 自动处理「调模型 → 看到 tool_call → 执行 execute → 再调模型」的多轮逻辑。
+`streamingEngine` 调用 `streamChatWithTools({ model, messages, tools, maxSteps: 8, abortSignal })`，订阅 SDK 返回的 `result.fullStream` —— 一个 `AsyncIterable<...>`，按时间顺序产出各种事件。`streamingEngine` 不再自己跑 round 循环：SDK 内部根据 `stopWhen: stepCountIs(8)` 自动处理「调模型 → 看到 tool_call → 执行 execute → 再调模型」的多轮逻辑。AI Assistant 使用 8 步是为了容纳读取工具的分页续查；QuickCapture 仍单独使用 `maxSteps: 1`。
 
 `streamingEngine` 的事件→UI 阶段映射（`onPhase` 的 update-in-place 分支保证同一 step 内多次写 debugInfo 时刷新最后一行而不堆出新行）：
 
@@ -126,6 +126,8 @@ SDK 串行执行 `execute`，所以多 tool 在同一轮被调时会按 index �
 ### 读取型查询
 
 典型问题是「昨天做了什么」「本周花了多少时间在项目 X」。模型应调用 `query_time_entries`、`list_goals`、`list_categories` 或 `search_memos`。工具结果只留在本地消息链路里，用于下一轮模型综合回答。
+
+`query_time_entries` 的统计摘要基于完整匹配结果，详细记录通过 `limit/offset` 分页返回：未显式指定 `offset` 时保持旧行为，展示最近一页；需要完整明细时应从 `offset=0` 开始，并按工具返回的 `has_more/next_offset` 或 `has_previous/previous_offset` 继续查询。`include_details=false` 可用于只取统计摘要，避免报告类问题把大量明细塞进上下文。`search_memos` 同样支持 `limit/offset`，但按最近优先分页。
 
 ### 写入或维护
 

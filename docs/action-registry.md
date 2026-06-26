@@ -103,10 +103,10 @@ autoPush('action: add_entry');
 
 | Action | 作用 |
 |---|---|
-| `query_time_entries` | 查询时间记录并统计时长 |
+| `query_time_entries` | 查询时间记录并统计时长；详细记录支持 `limit/offset` 分页，统计摘要基于完整匹配结果 |
 | `list_categories` | 列出活动分类 |
 | `list_goals` | 列出日期范围内目标 |
-| `search_memos` | 按日期和关键词检索 memo |
+| `search_memos` | 按日期和关键词检索 memo；支持 `limit/offset` 最近优先分页 |
 
 ### Write
 

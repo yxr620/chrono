@@ -61,6 +61,10 @@ ${categoryList || '（暂无类别）'}
 2. 如果用户的问题涉及多个时间段（如"1月和2月"），请分别查询每个时间段
 3. 如果需要按类别或目标筛选，使用对应的筛选参数
 4. 如果不确定用户有哪些目标，先用 list_goals 查询
+5. query_time_entries 的统计摘要始终基于完整匹配结果；做总结、报告、趋势分析时，优先使用统计摘要，必要时可设置 include_details=false 减少上下文
+6. 当用户要求完整明细、逐条列出、查找具体记录，使用 query_time_entries 的 offset/limit 分页：优先从 offset=0 开始；工具返回 has_more=true 时用 next_offset 继续查，返回 has_previous=true 且需要更早记录时用 previous_offset 继续查
+7. search_memos 也支持 limit/offset；返回 has_more=true 时用 next_offset 继续检索下一页
+8. 如果因为步骤上限或数据量过大无法取完所有分页，要明确说明已检索的页数和仍有未展开的数据
 
 ## 回答规则
 1. 用中文回答，语气自然简洁
@@ -120,7 +124,7 @@ export async function runToolCallLoop(
       onChunk: callbacks.onChunk,
       onToolCall: callbacks.onToolCall,
     },
-    maxSteps: 5,
+    maxSteps: 8,
     abortSignal: signal,
     modelLabel: config.model,
   });
