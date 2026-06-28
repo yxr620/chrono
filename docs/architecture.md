@@ -349,6 +349,12 @@ dataService.categories.list()
 
 读操作走 `db`，写操作走 `syncDb`。
 
+### 查询日期归属语义
+
+当前 `dataService.entries.query(filters?)` 的日期过滤仍偏向 `startTime` 落桶：一条跨日记录主要归属到它开始的那一天。Timeline / EntryList / TimeEntryForm 自动时间选择则采用 overlap 语义：只要记录和某一天有交集，就算那一天可见。
+
+例子：`5/17 23:30 -> 5/18 00:30` 在视觉时间轴上应该同时出现在 `5/17` 和 `5/18`；但使用 `startTime` 落桶的统计查询可能只把它算到 `5/17`，从而漏掉 `5/18 00:00-00:30` 这段。这个问题属于数据查询/统计口径统一，不属于 TimeEntryForm 自身机制。
+
 ### 维护方法
 
 - **findGaps**：按天遍历，计算相邻记录间的空白（含第一条前、最后一条后、整天无记录）

@@ -146,10 +146,19 @@ export const TimeEntryForm: React.FC = () => {
   const selectedCategoryIdRef = useRef(selectedCategoryId);
   const selectedGoalIdRef = useRef(selectedGoalId);
 
-  // 锚点：当前 startTime 跟随的自动开始时间建议。
-  // entries 变化（例如编辑了最后一条记录的结束时间）时，若 startTime 仍锚定在旧建议（用户没有手动改过），
-  // 则跟随到新的自动建议；若 startTime 已被手动改成别的值，则保持不动。
+  // 自动跟随保护：只有系统自动设置 startTime 时才记录锚点。
+  // 用户或外部组件显式改 startTime 时清空锚点，entries 后续变化就不会偷偷覆盖用户选择。
   const autoStartAnchorRef = useRef<number | null>(null);
+
+  const setAutoStartTime = (value: Date) => {
+    autoStartAnchorRef.current = value.getTime();
+    setStartTime(value);
+  };
+
+  const setManualStartTime = (value: Date) => {
+    autoStartAnchorRef.current = null;
+    setStartTime(value);
+  };
 
   // ============ Effects ============
 
@@ -158,7 +167,7 @@ export const TimeEntryForm: React.FC = () => {
     const init = async () => {
       await Promise.all([loadGoals(), loadCategories(), loadEntries()]);
       const today = dayjs().format('YYYY-MM-DD');
-      setStartTime(getAutoStartTimeForDate(today));
+      setAutoStartTime(getAutoStartTimeForDate(today));
     };
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -239,7 +248,7 @@ export const TimeEntryForm: React.FC = () => {
     if (!nextStartTime) return;
 
     const normalizedStart = ensureDate(nextStartTime);
-    setStartTime(normalizedStart);
+    setManualStartTime(normalizedStart);
 
     const newDateStr = dayjs(normalizedStart).format('YYYY-MM-DD');
     if (newDateStr !== selectedDate) {
@@ -259,26 +268,22 @@ export const TimeEntryForm: React.FC = () => {
     const startDateStr = dayjs(startTime).format('YYYY-MM-DD');
     if (startDateStr === selectedDate) return;
 
-    setStartTime(getAutoStartTimeForDate(selectedDate));
+    setAutoStartTime(getAutoStartTimeForDate(selectedDate));
     setEndTime(null);
   }, [selectedDate, startTime, getAutoStartTimeForDate]);
 
   // 当 entries 变化时（例如编辑/删除了最后一条记录），如果 startTime 仍锚定在旧的自动建议，
   // 就跟随新的自动建议更新；如果用户已手动改过 startTime，则保持不动。
   useEffect(() => {
+    const prevTs = autoStartAnchorRef.current;
+    if (prevTs === null) return;
+
     const autoStartTime = getAutoStartTimeForDate(selectedDate);
     const autoStartTs = autoStartTime.getTime();
-    const prevTs = autoStartAnchorRef.current;
 
-    if (
-      prevTs !== null &&
-      autoStartTs !== prevTs &&
-      Math.abs(startTime.getTime() - prevTs) < 5000
-    ) {
-      setStartTime(autoStartTime);
+    if (autoStartTs !== prevTs) {
+      setAutoStartTime(autoStartTime);
     }
-
-    autoStartAnchorRef.current = autoStartTs;
   }, [entries, selectedDate, startTime, getAutoStartTimeForDate]);
 
   // 同步时间选择器草稿值
@@ -345,7 +350,7 @@ export const TimeEntryForm: React.FC = () => {
   const setToNow = (isStart: boolean) => {
     const now = new Date();
     if (isStart) {
-      setStartTime(now);
+      setManualStartTime(now);
       setSelectedDate(dayjs(now).format('YYYY-MM-DD'));
     } else {
       if (now <= startTime) {
@@ -391,7 +396,7 @@ export const TimeEntryForm: React.FC = () => {
     );
     showToast('开始计时', 'success');
     resetForm();
-    setStartTime(getAutoStartTimeForDate(selectedDate));
+    setAutoStartTime(getAutoStartTimeForDate(selectedDate));
   };
 
   const handleStopTracking = async () => {
@@ -404,7 +409,7 @@ export const TimeEntryForm: React.FC = () => {
     if (stopDateStr !== selectedDate) {
       setSelectedDate(stopDateStr);
     } else {
-      setStartTime(getAutoStartTimeForDate(selectedDate));
+      setAutoStartTime(getAutoStartTimeForDate(selectedDate));
     }
   };
 
@@ -443,7 +448,7 @@ export const TimeEntryForm: React.FC = () => {
     if (endDateStr !== selectedDate) {
       setSelectedDate(endDateStr);
     } else {
-      setStartTime(getAutoStartTimeForDate(selectedDate));
+      setAutoStartTime(getAutoStartTimeForDate(selectedDate));
     }
   };
 
@@ -673,7 +678,7 @@ export const TimeEntryForm: React.FC = () => {
                             showToast('开始时间不能晚于当前', 'danger');
                             return;
                           }
-                          setStartTime(pickedDate);
+                          setManualStartTime(pickedDate);
                           setSelectedDate(dayjs(pickedDate).format('YYYY-MM-DD'));
                         });
                         return;
@@ -735,7 +740,7 @@ export const TimeEntryForm: React.FC = () => {
                       onClick={(e) => {
                         e.stopPropagation();
                         if (visibleEndDate) {
-                          setStartTime(visibleEndDate);
+                          setManualStartTime(visibleEndDate);
                           setSelectedDate(dayjs(visibleEndDate).format('YYYY-MM-DD'));
                         } else {
                           setToNow(true);
@@ -840,7 +845,7 @@ export const TimeEntryForm: React.FC = () => {
                     showToast('开始时间不能晚于当前', 'danger');
                     return;
                   }
-                  setStartTime(liveValue);
+                  setManualStartTime(liveValue);
                   setSelectedDate(dayjs(liveValue).format('YYYY-MM-DD'));
                   setStartPickerVisible(false);
                 }}

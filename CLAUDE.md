@@ -80,7 +80,7 @@ Responsive: switches between mobile layout (bottom tabs) and desktop layout (sid
 Six preset categories + user-defined custom categories. Colors are stored in the DB (`Category.color` field, added in schema v5). Preset defaults live in `src/config/categoryColors.ts`. Users manage categories via Maintenance → 类别管理 tab.
 
 ### TimeEntryForm 自动时间选择（核心机制）
-Chrono 的使用理念是"连续记录生活流水账"，所以主表单的 `startTime` / `endTime` 自动设置是承重墙。真正被写入的是 `TimeEntryForm` 本地 state：`setStartTime(...)` 和 `setEndTime(...)`；外部组件会把一次性的时间选择请求写到 store，`TimeEntryForm` 监听后消费并清空。跨午夜、timeline gap、`endTime === null`、`autoStartAnchorRef` 5s 容差、overlap + clip 到 dayEnd 都是核心语义。**修改前必读** `docs/auto-time-selection.md`。
+Chrono 的使用理念是"连续记录生活流水账"，所以主表单的 `startTime` / `endTime` 自动设置是承重墙。真正被写入的是 `TimeEntryForm` 本地 state：`setStartTime(...)` 和 `setEndTime(...)`；外部组件会把一次性的时间选择请求写到 store，`TimeEntryForm` 监听后消费并清空。跨午夜、timeline gap、`endTime === null`、`autoStartAnchorRef` 显式自动跟随保护、overlap + clip 到 dayEnd 都是核心语义。**修改前必读** `docs/auto-time-selection.md`。
 
 ### Managed Services (optional)
 

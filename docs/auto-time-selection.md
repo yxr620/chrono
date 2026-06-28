@@ -147,25 +147,60 @@ else                              setStartTime(getAutoStartTimeForDate(selectedD
 
 外部时间请求也遵守同一原则：请求里带的是真实 Date；`TimeEntryForm` 消费请求时，如果这个 Date 的日期和当前 `selectedDate` 不同，就同步切日。
 
-## 锚点机制
+## 自动跟随保护
 
-`autoStartAnchorRef` 记录当前 `startTime` 跟随的自动开始时间建议。每次 `entries` 变化时：
+这段逻辑解决的是一个很具体的问题：
 
-1. 重新计算当前 `selectedDate` 的 `getAutoStartTimeForDate(...)`。
-2. 如果新的自动建议和旧锚点不同，并且当前 `startTime` 距离旧锚点小于 5 秒，认为用户没有手动覆盖。
-3. 这时自动把 `startTime` 跟随到新的自动建议。
-4. 如果当前 `startTime` 已经离旧锚点很远，认为用户手动改过，不再覆盖。
+> `entries` 变化后，表单里的 `startTime` 要不要跟着新的自动建议一起变？
 
-左侧徽章也使用 5 秒容差，但它对比的是当前日期的最后可见结束点：
+系统自动设置 `startTime` 时，会同时记录：
+
+```ts
+autoStartAnchorRef.current = value.getTime()
+```
+
+这表示：当前 `startTime` 仍在跟随系统建议。之后如果用户手动选开始时间，或者外部组件发来一次明确的时间选择请求，就会清空：
+
+```ts
+autoStartAnchorRef.current = null
+```
+
+这表示：用户已经明确改过开始时间，后续 `entries` 刷新不应该偷偷覆盖它。
+
+所以 `entries` 变化时，规则很简单：
+
+1. 如果 `autoStartAnchorRef.current === null`，说明用户手动改过，保持 `startTime` 不动。
+2. 如果锚点还在，重新计算 `getAutoStartTimeForDate(selectedDate)`。
+3. 如果新的自动建议和旧锚点不同，就把 `startTime` 跟到新的自动建议。
+
+例子：
+
+```txt
+系统自动建议: 18:00
+startTime:   18:00
+锚点:        18:00
+```
+
+后来上一条记录被编辑，新的自动建议变成 `18:30`。因为锚点还在，表单会自动跟随：
+
+```txt
+startTime -> 18:30
+锚点      -> 18:30
+```
+
+如果用户手动把开始时间改成 `17:45`，锚点会被清空：
+
+```txt
+startTime: 17:45
+锚点:      null
+```
+
+之后 entries 再变化，系统不会覆盖用户的 `17:45`。
+
+左侧「上次结束 / 现在」徽章是另一件事：它只负责显示快捷动作。它仍用 5 秒容差判断 `startTime` 是否接近当前日期的最后可见结束点：
 
 - `startTime` 接近当前最后可见结束点：显示「现在」，点击后跳到 `new Date()`。
 - 否则：显示「上次结束」，点击后回到当前最后可见结束点。
-
-## 已知遗留
-
-- **5 秒锚点容差**可能误判用户手动选择了一个接近自动建议的时间。更稳的做法是显式记录「自动赋值」状态，用户任何主动改动都清空锚点。
-- **`dataService.queryEntries` 仍使用 startTime 落桶语义**，和这里的 overlap 语义不完全一致，统计页可能漏算跨日记录。
-- **`getLastEntryEndTime` 不带日期参数的版本**仍是全表最大 `endTime`，语义上可考虑后续和 `getLastEndTimeBeforeOrAt(new Date())` 合并。
 
 ## 修改前检查清单
 
