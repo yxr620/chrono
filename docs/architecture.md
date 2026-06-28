@@ -362,36 +362,58 @@ dataService.categories.list()
 
 ## TimeEntryForm 开始时间自动设置（应用核心机制）
 
-**为什么是核心**：Chrono 的使用理念是"连续记录生活流水账"。如果每记一条都要手动选 startTime，用户根本坚持不下来。所以"下一条 startTime 自动衔接上一条 endTime"这件事必须在 8 条不同触发路径上都能给出**正确、可预测、与时间轴显示一致**的值——它是这个 app 整个 UX 的承重墙，也是未来长期优化的重点。本节描述当前的语义；任何要动这块的改动都应该先回到这里更新文档。
+**为什么是核心**：Chrono 的使用理念是"连续记录生活流水账"。如果每记一条都要手动选 startTime，用户根本坚持不下来。所以**startTime 自动衔接上 endTime**这件事必须在多条触发路径上都能给出正确、可预测、与时间轴显示一致的值——它是这个 app 整个 UX 的承重墙。本节描述当前的语义；任何要动这块的改动都应该先回到这里更新文档。
 
-主界面（`TimeEntryForm`）顶部显示的「开始时间」是组件本地 state，不是 store 字段。它会在以下时机被自动覆盖（无手动覆盖时）。
+### 入口：真正被设置的是 `startTime` state
 
-### 两个核心查询函数（`entryStore`）
+主界面（`TimeEntryForm`）顶部显示的「开始时间」来自组件本地 state：
+
+```ts
+const [startTime, setStartTime] = useState(new Date());
+```
+
+所以理解这套机制时，应该先找所有 `setStartTime(...)`，这个函数是真正改变 UI 上「开始时间」的函数。
+
+这段逻辑可以按三层读：
+
+1. **状态入口**：`startTime` 是当前表单显示和提交使用的开始时间。
+2. **写入动作**：所有自动/手动改开始时间的路径，最后都会走到 `setStartTime(...)`。
+3. **计算函数**：`getLastEntryEndTimeForDate(...)` / `fallbackStartTime(...)` / `getNextStartTime()` 负责给 `setStartTime(...)` 提供值。
+
+### `setStartTime(...)` 的触发时机
+
+| 触发时机 | `setStartTime(...)` 写入什么 | selectedDate 是否同步 |
+|---------|------------------------------|-----------------------|
+| 组件挂载 | 今天的 `lastEndTime`；无则 `fallbackStartTime(today)` | — |
+| `selectedDate` 切换 | 该日 `lastEndTime`；无则 `fallbackStartTime(selectedDate)`，同时清空 `endTime` | — |
+| 列表点击已完成记录 | 该记录的真实 `endTime`（经 `nextStartTime` 中转） | ✅ 若 endTime 日期不同则切日 |
+| 时间轴点击已完成块 | 该记录的真实 `endTime`（经 `nextStartTime` 中转） | ✅ 若 endTime 日期不同则切日 |
+| 时间轴点击空白 gap | gap 的 `startTime`，并把 `endTime` 设为 gap 的 `endTime` | ✅ 若 gap start 日期不同则切日 |
+| 点「上次结束」徽章 | 当前 `selectedDate` 的 `lastEndTime` | ✅ |
+| 点「现在」徽章 | `new Date()` | ✅ |
+| 开始计时后重置表单 | `getNextStartTime()` | — |
+| 停止计时后 | 若未跨日，写 `getNextStartTime()`；若跨日，先切到停止日期，再由 `selectedDate` effect 重算 | ✅ 跨午夜时切到停止日期 |
+| 保存手动记录后 | 若未跨日，写 `getNextStartTime()`；若跨日，先切到结束日期，再由 `selectedDate` effect 重算 | ✅ 跨午夜时切到结束日期 |
+| `entries` 数据变化 | 如果当前 `startTime` 仍锚定旧 `lastEndTime`（5 秒内），跟随新的 `lastEndTime` | — |
+| 用户手动选择开始时间 | 用户选中的真实 Date | ✅ |
+
+换句话说，这不是一个"store 自动维护 startTime"的模型，而是一个"多个 UI / effect 触发点显式调用 `setStartTime(...)`"的模型。
+
+### `setStartTime(...)` 常用的计算函数
 
 | 函数 | 语义 | 调用方 |
 |------|------|--------|
-| `getLastEntryEndTimeForDate(date)` | 与 `date` 当天**有交集**的已完成记录中，`endTime` 截断到 `dayEnd` 后取最大值 | 主表单的所有自动 startTime 路径、「上次结束」徽章 |
+| `fallbackStartTime(dateStr)` | `dateStr` 当天 + 当前时分秒。今天就是 now；过去/未来日是"该日的当前钟点镜像" | 找不到 lastEndTime 时的空白回落值 |
+| `getLastEntryEndTimeForDate(date)` | 与 `date` 当天**有交集**的已完成记录中，`endTime` 截断到 `dayEnd` 后取最大值 | 主表单的自动 startTime 路径、「上次结束」徽章 |
+| `getNextStartTime()` | `getLastEntryEndTimeForDate(selectedDate)`，没有则 `fallbackStartTime(selectedDate)` | 开始/停止/保存后的下一条开始时间 |
 | `getLastEndTimeBeforeOrAt(time, excludeId?)` | 所有 `endTime ≤ time` 的已完成记录中 `endTime` 最大的那条 | 编辑弹窗的「上次结束」按钮 |
 
 设计要点：
 
 - **overlap 判定**（`startTime < dayEnd && endTime > dayStart`）与 EntryList / TimelineView 的"该 entry 是否属于这一天"语义一致——视觉上能看见的，自动衔接也能找到（解决跨日记录在 endDate 那一侧被遗漏的问题）。
 - **endTime 截断到 dayEnd**：跨日去明天的记录（22:00 → 次日 03:00）在起始日返回的是 23:59:59.999，而不是次日 03:00——避免后续逻辑把次日凌晨值倒回到当天凌晨。
-- 两个函数**返回的都是真实的 `Date` 对象**（没有任何"剥时分套到另一天"的变换），调用方可以直接 `setStartTime`，必要时同步 `setSelectedDate` 到这个 Date 所在的日期。
-- 当前查询函数**不排除正在计时的 currentEntry**（其 `endTime === null` 自然被过滤）。
-
-### 触发时机
-
-| 触发时机 | 设成什么值 | selectedDate 是否同步 |
-|---------|-----------|-----------|
-| 组件挂载 | 今天的 lastEndTime；无则 `fallbackStartTime(today)` | — |
-| `selectedDate` 切换 | 该日 lastEndTime；无则 `fallbackStartTime(selectedDate)`（同时清空 endTime） | — |
-| 列表/时间轴点击某条记录 | 该条 `endTime`（经 `nextStartTime` 中转，**不再剥时分**） | ✅ 若 endTime 日期 ≠ 当前 selectedDate 则同步切日 |
-| 点「上次结束」徽章 | lastEndTime | ✅ |
-| 点「现在」徽章 | `now` | ✅ |
-| 开始计时 / 停止计时 | `getNextStartTime()`（= lastEndTime 或 `fallbackStartTime(selectedDate)`） | ✅ 跨午夜停止时切到 endTime 所在日 |
-| 保存手动记录 | 同上（与 stop 同一路径） | ✅ 跨午夜手动条目同上 |
-| `entries` 数据变化 | 若 startTime 仍锚定旧 lastEndTime（5 秒内），跟随新 lastEndTime；否则不动 | — |
+- 这些函数**返回的都是真实的 `Date` 对象**（没有任何"剥时分套到另一天"的变换），调用方可以直接 `setStartTime`，必要时同步 `setSelectedDate` 到这个 Date 所在的日期。
+- `getLastEntryEndTimeForDate(...)` **不排除正在计时的 currentEntry**（其 `endTime === null` 自然被过滤）。
 
 ### 跨午夜处理
 
