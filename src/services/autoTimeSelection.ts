@@ -44,22 +44,10 @@ const getClippedIntervalsForDate = (
     .sort((a, b) => a.startMs - b.startMs);
 };
 
-export const getLastVisibleEndTimeForDate = (
-  entries: TimeRangeEntry[],
-  dateStr: string,
-): Date | null => {
-  const intervals = getClippedIntervalsForDate(entries, dateStr);
-  if (intervals.length === 0) return null;
-
-  const bestEndMs = Math.max(...intervals.map(interval => interval.endMs));
-  return new Date(bestEndMs);
-};
-
 const getFirstGapStartTimeForDate = (
-  entries: TimeRangeEntry[],
+  intervals: ClippedInterval[],
   dateStr: string,
 ): Date | null => {
-  const intervals = getClippedIntervalsForDate(entries, dateStr);
   if (intervals.length === 0) return null;
 
   const dayStartMs = dayjs(dateStr).startOf('day').valueOf();
@@ -77,21 +65,30 @@ const getFirstGapStartTimeForDate = (
   return coveredUntilMs < dayEndMs ? new Date(coveredUntilMs) : null;
 };
 
+export const getLastVisibleEndTimeForDate = (
+  entries: TimeRangeEntry[],
+  dateStr: string,
+): Date | null => {
+  const intervals = getClippedIntervalsForDate(entries, dateStr);
+  if (intervals.length === 0) return null;
+
+  const bestEndMs = Math.max(...intervals.map(interval => interval.endMs));
+  const dayEndMs = dayjs(dateStr).endOf('day').valueOf();
+  if (bestEndMs === dayEndMs) {
+    const firstGapStartTime = getFirstGapStartTimeForDate(intervals, dateStr);
+    if (firstGapStartTime) return firstGapStartTime;
+  }
+
+  return new Date(bestEndMs);
+};
+
 export const getAutoStartTimeForDate = (
   entries: TimeRangeEntry[],
   dateStr: string,
   now: Date = new Date(),
 ): Date => {
   const lastVisibleEndTime = getLastVisibleEndTimeForDate(entries, dateStr);
-  if (!lastVisibleEndTime) return fallbackStartTimeForDate(dateStr, now);
-
-  const dayEndMs = dayjs(dateStr).endOf('day').valueOf();
-  if (lastVisibleEndTime.getTime() === dayEndMs) {
-    const firstGapStartTime = getFirstGapStartTimeForDate(entries, dateStr);
-    if (firstGapStartTime) return firstGapStartTime;
-  }
-
-  return lastVisibleEndTime;
+  return lastVisibleEndTime ?? fallbackStartTimeForDate(dateStr, now);
 };
 
 export const getNextStartTimeAfter = (

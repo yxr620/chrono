@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import {
   fallbackStartTimeForDate,
   getAutoStartTimeForDate,
+  getLastVisibleEndTimeForDate,
   getNextStartTimeAfter,
 } from '../src/services/autoTimeSelection';
 import type { TimeEntry } from '../src/services/db';
@@ -37,26 +38,32 @@ test('fallbackStartTimeForDate mirrors the supplied clock onto the target date',
   assert.equal(fmt(result), '2026-05-17 14:35:20.123');
 });
 
-test('getAutoStartTimeForDate returns earliest gap start when final visible end is clipped to day end', () => {
+test('getLastVisibleEndTimeForDate returns earliest gap start when final visible end is clipped to day end', () => {
   const entries = [
     entry('early', '2026-05-17 00:00', '2026-05-17 01:00'),
     entry('cross-midnight', '2026-05-17 10:00', '2026-05-18 00:23'),
   ];
 
-  const result = getAutoStartTimeForDate(entries, '2026-05-17', d('2026-05-20 14:35'));
+  const result = getLastVisibleEndTimeForDate(entries, '2026-05-17');
 
-  assert.equal(fmt(result), '2026-05-17 01:00:00.000');
+  assert.equal(result && fmt(result), '2026-05-17 01:00:00.000');
 });
 
-test('getAutoStartTimeForDate keeps the latest same-day end when day end is not the selected value', () => {
+test('getLastVisibleEndTimeForDate keeps the latest same-day end when day end is not the selected value', () => {
   const entries = [
     entry('early', '2026-05-17 00:00', '2026-05-17 01:00'),
     entry('later', '2026-05-17 10:00', '2026-05-17 23:00'),
   ];
 
-  const result = getAutoStartTimeForDate(entries, '2026-05-17', d('2026-05-20 14:35'));
+  const result = getLastVisibleEndTimeForDate(entries, '2026-05-17');
 
-  assert.equal(fmt(result), '2026-05-17 23:00:00.000');
+  assert.equal(result && fmt(result), '2026-05-17 23:00:00.000');
+});
+
+test('getAutoStartTimeForDate falls back to the supplied clock when no visible end exists', () => {
+  const result = getAutoStartTimeForDate([], '2026-05-17', d('2026-05-20 14:35'));
+
+  assert.equal(fmt(result), '2026-05-17 14:35:00.000');
 });
 
 test('getNextStartTimeAfter returns the next entry start after the edited entry start', () => {
