@@ -6,6 +6,7 @@ import { autoPush } from '../services/autoPush';
 import {
   getAutoStartTimeForDate as selectAutoStartTimeForDate,
   getLastVisibleEndTimeForDate as selectLastVisibleEndTimeForDate,
+  getNextStartTimeAfter as selectNextStartTimeAfter,
 } from '../services/autoTimeSelection';
 
 interface EntryStore {
@@ -27,6 +28,7 @@ interface EntryStore {
   getLastVisibleEndTimeForDate: (date: string) => Date | null;
   getAutoStartTimeForDate: (date: string) => Date;
   getLastEndTimeBeforeOrAt: (time: Date, excludeId?: string) => Date | null;
+  getNextStartTimeAfter: (time: Date, excludeId?: string) => Date | null;
   getEarliestEntryDate: () => string | null;
 }
 
@@ -130,6 +132,11 @@ export const useEntryStore = create<EntryStore>((set, get) => ({
   getAutoStartTimeForDate: (date: string) => {
     const { entries } = get();
     return selectAutoStartTimeForDate(entries, date);
+  },
+
+  getNextStartTimeAfter: (time: Date, excludeId?: string) => {
+    const { entries } = get();
+    return selectNextStartTimeAfter(entries, time, excludeId);
   },
 
   // 找出 endTime <= time 的所有已完成记录中，endTime 最大的那条。

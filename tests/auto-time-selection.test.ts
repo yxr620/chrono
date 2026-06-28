@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import {
   fallbackStartTimeForDate,
   getAutoStartTimeForDate,
+  getNextStartTimeAfter,
 } from '../src/services/autoTimeSelection';
 import type { TimeEntry } from '../src/services/db';
 
@@ -56,4 +57,27 @@ test('getAutoStartTimeForDate keeps the latest same-day end when day end is not 
   const result = getAutoStartTimeForDate(entries, '2026-05-17', d('2026-05-20 14:35'));
 
   assert.equal(fmt(result), '2026-05-17 23:00:00.000');
+});
+
+test('getNextStartTimeAfter returns the next entry start after the edited entry start', () => {
+  const entries = [
+    entry('edited', '2026-05-17 11:10', '2026-05-17 11:20'),
+    entry('next', '2026-05-17 11:30', '2026-05-17 11:40'),
+    entry('later', '2026-05-17 12:30', '2026-05-17 12:40'),
+  ];
+
+  const result = getNextStartTimeAfter(entries, d('2026-05-17 11:10'), 'edited');
+
+  assert.equal(result && fmt(result), '2026-05-17 11:30:00.000');
+});
+
+test('getNextStartTimeAfter excludes the edited entry and returns null without a later start', () => {
+  const entries = [
+    entry('edited', '2026-05-17 11:10', '2026-05-17 11:20'),
+    entry('previous', '2026-05-17 10:30', '2026-05-17 10:40'),
+  ];
+
+  const result = getNextStartTimeAfter(entries, d('2026-05-17 11:10'), 'edited');
+
+  assert.equal(result, null);
 });

@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import type { TimeEntry } from './db';
 
-type TimeRangeEntry = Pick<TimeEntry, 'startTime' | 'endTime' | 'deleted'>;
+type TimeRangeEntry = Pick<TimeEntry, 'id' | 'startTime' | 'endTime' | 'deleted'>;
 
 export const ensureDate = (value: Date | string): Date =>
   value instanceof Date ? value : new Date(value);
@@ -92,4 +92,28 @@ export const getAutoStartTimeForDate = (
   }
 
   return lastVisibleEndTime;
+};
+
+export const getNextStartTimeAfter = (
+  entries: TimeRangeEntry[],
+  time: Date,
+  excludeId?: string,
+): Date | null => {
+  const thresholdMs = time.getTime();
+  let best: Date | null = null;
+  let bestMs = Infinity;
+
+  for (const entry of entries) {
+    if (entry.deleted) continue;
+    if (excludeId && entry.id === excludeId) continue;
+
+    const start = ensureDate(entry.startTime);
+    const startMs = start.getTime();
+    if (startMs > thresholdMs && startMs < bestMs) {
+      bestMs = startMs;
+      best = start;
+    }
+  }
+
+  return best;
 };

@@ -37,7 +37,7 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
   onClose,
   onSave
 }) => {
-  const { getLastEndTimeBeforeOrAt } = useEntryStore();
+  const { getLastEndTimeBeforeOrAt, getNextStartTimeAfter } = useEntryStore();
   const { goals, loadGoals } = useGoalStore();
   const { categories, loadCategories } = useCategoryStore();
   const [activity, setActivity] = useState('');
@@ -171,6 +171,17 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
       showToast('已设为上次结束时间', 'success');
     } else {
       showToast('无上次结束记录', 'danger');
+    }
+  };
+
+  // 设置结束时间为"下次开始"：取 startTime 之后 startTime 最小的那条记录。
+  const setEndTimeToNextStart = () => {
+    const nextStartTime = getNextStartTimeAfter(startTime, entry?.id);
+    if (nextStartTime) {
+      setEndTime(nextStartTime);
+      showToast('已设为下次开始时间', 'success');
+    } else {
+      showToast('无下次开始记录', 'danger');
     }
   };
 
@@ -360,6 +371,7 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
                 </div>
                 <div className="edit-dialog-time-badge-group">
                   <button type="button" className="edit-dialog-time-badge" onClick={() => setToNow(false)}>现在</button>
+                  <button type="button" className="edit-dialog-time-badge" onClick={setEndTimeToNextStart}>下次开始</button>
                   <button type="button" className="edit-dialog-time-badge ongoing" onClick={setEndTimeToOngoing}>进行中</button>
                 </div>
               </div>
