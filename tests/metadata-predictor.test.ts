@@ -106,6 +106,30 @@ test('single Chinese character exact historical activity does not auto-select ta
   assert.equal(result.categoryId, null);
 });
 
+test('fragmentless exact historical activity can predict category without selecting target', async () => {
+  const entertainment = makeCategory('entertainment', '娱乐');
+  const historicalGoal = makeGoal('hist-bilibili', 'B站放松', '2026-06-20');
+  const todayGoal = makeGoal('today-bilibili', 'B站放松');
+  await db.categories.put(entertainment);
+  await db.goals.bulkPut([historicalGoal, todayGoal]);
+  await db.entries.put(makeEntry({
+    id: 'entry-bilibili',
+    activity: '看B站',
+    categoryId: entertainment.id,
+    goalId: historicalGoal.id!,
+    endTime: new Date(Date.now() - 2 * day),
+  }));
+
+  const result = await predictMetadata('看B站', [todayGoal]);
+
+  assert.equal(result.categoryId, 'entertainment');
+  assert.equal(result.category.id, 'entertainment');
+  assert.equal(result.category.confidence, 'high');
+  assert.equal(result.category.reason, 'exactActivity');
+  assert.equal(result.goalId, null);
+  assert.equal(result.goal.id, null);
+});
+
 test('exact historical activity can map to a strongly related current goal name', async () => {
   const historicalGoal = makeGoal('hist-recogem', 'recogem文章', '2026-06-20');
   const todayGoal = makeGoal('today-recogem', '读recogem文章');

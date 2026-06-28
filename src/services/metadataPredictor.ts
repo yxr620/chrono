@@ -253,6 +253,49 @@ function rankedFrequencies(freqMap: Map<string, number>): RankedFrequency[] {
         .sort((a, b) => b.count - a.count);
 }
 
+function hasEnoughExactActivityText(input: TextProfile): boolean {
+    return Array.from(input.normalized.replace(/\s+/g, '')).length > 1;
+}
+
+function predictCategoryFromFrequency(
+    freqMap: Map<string, number>,
+    reason: Extract<PredictionReason, 'exactActivity' | 'strongActivityMatch'>,
+): MetadataPredictionField | null {
+    if (freqMap.size === 0) {
+        return null;
+    }
+
+    const [top, second] = rankedFrequencies(freqMap);
+    if (second && top.count === second.count) {
+        return {
+            id: reason === 'strongActivityMatch' ? top.key : null,
+            confidence: 'medium',
+            reason,
+            score: top.count,
+        };
+    }
+
+    return {
+        id: top.key,
+        confidence: 'high',
+        reason,
+        score: top.count,
+    };
+}
+
+function predictExactActivityCategory(input: TextProfile): MetadataPredictionField | null {
+    if (!activityCache || !input.normalized || !hasEnoughExactActivityText(input)) {
+        return null;
+    }
+
+    const exact = activityCache.get(input.normalized);
+    if (!exact) {
+        return null;
+    }
+
+    return predictCategoryFromFrequency(exact.categoryFreq, 'exactActivity');
+}
+
 function splitActivityMatches(input: TextProfile): {
     exact: ActivityStats | null;
     strong: ActivityStats[];
@@ -284,22 +327,7 @@ function splitActivityMatches(input: TextProfile): {
 
 function predictCategoryFromMatches(matches: ReturnType<typeof splitActivityMatches>): MetadataPredictionField {
     if (matches.exact && matches.exact.categoryFreq.size > 0) {
-        const [top, second] = rankedFrequencies(matches.exact.categoryFreq);
-        if (second && top.count === second.count) {
-            return {
-                id: null,
-                confidence: 'medium',
-                reason: 'exactActivity',
-                score: top.count,
-            };
-        }
-
-        return {
-            id: top.key,
-            confidence: 'high',
-            reason: 'exactActivity',
-            score: top.count,
-        };
+        return predictCategoryFromFrequency(matches.exact.categoryFreq, 'exactActivity') ?? emptyField();
     }
 
     const mergedStrong = new Map<string, number>();
@@ -308,14 +336,7 @@ function predictCategoryFromMatches(matches: ReturnType<typeof splitActivityMatc
     }
 
     if (mergedStrong.size > 0) {
-        const [top, second] = rankedFrequencies(mergedStrong);
-        const confidence: PredictionConfidence = top.count > (second?.count ?? 0) ? 'high' : 'medium';
-        return {
-            id: top.key,
-            confidence,
-            reason: 'strongActivityMatch',
-            score: top.count,
-        };
+        return predictCategoryFromFrequency(mergedStrong, 'strongActivityMatch') ?? emptyField();
     }
 
     return matches.hasWeak ? emptyField('weakMatch') : emptyField();
@@ -497,7 +518,7 @@ export async function predictMetadata(
 
     const input = toTextProfile(activityInput);
     const matches = splitActivityMatches(input);
-    const category = predictCategoryFromMatches(matches);
+    const category = predictExactActivityCategory(input) ?? predictCategoryFromMatches(matches);
     const goal = predictGoalFromMatches(input, toGoalProfiles(todayGoals), matches);
 
     return {
