@@ -3,6 +3,10 @@ import dayjs from 'dayjs';
 import { db, type TimeEntry } from '../services/db';
 import { dataService } from '../services/dataService';
 import { autoPush } from '../services/autoPush';
+import {
+  getAutoStartTimeForDate as selectAutoStartTimeForDate,
+  getLastVisibleEndTimeForDate as selectLastVisibleEndTimeForDate,
+} from '../services/autoTimeSelection';
 
 interface EntryStore {
   entries: TimeEntry[];
@@ -20,7 +24,8 @@ interface EntryStore {
   setNextStartTime: (time: Date | null) => void;
   setTimeRange: (startTime: Date | null, endTime: Date | null) => void;
   getLastEntryEndTime: () => Date | null;
-  getLastEntryEndTimeForDate: (date: string) => Date | null;
+  getLastVisibleEndTimeForDate: (date: string) => Date | null;
+  getAutoStartTimeForDate: (date: string) => Date;
   getLastEndTimeBeforeOrAt: (time: Date, excludeId?: string) => Date | null;
   getEarliestEntryDate: () => string | null;
 }
@@ -117,25 +122,14 @@ export const useEntryStore = create<EntryStore>((set, get) => ({
     return sortedByEndTime[0].endTime;
   },
 
-  getLastEntryEndTimeForDate: (date: string) => {
+  getLastVisibleEndTimeForDate: (date: string) => {
     const { entries } = get();
-    const dayStart = dayjs(date).startOf('day');
-    const dayEnd = dayjs(date).endOf('day');
+    return selectLastVisibleEndTimeForDate(entries, date);
+  },
 
-    // 与当天有交集的已完成记录：endTime 截断到 dayEnd，取最大值。
-    // 这样跨日记录在 endDate 这一侧也能被找到（题主原型：5/17 23:30→5/18 00:30 在 5/18 返回 00:30）；
-    // 跨日去明天的记录在起始日被 clip 到 23:59，避免"凌晨穿越"。
-    let bestMs = -Infinity;
-    for (const e of entries) {
-      if (!e.endTime) continue;
-      const entryStart = dayjs(e.startTime);
-      const entryEnd = dayjs(e.endTime);
-      if (!entryStart.isBefore(dayEnd) || !entryEnd.isAfter(dayStart)) continue;
-      const clipped = Math.min(entryEnd.valueOf(), dayEnd.valueOf());
-      if (clipped > bestMs) bestMs = clipped;
-    }
-
-    return bestMs === -Infinity ? null : new Date(bestMs);
+  getAutoStartTimeForDate: (date: string) => {
+    const { entries } = get();
+    return selectAutoStartTimeForDate(entries, date);
   },
 
   // 找出 endTime <= time 的所有已完成记录中，endTime 最大的那条。

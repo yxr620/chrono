@@ -360,95 +360,11 @@ dataService.categories.list()
 
 仅桌面端可见。**睡觉补录 Tab**：配置 → 扫描 → 预览/勾选 → 确认补录。**数据校验 Tab**：扫描重叠和异常 → 逐条截断或删除。
 
-## TimeEntryForm 开始时间自动设置（应用核心机制）
+## TimeEntryForm 自动时间选择（应用核心机制）
 
-**为什么是核心**：Chrono 的使用理念是"连续记录生活流水账"。如果每记一条都要手动选 startTime，用户根本坚持不下来。所以**startTime 自动衔接上 endTime**这件事必须在多条触发路径上都能给出正确、可预测、与时间轴显示一致的值——它是这个 app 整个 UX 的承重墙。本节描述当前的语义；任何要动这块的改动都应该先回到这里更新文档。
+Chrono 的使用理念是"连续记录生活流水账"，所以主表单的 `startTime` / `endTime` 自动设置是核心 UX。它不是 store 里集中维护的一块状态，而是 `TimeEntryForm` 本地 state，由多条 UI / effect 路径显式调用 `setStartTime(...)` 和 `setEndTime(...)` 写入。
 
-### 入口：真正被设置的是 `startTime` state
-
-主界面（`TimeEntryForm`）顶部显示的「开始时间」来自组件本地 state：
-
-```ts
-const [startTime, setStartTime] = useState(new Date());
-```
-
-所以理解这套机制时，应该先找所有 `setStartTime(...)`，这个函数是真正改变 UI 上「开始时间」的函数。
-
-这段逻辑可以按三层读：
-
-1. **状态入口**：`startTime` 是当前表单显示和提交使用的开始时间。
-2. **写入动作**：所有自动/手动改开始时间的路径，最后都会走到 `setStartTime(...)`。
-3. **计算函数**：`getLastEntryEndTimeForDate(...)` / `fallbackStartTime(...)` / `getNextStartTime()` 负责给 `setStartTime(...)` 提供值。
-
-### `setStartTime(...)` 的触发时机
-
-| 触发时机 | `setStartTime(...)` 写入什么 | selectedDate 是否同步 |
-|---------|------------------------------|-----------------------|
-| 组件挂载 | 今天的 `lastEndTime`；无则 `fallbackStartTime(today)` | — |
-| `selectedDate` 切换 | 该日 `lastEndTime`；无则 `fallbackStartTime(selectedDate)`，同时清空 `endTime` | — |
-| 列表点击已完成记录 | 该记录的真实 `endTime`（经 `nextStartTime` 中转） | ✅ 若 endTime 日期不同则切日 |
-| 时间轴点击已完成块 | 该记录的真实 `endTime`（经 `nextStartTime` 中转） | ✅ 若 endTime 日期不同则切日 |
-| 时间轴点击空白 gap | gap 的 `startTime`，并把 `endTime` 设为 gap 的 `endTime` | ✅ 若 gap start 日期不同则切日 |
-| 点「上次结束」徽章 | 当前 `selectedDate` 的 `lastEndTime` | ✅ |
-| 点「现在」徽章 | `new Date()` | ✅ |
-| 开始计时后重置表单 | `getNextStartTime()` | — |
-| 停止计时后 | 若未跨日，写 `getNextStartTime()`；若跨日，先切到停止日期，再由 `selectedDate` effect 重算 | ✅ 跨午夜时切到停止日期 |
-| 保存手动记录后 | 若未跨日，写 `getNextStartTime()`；若跨日，先切到结束日期，再由 `selectedDate` effect 重算 | ✅ 跨午夜时切到结束日期 |
-| `entries` 数据变化 | 如果当前 `startTime` 仍锚定旧 `lastEndTime`（5 秒内），跟随新的 `lastEndTime` | — |
-| 用户手动选择开始时间 | 用户选中的真实 Date | ✅ |
-
-换句话说，这不是一个"store 自动维护 startTime"的模型，而是一个"多个 UI / effect 触发点显式调用 `setStartTime(...)`"的模型。
-
-### `setStartTime(...)` 常用的计算函数
-
-| 函数 | 语义 | 调用方 |
-|------|------|--------|
-| `fallbackStartTime(dateStr)` | `dateStr` 当天 + 当前时分秒。今天就是 now；过去/未来日是"该日的当前钟点镜像" | 找不到 lastEndTime 时的空白回落值 |
-| `getLastEntryEndTimeForDate(date)` | 与 `date` 当天**有交集**的已完成记录中，`endTime` 截断到 `dayEnd` 后取最大值 | 主表单的自动 startTime 路径、「上次结束」徽章 |
-| `getNextStartTime()` | `getLastEntryEndTimeForDate(selectedDate)`，没有则 `fallbackStartTime(selectedDate)` | 开始/停止/保存后的下一条开始时间 |
-| `getLastEndTimeBeforeOrAt(time, excludeId?)` | 所有 `endTime ≤ time` 的已完成记录中 `endTime` 最大的那条 | 编辑弹窗的「上次结束」按钮 |
-
-设计要点：
-
-- **overlap 判定**（`startTime < dayEnd && endTime > dayStart`）与 EntryList / TimelineView 的"该 entry 是否属于这一天"语义一致——视觉上能看见的，自动衔接也能找到（解决跨日记录在 endDate 那一侧被遗漏的问题）。
-- **endTime 截断到 dayEnd**：跨日去明天的记录（22:00 → 次日 03:00）在起始日返回的是 23:59:59.999，而不是次日 03:00——避免后续逻辑把次日凌晨值倒回到当天凌晨。
-- 这些函数**返回的都是真实的 `Date` 对象**（没有任何"剥时分套到另一天"的变换），调用方可以直接 `setStartTime`，必要时同步 `setSelectedDate` 到这个 Date 所在的日期。
-- `getLastEntryEndTimeForDate(...)` **不排除正在计时的 currentEntry**（其 `endTime === null` 自然被过滤）。
-
-### 跨午夜处理
-
-`handleStopTracking` 和 `handleSaveManualEntry` 在动作结束后：
-
-```
-endDateStr = dayjs(endTime).format('YYYY-MM-DD')
-if (endDateStr !== selectedDate) setSelectedDate(endDateStr)
-else                              setStartTime(getNextStartTime())
-```
-
-切日后由 `selectedDate` effect 重新基于新日期查询 lastEndTime 并设 startTime。这一处统一让"用户的真实活动日"和"UI 显示日"始终对齐，避免把跨夜的 endTime 倒回到起始日凌晨。
-
-外部 `setNextStartTime` 副作用（列表/时间轴点击触发）也做同样的"日期不一致就切日"处理。
-
-### 锚点机制
-
-通过 `lastEndAnchorRef` 记录"上次同步到的 lastEndTime 时间戳"，每次 `entries` 变化时对比当前 startTime 与旧锚点是否仍接近（< 5s），用于区分"自动同步"和"用户手动覆盖"两种状态。手动改过时间选择器后，锚点和 startTime 不再相等，自动同步就停手，直到下一次显式触发（点「上次结束」、切日期等）重新对齐。
-
-「上次结束」/「现在」徽章的显示也基于同一判定：startTime 与当前 lastEndTime 在 5 秒内 → 显示「现在」（点击跳到 `now`），否则显示「上次结束」（点击回到 lastEndTime）。
-
-### 已知遗留 / 未来优化重点
-
-这块是长期优化的承重墙，下面列的都是已知偏差，欢迎在未来 PR 中逐项消除：
-
-1. **5 秒锚点容差**可能在用户手动选了一个恰好接近 lastEnd ±5s 的时刻时误判为"未手动改过"。建议改成显式 ref：只在自动赋值时记录"精确赋值的时间戳"，用户任何主动改动清空 ref。
-2. **过去空白日启动 live 计时未拦截**：`handleStartTracking` 只校验 `startTime > new Date()`，允许从 5 天前的 00:00 起跳启动计时器。建议加一条"selectedDate 不能是过去日"的拦截。
-3. **`dataService.queryEntries` 仍使用 startTime 落桶语义**，与 `getLastEntryEndTimeForDate` 已经统一到的 overlap 语义不一致——Dashboard / Trends 等基于 query 的统计会漏算跨日 entry。属于另一处需要后续统一的地方。
-4. **`getLastEntryEndTime`（不带 ForDate 的版本）** 仍是全表最大 endTime，未参与本次重构。它当前只被 `EditEntryDialog` 之外的少数路径使用，但语义上和 `getLastEndTimeBeforeOrAt(new Date())` 重合，可考虑后续合并。
-
-### 修改这块代码前的建议
-
-- 改之前先在脑里跑一遍：**5/17 23:30 → 5/18 00:30 这条跨日记录在 5/17 和 5/18 各自的 EntryList / 主表单"上次结束" / Timeline 上分别是什么行为**。这是历史上多次出 bug 的标准测试用例。
-- 任何让 startTime 自动被覆盖的新触发点都必须考虑：(1) lastEndTime 的来源（哪个查询函数）；(2) selectedDate 是否需要跟随；(3) 跨午夜情况下的行为；(4) 用户手动改过 startTime 后是否还会被这个新触发点覆盖（锚点机制）。
-- 不要再引入"剥时分套到 selectedDate"这种 align 操作——startTime 设置应该永远基于真实时间轴。selectedDate 只决定"显示哪一天"，不应反过来污染时刻信息。
+完整机制已经抽到独立文档：[TimeEntryForm 自动时间选择机制](auto-time-selection.md)。修改这块代码前，请先读那篇文档。
 
 ## 智能预选（metadataPredictor）
 

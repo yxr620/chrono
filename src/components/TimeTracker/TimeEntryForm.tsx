@@ -25,25 +25,9 @@ import {
   applyMetadataPredictionToSelection,
   clearAutoFilledMetadataSelection,
 } from '../../services/metadataPredictionFormState';
+import { ensureDate } from '../../services/autoTimeSelection';
 import { QuickCaptureButton } from '../QuickCapture/QuickCaptureButton';
 import { CategoryPicker, GoalPicker } from '../common/EntryFields';
-
-// ============ 工具函数 ============
-
-const ensureDate = (value: Date | string): Date =>
-  value instanceof Date ? value : new Date(value);
-
-// 「dateStr 当天 + 此刻时分秒」的空白回落值——自动 startTime 找不到 lastEndTime 时统一使用。
-// 今天 → now；过去/未来日 → 该日的"当前时刻镜像"。
-const fallbackStartTime = (dateStr: string): Date => {
-  const now = dayjs();
-  return dayjs(dateStr)
-    .hour(now.hour())
-    .minute(now.minute())
-    .second(now.second())
-    .millisecond(now.millisecond())
-    .toDate();
-};
 
 // ============ 样式常量 ============
 
@@ -123,7 +107,8 @@ export const TimeEntryForm: React.FC = () => {
     nextStartTime,
     nextEndTime,
     setTimeRange,
-    getLastEntryEndTimeForDate,
+    getLastVisibleEndTimeForDate,
+    getAutoStartTimeForDate,
     loadEntries
   } = useEntryStore();
   const { goals, loadGoals } = useGoalStore();
@@ -161,10 +146,10 @@ export const TimeEntryForm: React.FC = () => {
   const selectedCategoryIdRef = useRef(selectedCategoryId);
   const selectedGoalIdRef = useRef(selectedGoalId);
 
-  // 锚点：当前 startTime 跟随的 lastEndTime 时间戳。
-  // entries 变化（例如编辑了最后一条记录的结束时间）时，若 startTime 仍锚定在旧值（用户没有手动改过），
-  // 则跟随到新的 lastEndTime；若 startTime 已被手动改成别的值，则保持不动。
-  const lastEndAnchorRef = useRef<number | null>(null);
+  // 锚点：当前 startTime 跟随的自动开始时间建议。
+  // entries 变化（例如编辑了最后一条记录的结束时间）时，若 startTime 仍锚定在旧建议（用户没有手动改过），
+  // 则跟随到新的自动建议；若 startTime 已被手动改成别的值，则保持不动。
+  const autoStartAnchorRef = useRef<number | null>(null);
 
   // ============ Effects ============
 
@@ -173,8 +158,7 @@ export const TimeEntryForm: React.FC = () => {
     const init = async () => {
       await Promise.all([loadGoals(), loadCategories(), loadEntries()]);
       const today = dayjs().format('YYYY-MM-DD');
-      const lastEndTime = getLastEntryEndTimeForDate(today);
-      setStartTime(lastEndTime ? ensureDate(lastEndTime) : fallbackStartTime(today));
+      setStartTime(getAutoStartTimeForDate(today));
     };
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -275,33 +259,27 @@ export const TimeEntryForm: React.FC = () => {
     const startDateStr = dayjs(startTime).format('YYYY-MM-DD');
     if (startDateStr === selectedDate) return;
 
-    const lastEndTime = getLastEntryEndTimeForDate(selectedDate);
-    if (lastEndTime) {
-      setStartTime(ensureDate(lastEndTime));
-    } else {
-      setStartTime(fallbackStartTime(selectedDate));
-    }
+    setStartTime(getAutoStartTimeForDate(selectedDate));
     setEndTime(null);
-  }, [selectedDate, startTime, getLastEntryEndTimeForDate]);
+  }, [selectedDate, startTime, getAutoStartTimeForDate]);
 
-  // 当 entries 变化时（例如编辑/删除了最后一条记录），如果 startTime 仍锚定在旧的 lastEndTime，
-  // 就跟随新的 lastEndTime 更新；如果用户已手动改过 startTime，则保持不动。
+  // 当 entries 变化时（例如编辑/删除了最后一条记录），如果 startTime 仍锚定在旧的自动建议，
+  // 就跟随新的自动建议更新；如果用户已手动改过 startTime，则保持不动。
   useEffect(() => {
-    const last = getLastEntryEndTimeForDate(selectedDate);
-    const lastTs = last ? new Date(last).getTime() : null;
-    const prevTs = lastEndAnchorRef.current;
+    const autoStartTime = getAutoStartTimeForDate(selectedDate);
+    const autoStartTs = autoStartTime.getTime();
+    const prevTs = autoStartAnchorRef.current;
 
     if (
       prevTs !== null &&
-      lastTs !== null &&
-      lastTs !== prevTs &&
+      autoStartTs !== prevTs &&
       Math.abs(startTime.getTime() - prevTs) < 5000
     ) {
-      setStartTime(new Date(lastTs));
+      setStartTime(autoStartTime);
     }
 
-    lastEndAnchorRef.current = lastTs;
-  }, [entries, selectedDate, startTime, getLastEntryEndTimeForDate]);
+    autoStartAnchorRef.current = autoStartTs;
+  }, [entries, selectedDate, startTime, getAutoStartTimeForDate]);
 
   // 同步时间选择器草稿值
   useEffect(() => {
@@ -395,13 +373,6 @@ export const TimeEntryForm: React.FC = () => {
     invalidatePredictionCache();
   };
 
-  const getNextStartTime = () => {
-    const lastEndTime = getLastEntryEndTimeForDate(selectedDate);
-    return lastEndTime
-      ? ensureDate(lastEndTime)
-      : fallbackStartTime(selectedDate);
-  };
-
   const handleStartTracking = async () => {
     if (!activity.trim()) {
       showToast('请输入活动名称', 'danger');
@@ -420,7 +391,7 @@ export const TimeEntryForm: React.FC = () => {
     );
     showToast('开始计时', 'success');
     resetForm();
-    setStartTime(getNextStartTime());
+    setStartTime(getAutoStartTimeForDate(selectedDate));
   };
 
   const handleStopTracking = async () => {
@@ -433,7 +404,7 @@ export const TimeEntryForm: React.FC = () => {
     if (stopDateStr !== selectedDate) {
       setSelectedDate(stopDateStr);
     } else {
-      setStartTime(getNextStartTime());
+      setStartTime(getAutoStartTimeForDate(selectedDate));
     }
   };
 
@@ -472,7 +443,7 @@ export const TimeEntryForm: React.FC = () => {
     if (endDateStr !== selectedDate) {
       setSelectedDate(endDateStr);
     } else {
-      setStartTime(getNextStartTime());
+      setStartTime(getAutoStartTimeForDate(selectedDate));
     }
   };
 
@@ -685,10 +656,10 @@ export const TimeEntryForm: React.FC = () => {
         <IonCardContent style={{ padding: '12px 20px' }}>
           {/* 时间显示行：时间 + 箭头对齐 */}
           {(() => {
-            const lastEndTime = getLastEntryEndTimeForDate(selectedDate);
-            const lastEndDate = lastEndTime ? ensureDate(lastEndTime) : null;
-            const startIsLastEnd = lastEndDate !== null &&
-              Math.abs(dayjs(startTime).diff(dayjs(lastEndDate), 'second')) < 5;
+            const visibleEndTime = getLastVisibleEndTimeForDate(selectedDate);
+            const visibleEndDate = visibleEndTime ? ensureDate(visibleEndTime) : null;
+            const startIsVisibleEnd = visibleEndDate !== null &&
+              Math.abs(dayjs(startTime).diff(dayjs(visibleEndDate), 'second')) < 5;
             return (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '8px' }}>
@@ -747,7 +718,7 @@ export const TimeEntryForm: React.FC = () => {
 
                 {/* 快捷按钮行 */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  {startIsLastEnd ? (
+                  {startIsVisibleEnd ? (
                     <span
                       onClick={(e) => { e.stopPropagation(); setToNow(true); }}
                       style={{
@@ -763,9 +734,9 @@ export const TimeEntryForm: React.FC = () => {
                     <span
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (lastEndDate) {
-                          setStartTime(lastEndDate);
-                          setSelectedDate(dayjs(lastEndDate).format('YYYY-MM-DD'));
+                        if (visibleEndDate) {
+                          setStartTime(visibleEndDate);
+                          setSelectedDate(dayjs(visibleEndDate).format('YYYY-MM-DD'));
                         } else {
                           setToNow(true);
                         }
@@ -776,7 +747,7 @@ export const TimeEntryForm: React.FC = () => {
                         background: isDark ? 'rgba(51, 65, 85, 0.5)' : '#f7f8fa'
                       }}
                     >
-                      {lastEndDate ? '上次结束' : (
+                      {visibleEndDate ? '上次结束' : (
                         <><IonIcon icon={refreshOutline} style={{ fontSize: '12px' }} />现在</>
                       )}
                     </span>
