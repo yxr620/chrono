@@ -4,12 +4,12 @@
 
 | 入口 | 调用位置 | 行为 |
 |---|---|---|
-| 主表单 | `src/components/TimeTracker/TimeEntryForm.tsx` | 用户输入活动名后，以 300ms 防抖调用 `predictMetadata(activity, currentGoals)`，只自动落地高置信度类别/目标 |
-| Quick Capture | `src/services/quickCapture/quickCaptureParse.ts` | LLM 解析出待确认条目后，再用本地历史预测补全 category / goal；只有高置信度本地结果会覆盖 AI 字段 |
+| 主表单 | `src/components/TimeTracker/TimeEntryForm.tsx` | 用户输入活动名后，以 300ms 防抖调用 `predictMetadata(activity, currentGoals)`；Category 必选时采用最佳候选，Goal 仍只采用高置信度结果 |
+| Quick Capture | `src/services/quickCapture/quickCaptureParse.ts` | LLM 解析出待确认条目后，用本地历史补全无效或缺失的 Category；有效 AI Category 会保留，Goal 仍只采用高置信度本地结果 |
 
-这个模块的定位是“减少重复选择”，不是强分类器。实现策略是：保留大部分有用的历史复用能力，但把短输入、过期异步结果、模糊间接匹配和低置信度结果挡在自动写入之外。
+这个模块仍以本地历史复用为主。Category 同时提供两种消费语义：结构化 `category.id` 是确定性的最佳候选，按 `exact → strong 历史分类投票 → 最近 60 天全局频率 → Category order` 选择；兼容字段 `categoryId` 仍只代表 high-confidence 结果。Goal 继续保持 high-confidence-only 自动落地策略。
 
-当前实现采用“类别 exact 复用 + 目标路径 A 加护栏”的策略：完整活动名重复出现时可以直接复用稳定类别；历史活动到历史目标名再映射到今日目标仍然保留，但只有 `exact` / `strong` 活动匹配可以进入目标路径 A，单字或弱短输入不会产生自动目标。`PredictionResult.categoryId` / `goalId` 仅代表 high-confidence 可落地结果；中/低置信度只保留在结构化字段中，供诊断或未来 UI 建议使用。
+`strong` 表示新活动和历史活动至少共享一个有效活动片段。Category 路径只统计这些历史活动已经关联的 Category，不读取 Goal 名称；Goal 路径虽然复用 activity match 分组，但随后独立处理历史 Goal 名称、页面 Goal 和直接 Goal token。
 
 ## 当前数据流
 
@@ -52,15 +52,16 @@ interface PredictionResult {
 }
 ```
 
-`categoryId` / `goalId` 只在对应结构化字段为 `confidence === 'high'` 时填充。调用方如果要自动写入表单或覆盖 AI 字段，应优先使用这个 high-only 语义，不能把 `medium` 当作可自动落地结果。
+`categoryId` / `goalId` 只在对应结构化字段为 `confidence === 'high'` 时填充。Category 必选的调用方使用结构化 `category.id`；Category 可选的调用方和所有 Goal 调用方继续使用 high-only 的 legacy 字段。
 
 ## 类别预测
 
-类别预测按活动匹配等级处理：
+类别预测依次处理：
 
-1. 完整活动名 exact lookup：先用规范化后的活动名直接查历史缓存。只要输入不是单字符，且类别频率最高项唯一，就返回 high；若最高项打平，返回 medium 且不填充 legacy `categoryId`。这个路径不依赖有效片段，因此能覆盖“看B站”这类中英混排短活动。
-2. `exact` / `strong` 片段路径：若活动名完全相同且包含有效片段，或活动名之间存在显著片段重叠，则按类别频率投票。最高项唯一返回 high；打平返回 medium。
-3. `weak` / `none`：不自动落地。
+1. 完整活动名 exact lookup：先用规范化后的活动名直接查历史缓存。只要输入不是单字符，且类别频率最高项唯一，就返回 high；若最高项打平，仍返回一个确定的结构化候选，但降为 medium 且不填充 legacy `categoryId`。这个路径不依赖有效片段，因此能覆盖“看B站”这类中英混排短活动。
+2. strong 历史分类投票：新活动与历史活动存在有效活动片段重叠时，汇总这些历史活动已经关联的 Category 频率。最高项唯一返回 high；打平时按全局 60 天频率、Category order、Category id 确定候选并返回 medium。
+3. 全局 60 天兜底：没有 exact 或 strong 分类候选时，选择最近 60 天使用次数最多的有效 Category，返回 low。
+4. 冷启动兜底：没有分类历史时，按 Category order、Category id 选择第一项，返回 low。
 
 类别频率只统计缓存构建时仍然有效的类别，避免历史孤儿 `categoryId` 或已删除类别被写回新记录。缓存有效期内的类别变更依赖 TTL 或主动失效生效。
 
@@ -93,8 +94,8 @@ interface PredictionResult {
 
 主表单通过 `src/services/metadataPredictionFormState.ts` 统一处理预测结果落地：
 
-- 高置信度 legacy `categoryId` / `goalId` 可以自动写入。
-- 中/低置信度不会写入 `selectedCategoryId` / `selectedGoalId`，当前也不显示建议。
+- Category 必选时采用结构化 `category.id`；可选时只采用高置信度 legacy `categoryId`。
+- Goal 始终只采用高置信度 legacy `goalId`。
 - 表单记录 `autoFilledCategoryIdRef` / `autoFilledGoalIdRef`，因此当后续预测为空或降级时，只会清空仍然来自自动填充的值。
 - 用户手动选择过类别或目标后，预测不会覆盖对应字段，也不会清空用户选择。
 - `predictionSeqRef` 用于代际校验：旧输入的异步预测晚返回时会被丢弃。
@@ -102,15 +103,25 @@ interface PredictionResult {
 
 当前没有专门实现“输入法合成期间暂停预测”。短输入护栏、代际校验和过期自动填充清理已经覆盖了原先最容易出错的合成中间态。
 
+## Category 必选设置
+
+设置页的“每条记录自动关联 Category”默认开启并仅保存在当前设备。
+
+- 开启：主表单采用结构化 `category.id`，Quick Capture 和 AI 助手在没有有效显式 Category 时也采用最佳候选；`dataService.entries.add/update` 在本地写入前执行最终校验。
+- 关闭：调用方只采用 high-confidence `categoryId`，保存层允许 `null`。
+- 没有 exact 或 strong 候选时，使用最近 60 天最常用的有效 Category；没有分类历史时使用 Category order 第一项。
+- 没有任何有效 Category 时，本地新建或编辑会返回“请先创建至少一个 Category”。
+- 同步和备份恢复绕过该本地偏好，不会改写原始数据。
+
 ## Quick Capture 覆盖策略
 
 Quick Capture 会先让 AI 解析用户口述，再用本地 `predictMetadata()` 做补全。当前策略是：
 
-- 只有 `local.category.confidence === 'high' && local.category.id` 时，才覆盖 AI 给出的 category。
+- AI 已解析出的有效 Category 会保留。
+- AI Category 缺失或无效时，必选模式采用结构化 `category.id`，可选模式只采用 high-confidence `categoryId`。
 - 只有 `local.goal.confidence === 'high' && local.goal.id` 时，才覆盖 AI 给出的 goal。
-- 中/低置信度或无命中的本地预测不覆盖用户口述解析结果。
 
-这保留了“历史非常稳定时自动补全”的价值，同时避免弱模糊命中把 AI 从上下文里推断出的字段覆盖掉。
+AI Assistant 的 `add_entry` 确认卡和最终 handler 共用 Category 解析流程，因此预览会显示最终实际写入的 Category。
 
 ## 仍未做的优化
 
@@ -124,9 +135,12 @@ Quick Capture 会先让 AI 解析用户口述，再用本地 `predictMetadata()`
 
 ## 回归测试入口
 
-这些测试覆盖短输入误选、路径 A 降级、直接目标打平、过期自动填充清理、表单代际校验和 Quick Capture 高置信度覆盖 guard。
+这些测试覆盖 Category 的 exact、strong、全局 60 天和冷启动选择，设置持久化，保存边界，表单交互，Quick Capture 以及 AI Assistant 确认预览。
 
 - `node --import tsx --test tests/metadata-predictor.test.ts`
+- `node --import tsx --test tests/category-assignment-preference.test.ts`
+- `node --import tsx --test tests/entry-category-assignment.test.ts`
+- `node --import tsx --test tests/add-entry-category-confirmation.test.ts`
 - `node --import tsx --test tests/metadata-prediction-form-state.test.ts`
 - `node --import tsx --test tests/time-entry-form.metadata-prediction.test.ts`
 - `node --import tsx --test tests/quick-capture-metadata-enrichment.test.ts`
