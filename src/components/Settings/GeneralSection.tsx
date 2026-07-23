@@ -2,14 +2,26 @@ import React, { useState } from 'react';
 import { IonCard, IonCardContent, IonToggle } from '@ionic/react';
 import { useDarkMode } from '../../hooks/useDarkMode';
 import { isAutoMergeEnabled, setAutoMergeEnabled } from '../../services/autoMerge';
+import {
+  isEntryCategoryRequired,
+  setEntryCategoryRequired,
+} from '../../services/categoryAssignmentPreference';
 
 export const GeneralSection: React.FC = () => {
   const { isDark, setDark } = useDarkMode();
   const [autoMerge, setAutoMerge] = useState<boolean>(() => isAutoMergeEnabled());
+  const [categoryRequired, setCategoryRequired] = useState<boolean>(
+    () => isEntryCategoryRequired(),
+  );
 
   const handleAutoMergeChange = (checked: boolean) => {
     setAutoMerge(checked);
     setAutoMergeEnabled(checked);
+  };
+
+  const handleCategoryRequiredChange = (checked: boolean) => {
+    setCategoryRequired(checked);
+    setEntryCategoryRequired(checked);
   };
 
   return (
@@ -18,6 +30,18 @@ export const GeneralSection: React.FC = () => {
         <div className="settings-row">
           <div className="settings-row-label">深色模式</div>
           <IonToggle checked={isDark} onIonChange={(e) => setDark(e.detail.checked)} />
+        </div>
+        <div className="settings-row">
+          <div className="settings-row-text">
+            <div className="settings-row-label">每条记录自动关联 Category</div>
+            <div className="settings-row-sub">
+              开启后会根据活动历史自动选择最可能的 Category；没有相似记录时使用最近 60 天最常用的 Category。
+            </div>
+          </div>
+          <IonToggle
+            checked={categoryRequired}
+            onIonChange={(e) => handleCategoryRequiredChange(e.detail.checked)}
+          />
         </div>
         <div className="settings-row">
           <div className="settings-row-text">
