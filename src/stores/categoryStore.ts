@@ -3,6 +3,7 @@ import { db, type Category, ensurePresetCategories } from '../services/db';
 import { syncDb } from '../services/syncDb';
 import { v4 as uuidv4 } from 'uuid';
 import { autoPush } from '../services/autoPush';
+import { invalidatePredictionCache } from '../services/metadataPredictor';
 
 interface CategoryStore {
   categories: Category[];
@@ -63,6 +64,7 @@ export const useCategoryStore = create<CategoryStore>((set, get) => ({
       updatedAt: now,
     };
     await syncDb.categories.add(newCategory);
+    invalidatePredictionCache();
     await get().loadCategories();
     autoPush('after add category');
     return newCategory.id;
@@ -70,12 +72,14 @@ export const useCategoryStore = create<CategoryStore>((set, get) => ({
 
   updateCategory: async (id, updates) => {
     await syncDb.categories.update(id, updates);
+    invalidatePredictionCache();
     await get().loadCategories();
     autoPush('after update category');
   },
 
   deleteCategory: async (id) => {
     await syncDb.categories.delete(id);
+    invalidatePredictionCache();
     await get().loadCategories();
     autoPush('after delete category');
   },
