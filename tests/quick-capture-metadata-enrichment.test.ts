@@ -11,10 +11,13 @@ const sourcePath = path.resolve(
 
 const source = await readFile(sourcePath, 'utf8');
 
-test('quick capture enrichment source uses structured high-confidence category guard', () => {
-  assert.match(source, /local\.category\.confidence\s*===\s*'high'/);
-  assert.match(source, /local\.category\.id/);
-  assert.doesNotMatch(source, /\blocal\.categoryId\b/);
+test('quick capture preserves a valid AI Category and fills only missing or invalid values', () => {
+  assert.match(source, /isEntryCategoryRequired/);
+  assert.match(source, /selectPredictedCategoryId/);
+  assert.match(source, /const parsedCategoryName = entry\.params\.category\?\.toLowerCase\(\)/);
+  assert.match(source, /const parsedCategory = parsedCategoryName/);
+  assert.match(source, /if \(!parsedCategory\)/);
+  assert.match(source, /entry\.params\.category = cat\.name/);
 });
 
 test('quick capture enrichment source uses structured high-confidence goal guard', () => {

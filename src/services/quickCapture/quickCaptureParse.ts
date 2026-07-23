@@ -16,6 +16,8 @@ import {
   type AssistantDebugInfoPayload,
 } from '../ai/debugInfo';
 import { predictMetadata } from '../metadataPredictor';
+import { isEntryCategoryRequired } from '../categoryAssignmentPreference';
+import { selectPredictedCategoryId } from '../entryCategoryAssignment';
 import { detectConflicts, type ConflictInfo } from './conflictDetection';
 
 export interface AddEntryParams {
@@ -269,17 +271,30 @@ export async function parseTranscript(
     });
   }
 
-  // 本地 predictMetadata 基于用户历史，但只允许高置信度结果覆盖 AI 字段。
-  // 中/低置信度或无命中的预测不覆盖用户口述解析结果。
+  // 保留 AI 已解析出的有效 Category；只有缺失或无效时才用本地历史补全。
+  // Goal 仍只允许高置信度本地结果覆盖 AI 字段。
   callbacks?.onPhase?.('enriching', '本地补全 category/goal');
   await Promise.all(
     entries.map(async entry => {
       try {
         const local = await predictMetadata(entry.params.activity, ctx.pageDateGoals);
-        if (local.category.confidence === 'high' && local.category.id) {
-          const cat = ctx.categories.find(c => c.id === local.category.id);
+
+        const parsedCategoryName = entry.params.category?.toLowerCase();
+        const parsedCategory = parsedCategoryName
+          ? ctx.categories.find(category =>
+              category.name.toLowerCase().includes(parsedCategoryName)
+            )
+          : undefined;
+
+        if (!parsedCategory) {
+          const categoryId = selectPredictedCategoryId(
+            local,
+            isEntryCategoryRequired(),
+          );
+          const cat = ctx.categories.find(category => category.id === categoryId);
           if (cat) entry.params.category = cat.name;
         }
+
         if (local.goal.confidence === 'high' && local.goal.id) {
           const goal = ctx.pageDateGoals.find(g => g.id === local.goal.id);
           if (goal) entry.params.goal = goal.name;
@@ -294,7 +309,7 @@ export async function parseTranscript(
     undefined,
     createTextDebug(
       'ENRICH',
-      `entries=${entries.length}\n仅高置信度本地预测会覆盖 AI 给出的 category/goal（中/低置信度或失败的条目保留 AI 原始字段）`,
+      `entries=${entries.length}\nCategory 在必选模式采用最佳本地候选，在可选模式仅采用高置信度候选；有效 AI Category 保留。Goal 仍仅采用高置信度本地预测。`,
     ),
   );
 
