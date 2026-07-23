@@ -15,6 +15,8 @@ export type PredictionReason =
     | 'exactActivity'
     | 'strongActivityMatch'
     | 'directGoalToken'
+    | 'globalCategoryFrequency'
+    | 'categoryOrderFallback'
     | 'weakMatch'
     | 'noMatch';
 
@@ -54,6 +56,11 @@ interface GoalProfile {
 interface RankedFrequency {
     key: string;
     count: number;
+}
+
+interface ActiveCategoryRank {
+    id: string;
+    order: number;
 }
 
 type GoalNameRemapType = 'exactName' | 'fuzzyName';
@@ -155,6 +162,8 @@ function classifyActivityMatch(input: TextProfile, historical: TextProfile): Act
 // ============ Cache ============
 
 let activityCache: Map<string, ActivityStats> | null = null;
+let globalCategoryFreq = new Map<string, number>();
+let activeCategoryRanks: ActiveCategoryRank[] = [];
 let cacheBuiltAt = 0;
 
 const CACHE_TTL = 60_000;
@@ -186,16 +195,18 @@ async function ensureCache(): Promise<void> {
         }
     }
 
-    const activeCategories = await db.categories.toArray();
-    const activeCategoryIds = new Set(
-        activeCategories
-            .filter(category => !category.deleted)
-            .map(category => category.id),
-    );
-
+    const activeCategories = (await db.categories.toArray())
+        .filter(category => !category.deleted)
+        .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+    const activeCategoryIds = new Set(activeCategories.map(category => category.id));
+    const nextGlobalCategoryFreq = new Map<string, number>();
     const nextCache = new Map<string, ActivityStats>();
 
     for (const entry of validEntries) {
+        if (entry.categoryId && activeCategoryIds.has(entry.categoryId)) {
+            increment(nextGlobalCategoryFreq, entry.categoryId);
+        }
+
         const activity = toTextProfile(entry.activity);
         if (!activity.normalized) {
             continue;
@@ -224,6 +235,11 @@ async function ensureCache(): Promise<void> {
     }
 
     activityCache = nextCache;
+    globalCategoryFreq = nextGlobalCategoryFreq;
+    activeCategoryRanks = activeCategories.map(category => ({
+        id: category.id,
+        order: category.order,
+    }));
     cacheBuiltAt = Date.now();
 }
 
@@ -253,6 +269,49 @@ function rankedFrequencies(freqMap: Map<string, number>): RankedFrequency[] {
         .sort((a, b) => b.count - a.count);
 }
 
+function categoryOrder(categoryId: string): number {
+    return activeCategoryRanks.find(category => category.id === categoryId)?.order
+        ?? Number.MAX_SAFE_INTEGER;
+}
+
+function compareCategoryIds(a: string, b: string): number {
+    return (
+        (globalCategoryFreq.get(b) ?? 0) - (globalCategoryFreq.get(a) ?? 0)
+        || categoryOrder(a) - categoryOrder(b)
+        || a.localeCompare(b)
+    );
+}
+
+function rankedCategoryFrequencies(freqMap: Map<string, number>): RankedFrequency[] {
+    return [...freqMap.entries()]
+        .map(([key, count]) => ({ key, count }))
+        .sort((a, b) => b.count - a.count || compareCategoryIds(a.key, b.key));
+}
+
+function predictFallbackCategory(): MetadataPredictionField {
+    const rankedGlobal = rankedCategoryFrequencies(globalCategoryFreq);
+    if (rankedGlobal.length > 0) {
+        return {
+            id: rankedGlobal[0].key,
+            confidence: 'low',
+            reason: 'globalCategoryFrequency',
+            score: rankedGlobal[0].count,
+        };
+    }
+
+    const first = activeCategoryRanks[0];
+    if (first) {
+        return {
+            id: first.id,
+            confidence: 'low',
+            reason: 'categoryOrderFallback',
+            score: 0,
+        };
+    }
+
+    return emptyField();
+}
+
 function hasEnoughExactActivityText(input: TextProfile): boolean {
     return Array.from(input.normalized.replace(/\s+/g, '')).length > 1;
 }
@@ -265,10 +324,10 @@ function predictCategoryFromFrequency(
         return null;
     }
 
-    const [top, second] = rankedFrequencies(freqMap);
+    const [top, second] = rankedCategoryFrequencies(freqMap);
     if (second && top.count === second.count) {
         return {
-            id: reason === 'strongActivityMatch' ? top.key : null,
+            id: top.key,
             confidence: 'medium',
             reason,
             score: top.count,
@@ -325,9 +384,11 @@ function splitActivityMatches(input: TextProfile): {
     return matches;
 }
 
-function predictCategoryFromMatches(matches: ReturnType<typeof splitActivityMatches>): MetadataPredictionField {
+function predictCategoryFromMatches(
+    matches: ReturnType<typeof splitActivityMatches>,
+): MetadataPredictionField | null {
     if (matches.exact && matches.exact.categoryFreq.size > 0) {
-        return predictCategoryFromFrequency(matches.exact.categoryFreq, 'exactActivity') ?? emptyField();
+        return predictCategoryFromFrequency(matches.exact.categoryFreq, 'exactActivity');
     }
 
     const mergedStrong = new Map<string, number>();
@@ -336,10 +397,21 @@ function predictCategoryFromMatches(matches: ReturnType<typeof splitActivityMatc
     }
 
     if (mergedStrong.size > 0) {
-        return predictCategoryFromFrequency(mergedStrong, 'strongActivityMatch') ?? emptyField();
+        return predictCategoryFromFrequency(mergedStrong, 'strongActivityMatch');
     }
 
-    return matches.hasWeak ? emptyField('weakMatch') : emptyField();
+    return null;
+}
+
+function predictCategoryFromCache(
+    input: TextProfile,
+    matches: ReturnType<typeof splitActivityMatches>,
+): MetadataPredictionField {
+    return (
+        predictExactActivityCategory(input)
+        ?? predictCategoryFromMatches(matches)
+        ?? predictFallbackCategory()
+    );
 }
 
 function toGoalProfiles(todayGoals: Goal[]): GoalProfile[] {
@@ -510,6 +582,14 @@ function predictGoalFromMatches(
 
 // ============ Public API ============
 
+export async function predictCategory(
+    activityInput: string,
+): Promise<MetadataPredictionField> {
+    await ensureCache();
+    const input = toTextProfile(activityInput);
+    return predictCategoryFromCache(input, splitActivityMatches(input));
+}
+
 export async function predictMetadata(
     activityInput: string,
     todayGoals: Goal[],
@@ -518,7 +598,7 @@ export async function predictMetadata(
 
     const input = toTextProfile(activityInput);
     const matches = splitActivityMatches(input);
-    const category = predictExactActivityCategory(input) ?? predictCategoryFromMatches(matches);
+    const category = predictCategoryFromCache(input, matches);
     const goal = predictGoalFromMatches(input, toGoalProfiles(todayGoals), matches);
 
     return {
@@ -531,5 +611,7 @@ export async function predictMetadata(
 
 export function invalidatePredictionCache(): void {
     activityCache = null;
+    globalCategoryFreq = new Map<string, number>();
+    activeCategoryRanks = [];
     cacheBuiltAt = 0;
 }

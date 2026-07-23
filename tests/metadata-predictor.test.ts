@@ -130,6 +130,24 @@ test('fragmentless exact historical activity can predict category without select
   assert.equal(result.goal.id, null);
 });
 
+test('strong activity match reuses historical category classification without consulting goals', async () => {
+  const study = makeCategory('study', '学习', { order: 1 });
+  await db.categories.put(study);
+  await db.entries.put(makeEntry({
+    id: 'entry-paper',
+    activity: '读论文',
+    categoryId: study.id,
+    endTime: new Date(Date.now() - 1 * day),
+  }));
+
+  const result = await predictMetadata('看论文', []);
+
+  assert.equal(result.category.id, study.id);
+  assert.equal(result.category.confidence, 'high');
+  assert.equal(result.category.reason, 'strongActivityMatch');
+  assert.equal(result.goal.id, null);
+});
+
 test('exact historical activity can map to a strongly related current goal name', async () => {
   const historicalGoal = makeGoal('hist-recogem', 'recogem文章', '2026-06-20');
   const todayGoal = makeGoal('today-recogem', '读recogem文章');
@@ -300,10 +318,11 @@ test('short alphanumeric substring does not auto-select through historical subst
   const result = await predictMetadata('ai', [todayGoal]);
 
   assert.equal(result.categoryId, null);
-  assert.equal(result.category.id, null);
+  assert.equal(result.category.id, work.id);
+  assert.equal(result.category.confidence, 'low');
+  assert.equal(result.category.reason, 'globalCategoryFrequency');
   assert.equal(result.goalId, null);
   assert.equal(result.goal.id, null);
-  assert.notEqual(result.category.confidence, 'high');
   assert.notEqual(result.goal.confidence, 'high');
 });
 
@@ -329,8 +348,9 @@ test('exact activity category tie does not auto-select a category', async () => 
   const result = await predictMetadata('整理资料', []);
 
   assert.equal(result.categoryId, null);
-  assert.equal(result.category.id, null);
-  assert.notEqual(result.category.confidence, 'high');
+  assert.equal(result.category.id, 'work');
+  assert.equal(result.category.confidence, 'medium');
+  assert.equal(result.category.reason, 'exactActivity');
 });
 
 test('deleted category IDs are ignored for category predictions', async () => {
@@ -351,7 +371,7 @@ test('deleted category IDs are ignored for category predictions', async () => {
   assert.equal(result.category.id, null);
 });
 
-test('recent deleted and ongoing entries do not influence predictions', async () => {
+test('recent deleted and ongoing entries do not influence history-backed predictions', async () => {
   const work = makeCategory('work', '工作');
   const historicalGoal = makeGoal('hist-client', '客户项目', '2026-06-20');
   const todayGoal = makeGoal('today-client', '客户项目');
@@ -378,7 +398,9 @@ test('recent deleted and ongoing entries do not influence predictions', async ()
   const result = await predictMetadata('整理会议资料', [todayGoal]);
 
   assert.equal(result.categoryId, null);
-  assert.equal(result.category.id, null);
+  assert.equal(result.category.id, work.id);
+  assert.equal(result.category.confidence, 'low');
+  assert.equal(result.category.reason, 'categoryOrderFallback');
   assert.equal(result.goalId, null);
   assert.equal(result.goal.id, null);
 });
@@ -451,4 +473,53 @@ test('recent exact activity can still predict category and goal', async () => {
   assert.equal(result.category.confidence, 'high');
   assert.equal(result.goalId, 'today-app');
   assert.equal(result.goal.confidence, 'high');
+});
+
+test('no text match falls back to the most frequent category from the last 60 days', async () => {
+  const work = makeCategory('work', '工作', { order: 2 });
+  const study = makeCategory('study', '学习', { order: 1 });
+  await db.categories.bulkPut([work, study]);
+  await db.entries.bulkPut([
+    makeEntry({ id: 'work-1', activity: '开会', categoryId: work.id, endTime: new Date(Date.now() - 1 * day) }),
+    makeEntry({ id: 'work-2', activity: '写周报', categoryId: work.id, endTime: new Date(Date.now() - 2 * day) }),
+    makeEntry({ id: 'study-1', activity: '读书', categoryId: study.id, endTime: new Date(Date.now() - 3 * day) }),
+  ]);
+
+  const result = await predictMetadata('买菜', []);
+
+  assert.equal(result.category.id, work.id);
+  assert.equal(result.category.confidence, 'low');
+  assert.equal(result.category.reason, 'globalCategoryFrequency');
+  assert.equal(result.categoryId, null);
+});
+
+test('global frequency tie falls back to category order and then id', async () => {
+  const later = makeCategory('z-category', '稍后', { order: 2 });
+  const firstB = makeCategory('b-category', '首选 B', { order: 1 });
+  const firstA = makeCategory('a-category', '首选 A', { order: 1 });
+  await db.categories.bulkPut([later, firstB, firstA]);
+  await db.entries.bulkPut([
+    makeEntry({ id: 'later-entry', activity: '开会', categoryId: later.id, endTime: new Date(Date.now() - 1 * day) }),
+    makeEntry({ id: 'first-b-entry', activity: '读书', categoryId: firstB.id, endTime: new Date(Date.now() - 2 * day) }),
+    makeEntry({ id: 'first-a-entry', activity: '跑步', categoryId: firstA.id, endTime: new Date(Date.now() - 3 * day) }),
+  ]);
+
+  const result = await predictMetadata('洗衣服', []);
+
+  assert.equal(result.category.id, firstA.id);
+  assert.equal(result.category.reason, 'globalCategoryFrequency');
+});
+
+test('empty category history uses the first active category by order and id', async () => {
+  const second = makeCategory('second', '第二', { order: 2 });
+  const firstB = makeCategory('first-b', '第一 B', { order: 1 });
+  const firstA = makeCategory('first-a', '第一 A', { order: 1 });
+  await db.categories.bulkPut([second, firstB, firstA]);
+
+  const result = await predictMetadata('第一条记录', []);
+
+  assert.equal(result.category.id, firstA.id);
+  assert.equal(result.category.confidence, 'low');
+  assert.equal(result.category.reason, 'categoryOrderFallback');
+  assert.equal(result.categoryId, null);
 });
