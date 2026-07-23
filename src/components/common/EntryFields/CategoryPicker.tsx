@@ -1,6 +1,6 @@
 /**
  * 类别选择器 — 抽自 TimeEntryForm.renderCategoryRow
- * 横向滚动的小标签，单选；再次点击当前选中项 → 取消选择（onChange 传空字符串）
+ * 横向滚动的小标签，单选；允许清空时，再次点击当前选中项会取消选择。
  */
 
 import React from 'react';
@@ -13,9 +13,10 @@ import { SelectablePill, PillSeparator } from './SelectablePill';
 interface Props {
   selectedId: string;
   onChange: (next: string) => void;
+  allowClear?: boolean;
 }
 
-export const CategoryPicker: React.FC<Props> = ({ selectedId, onChange }) => {
+export const CategoryPicker: React.FC<Props> = ({ selectedId, onChange, allowClear = true }) => {
   const { categories } = useCategoryStore();
   const { isDark } = useDarkMode();
 
@@ -56,7 +57,7 @@ export const CategoryPicker: React.FC<Props> = ({ selectedId, onChange }) => {
                 activeColor="#3b82f6"
                 inactiveColor="#666"
                 isDark={isDark}
-                onClick={() => onChange(c.id === selectedId ? '' : c.id)}
+                onClick={() => onChange(c.id === selectedId && allowClear ? '' : c.id)}
               />
             </React.Fragment>
           ))}

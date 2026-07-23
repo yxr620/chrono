@@ -18,3 +18,9 @@ test('edit entry dialog wires a next-start shortcut for the end time', () => {
   assert.match(source, /setEndTime\(nextStartTime\)/);
   assert.match(source, />下次开始<\/button>/);
 });
+
+test('edit entry dialog keeps assignment errors visible without closing', () => {
+  assert.match(source, /EntryCategoryAssignmentError/);
+  assert.match(source, /error instanceof EntryCategoryAssignmentError/);
+  assert.match(source, /showToast\(error\.message,\s*'danger'\)/);
+});

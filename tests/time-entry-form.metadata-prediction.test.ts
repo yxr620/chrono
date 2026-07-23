@@ -41,3 +41,10 @@ test('clicking an existing entry defaults the end time to now instead of ongoing
   assert.match(effectSource, /else\s*\{\s*setEndTime\(new Date\(\)\);\s*\}/);
   assert.doesNotMatch(effectSource, /else\s*\{\s*setEndTime\(null\);\s*\}/);
 });
+
+test('time entry form applies required Category prediction and prevents clearing', () => {
+  assert.match(source, /isEntryCategoryRequired/);
+  assert.match(source, /applyMetadataPredictionToSelection\([\s\S]*categoryRequired/);
+  assert.match(source, /allowClear=\{!categoryRequired\}/);
+  assert.match(source, /EntryCategoryAssignmentError/);
+});

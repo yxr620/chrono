@@ -122,3 +122,33 @@ test('empty activity clears only auto-filled values', () => {
     autoFilledGoalId: null,
   });
 });
+
+test('required mode fills the structured best-effort category while keeping goal high-only', () => {
+  const bestEffort: PredictionResult = {
+    category: {
+      id: 'cat-global',
+      confidence: 'low',
+      reason: 'globalCategoryFrequency',
+    },
+    goal: {
+      id: 'goal-medium',
+      confidence: 'medium',
+      reason: 'strongActivityMatch',
+    },
+    categoryId: null,
+    goalId: null,
+  };
+
+  const result = applyMetadataPredictionToSelection(
+    bestEffort,
+    state(),
+    true,
+  );
+
+  assert.deepEqual(result, {
+    selectedCategoryId: 'cat-global',
+    selectedGoalId: null,
+    autoFilledCategoryId: 'cat-global',
+    autoFilledGoalId: null,
+  });
+});

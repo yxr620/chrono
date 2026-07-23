@@ -1,4 +1,5 @@
 import type { PredictionResult } from './metadataPredictor';
+import { selectPredictedCategoryId } from './entryCategoryAssignment';
 
 export interface MetadataPredictionSelectionState {
     selectedCategoryId: string;
@@ -19,17 +20,19 @@ export interface MetadataPredictionSelectionUpdate {
 export function applyMetadataPredictionToSelection(
     prediction: PredictionResult,
     state: MetadataPredictionSelectionState,
+    categoryRequired = false,
 ): MetadataPredictionSelectionUpdate {
     let selectedCategoryId = state.selectedCategoryId;
     let selectedGoalId = state.selectedGoalId;
     let autoFilledCategoryId: string | null = null;
     let autoFilledGoalId: string | null = null;
+    const predictedCategoryId = selectPredictedCategoryId(prediction, categoryRequired);
 
-    if (prediction.categoryId && !state.userPickedCategory) {
-        selectedCategoryId = prediction.categoryId;
-        autoFilledCategoryId = prediction.categoryId;
+    if (predictedCategoryId && !state.userPickedCategory) {
+        selectedCategoryId = predictedCategoryId;
+        autoFilledCategoryId = predictedCategoryId;
     } else if (
-        !prediction.categoryId
+        !predictedCategoryId
         && !state.userPickedCategory
         && state.autoFilledCategoryId
         && state.selectedCategoryId === state.autoFilledCategoryId

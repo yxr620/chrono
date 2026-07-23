@@ -25,6 +25,8 @@ import {
   applyMetadataPredictionToSelection,
   clearAutoFilledMetadataSelection,
 } from '../../services/metadataPredictionFormState';
+import { isEntryCategoryRequired } from '../../services/categoryAssignmentPreference';
+import { EntryCategoryAssignmentError } from '../../services/entryCategoryAssignment';
 import { ensureDate } from '../../services/autoTimeSelection';
 import { QuickCaptureButton } from '../QuickCapture/QuickCaptureButton';
 import { CategoryPicker, GoalPicker } from '../common/EntryFields';
@@ -118,6 +120,7 @@ export const TimeEntryForm: React.FC = () => {
   const { isDark } = useDarkMode();
   const isIOS = Capacitor.getPlatform() === 'ios';
   const { openIOSTimePicker } = useIOSTimePicker();
+  const categoryRequired = isEntryCategoryRequired();
 
   // Local state
   const [activity, setActivity] = useState('');
@@ -222,7 +225,7 @@ export const TimeEntryForm: React.FC = () => {
           autoFilledGoalId: autoFilledGoalIdRef.current,
           userPickedCategory: userPickedCategoryRef.current,
           userPickedGoal: userPickedGoalRef.current,
-        });
+        }, categoryRequired);
 
         if (update.selectedCategoryId !== selectedCategoryIdRef.current) {
           setSelectedCategoryId(update.selectedCategoryId);
@@ -240,7 +243,7 @@ export const TimeEntryForm: React.FC = () => {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [activity]);
+  }, [activity, categoryRequired]);
 
   // 当从记录列表或时间轴点击时，自动设置开始时间和结束时间。
   // 直接使用真实时间，跨日点击会同步切换 selectedDate，避免"凌晨穿越"。
@@ -343,6 +346,14 @@ export const TimeEntryForm: React.FC = () => {
     present({ message, duration: 1500, position: 'top', color });
   };
 
+  const showEntrySaveError = (error: unknown) => {
+    if (error instanceof EntryCategoryAssignmentError) {
+      showToast(error.message, 'danger');
+      return;
+    }
+    showToast('保存失败，请重试', 'danger');
+  };
+
   const setEndTimeToOngoing = () => {
     setEndTime(null);
   };
@@ -388,12 +399,17 @@ export const TimeEntryForm: React.FC = () => {
       return;
     }
 
-    await startTracking(
-      activity,
-      selectedGoalId || undefined,
-      startTime,
-      selectedCategoryId || undefined
-    );
+    try {
+      await startTracking(
+        activity,
+        selectedGoalId || undefined,
+        startTime,
+        selectedCategoryId || undefined
+      );
+    } catch (error) {
+      showEntrySaveError(error);
+      return;
+    }
     showToast('开始计时', 'success');
     resetForm();
     setAutoStartTime(getAutoStartTimeForDate(selectedDate));
@@ -431,14 +447,19 @@ export const TimeEntryForm: React.FC = () => {
       return;
     }
 
-    await addEntry({
-      startTime,
-      endTime,
-      activity,
-      categoryId: selectedCategoryId || null,
-      goalId: selectedGoalId,
-      memo: memo.trim() || undefined,
-    });
+    try {
+      await addEntry({
+        startTime,
+        endTime,
+        activity,
+        categoryId: selectedCategoryId || null,
+        goalId: selectedGoalId,
+        memo: memo.trim() || undefined,
+      });
+    } catch (error) {
+      showEntrySaveError(error);
+      return;
+    }
     showToast('记录已保存', 'success');
 
     // 跨午夜手动补录：切到 endTime 所在日期，让下一条预设跟着真实时间走，
@@ -458,6 +479,7 @@ export const TimeEntryForm: React.FC = () => {
   const categoryRow = (
     <CategoryPicker
       selectedId={selectedCategoryId}
+      allowClear={!categoryRequired}
       onChange={(id) => {
         userPickedCategoryRef.current = true;
         autoFilledCategoryIdRef.current = null;

@@ -19,6 +19,8 @@ import { useDarkMode } from '../../hooks/useDarkMode';
 import { WheelTimePicker } from '../common/WheelTimePicker';
 import { useIOSTimePicker } from '../../hooks/useIOSTimePicker';
 import type { TimeEntry } from '../../services/db';
+import { isEntryCategoryRequired } from '../../services/categoryAssignmentPreference';
+import { EntryCategoryAssignmentError } from '../../services/entryCategoryAssignment';
 import dayjs from 'dayjs';
 import './EditEntryDialog.css';
 
@@ -57,6 +59,7 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
   const { isDark } = useDarkMode();
   const isIOS = Capacitor.getPlatform() === 'ios';
   const { openIOSTimePicker } = useIOSTimePicker();
+  const categoryRequired = isEntryCategoryRequired();
 
   useEffect(() => {
     if (visible) {
@@ -151,16 +154,23 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
       return;
     }
 
-    await onSave(entry.id, {
-      activity,
-      startTime,
-      endTime,
-      categoryId: selectedCategoryId || null,
-      goalId: selectedGoalId,
-      memo: memo.trim() || undefined,
-    });
-
-    onClose();
+    try {
+      await onSave(entry.id, {
+        activity,
+        startTime,
+        endTime,
+        categoryId: selectedCategoryId || null,
+        goalId: selectedGoalId,
+        memo: memo.trim() || undefined,
+      });
+      onClose();
+    } catch (error) {
+      if (error instanceof EntryCategoryAssignmentError) {
+        showToast(error.message, 'danger');
+        return;
+      }
+      showToast('保存失败，请重试', 'danger');
+    }
   };
 
   // 设置开始时间为"上次结束"：取 startTime 之前（含相等）endTime 最大的那条记录。
@@ -266,7 +276,7 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
                       <React.Fragment key={c.id}>
                         {i > 0 && <span className="edit-dialog-separator">|</span>}
                         <span
-                          onClick={() => setSelectedCategoryId(c.id === selectedCategoryId ? '' : c.id)}
+                          onClick={() => setSelectedCategoryId(c.id === selectedCategoryId && !categoryRequired ? '' : c.id)}
                           className={`edit-dialog-option ${c.id === selectedCategoryId ? 'selected' : ''}`}
                         >
                           {c.name}
