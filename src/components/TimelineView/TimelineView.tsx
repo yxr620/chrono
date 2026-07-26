@@ -8,6 +8,7 @@ import dayjs from 'dayjs';
 import { IonDatetime, IonModal } from '@ionic/react';
 import { WheelMonthYearPicker } from '../common/WheelTimePicker';
 import { useDarkMode } from '../../hooks/useDarkMode';
+import { calculateWeeklyCoverage } from '../../services/weeklyCoverage';
 import './TimelineView.css';
 
 interface TimeBlock {
@@ -66,6 +67,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
   const [viewYear, setViewYear] = useState(() => dayjs(selectedDate).year());
   const [viewMonth, setViewMonth] = useState(() => dayjs(selectedDate).month() + 1);
   const [tooltip, setTooltip] = useState<{ block: TimeBlock; positionPercent: number } | null>(null);
+  const [nowTick, setNowTick] = useState(() => Date.now());
   const containerRef = useRef<HTMLDivElement>(null);
   const datetimeRef = useRef<HTMLIonDatetimeElement>(null);
   const { isDark } = useDarkMode();
@@ -324,12 +326,6 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
     return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
   };
 
-  const totalHours = Math.round(
-    timeBlocks.reduce((sum, b) => {
-      return sum + dayjs(b.entry.endTime).diff(dayjs(b.entry.startTime), 'minute');
-    }, 0) / 60 * 10
-  ) / 10;
-
   const timeLabels = [0, 6, 12, 18, 24];
 
   const earliestDayJs = earliestDate ? dayjs(earliestDate) : null;
@@ -339,12 +335,16 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
 
   const isToday = dayjs(selectedDate).isSame(dayjs(), 'day');
 
-  const [nowTick, setNowTick] = useState(() => Date.now());
+  const weeklyCoverage = useMemo(
+    () => calculateWeeklyCoverage(entries, selectedDate, new Date(nowTick)),
+    [entries, selectedDate, nowTick]
+  );
+
   useEffect(() => {
-    if (!isToday) return;
+    if (!weeklyCoverage.isCurrentWeek) return;
     const id = setInterval(() => setNowTick(Date.now()), 60_000);
     return () => clearInterval(id);
-  }, [isToday]);
+  }, [weeklyCoverage.isCurrentWeek]);
 
   const goToPreviousDay = () => {
     if (isEarliestDay) return;
@@ -361,7 +361,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
 
   return (
     <div className="timeline-view">
-      {/* 日期导航 + 统计信息：合并一行 */}
+      {/* 日期导航 + 所选日期所在周的记录覆盖率 */}
       <div className="timeline-header">
         <div className="timeline-header-left">
           <button
@@ -396,10 +396,27 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
           </button>
         </div>
 
-        <div className="timeline-header-stats">
-          <span>{timeBlocks.length} 项</span>
-          <span className="stat-sep">·</span>
-          <span>{totalHours}h</span>
+        <div
+          className="timeline-week-coverage"
+          title={`${weeklyCoverage.isCurrentWeek ? '本周' : '当周'}时间记录覆盖率 ${weeklyCoverage.percentage}%`}
+        >
+          <div className="timeline-week-coverage-meta">
+            <span>{weeklyCoverage.isCurrentWeek ? '本周' : '当周'}</span>
+            <strong>{weeklyCoverage.percentage}%</strong>
+          </div>
+          <div
+            className="timeline-week-coverage-track"
+            role="progressbar"
+            aria-label={`${weeklyCoverage.isCurrentWeek ? '本周' : '当周'}时间记录覆盖率`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={weeklyCoverage.percentage}
+          >
+            <div
+              className="timeline-week-coverage-fill"
+              style={{ width: `${weeklyCoverage.percentage}%` }}
+            />
+          </div>
         </div>
       </div>
 

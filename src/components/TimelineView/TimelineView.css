@@ -7,7 +7,7 @@
   /* 不设 overflow:hidden，tooltip 向下展开不会被裁切 */
 }
 
-/* ── Header：日期导航 + 统计信息 合并一行 ── */
+/* ── Header：日期导航 + 周记录覆盖率 合并一行 ── */
 .timeline-header {
   display: flex;
   align-items: center;
@@ -19,6 +19,7 @@
   display: flex;
   align-items: center;
   gap: 2px;
+  min-width: 0;
 }
 
 .date-display {
@@ -111,16 +112,44 @@
   background: #1565d8;
 }
 
-.timeline-header-stats {
+.timeline-week-coverage {
+  width: 96px;
+  flex: 0 0 96px;
   display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.timeline-week-coverage-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1;
   color: hsl(var(--muted-foreground));
 }
 
-.timeline-header-stats .stat-sep {
-  opacity: 0.4;
+.timeline-week-coverage-meta strong {
+  color: hsl(var(--primary));
+  font-family: var(--app-number-family);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+
+.timeline-week-coverage-track {
+  height: 4px;
+  overflow: hidden;
+  background: hsl(var(--secondary));
+  border-radius: 9999px;
+}
+
+.timeline-week-coverage-fill {
+  height: 100%;
+  background: hsl(var(--primary));
+  border-radius: inherit;
+  transition: width 280ms ease-out;
 }
 
 /* ── Timeline container ── */
@@ -322,8 +351,9 @@
     font-size: 14px;
   }
 
-  .timeline-header-stats {
-    font-size: 11px;
+  .timeline-week-coverage {
+    width: 90px;
+    flex-basis: 90px;
   }
 }
 
@@ -367,7 +397,16 @@
     padding: 2px 8px;
   }
 
-  .timeline-header-stats {
+  .timeline-week-coverage {
+    width: 108px;
+    flex-basis: 108px;
+  }
+
+  .timeline-week-coverage-meta {
+    font-size: 12px;
+  }
+
+  .timeline-week-coverage-meta strong {
     font-size: 13px;
   }
 
