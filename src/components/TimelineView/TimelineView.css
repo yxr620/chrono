@@ -220,6 +220,24 @@
   opacity: 0.85;
 }
 
+.timeline-block.is-new-entry {
+  transform-origin: left center;
+  animation: timeline-new-entry-reveal 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+
+@keyframes timeline-new-entry-reveal {
+  from {
+    opacity: 0.4;
+    transform: scaleX(0);
+  }
+
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
 /* 当前时间指示线 — 相对于 .timeline-container 绝对定位并持续移动 */
 .timeline-current-time {
   position: absolute;
@@ -265,6 +283,12 @@
   font-weight: 600;
   line-height: 1;
   text-align: right;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timeline-block.is-new-entry {
+    animation: none;
+  }
 }
 
 /* ── Tooltip — 出现在 bar 下方，无裁切问题 ── */

@@ -19,7 +19,7 @@ test('timeline omits hour labels and continuously animates the current-time mark
   assert.match(component, /animationDuration:/);
   assert.match(css, /@keyframes timeline-current-time-progress/);
   assert.match(css, /animation-timing-function:\s*linear/);
-  assert.match(css, /\.timeline-current-time\s*\{[^}]*top:\s*-1px[^}]*height:\s*calc\(var\(--timeline-track-height\) \+ 2px\)/s);
+  assert.match(css, /\.timeline-current-time\s*\{[^}]*top:\s*0[^}]*height:\s*calc\(var\(--timeline-track-height\) \+ 1px\)/s);
   assert.match(css, /\.timeline-current-time::before\s*\{[^}]*top:\s*-3px[^}]*border-top:\s*4px solid var\(--timeline-now-marker\)/s);
   assert.doesNotMatch(css, /\.timeline-current-time::before\s*\{[^}]*border-radius:\s*50%/s);
 });

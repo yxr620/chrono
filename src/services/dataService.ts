@@ -75,16 +75,17 @@ async function addEntry(
   };
   const id = await syncDb.entries.add(newEntry);
   invalidatePredictionCache();
+  let visibleEntryId = id;
   if (newEntry.endTime != null) {
-    await tryMergeWithLeftNeighbor(newEntry);
+    visibleEntryId = await tryMergeWithLeftNeighbor(newEntry) ?? id;
   }
-  return id;
+  return visibleEntryId;
 }
 
 async function updateEntry(
   id: string,
   updates: Partial<TimeEntry>
-): Promise<void> {
+): Promise<string> {
   const before = await db.entries.get(id);
   if (!before) {
     throw new Error(`Entry ${id} not found`);
@@ -98,11 +99,15 @@ async function updateEntry(
 
   await syncDb.entries.update(id, { ...updates, categoryId });
   invalidatePredictionCache();
+  let visibleEntryId = id;
   const endTimeJustSet = before.endTime == null && updates.endTime != null;
   if (endTimeJustSet) {
     const after = await db.entries.get(id);
-    if (after) await tryMergeWithLeftNeighbor(after);
+    if (after) {
+      visibleEntryId = await tryMergeWithLeftNeighbor(after) ?? id;
+    }
   }
+  return visibleEntryId;
 }
 
 async function deleteEntry(id: string): Promise<void> {

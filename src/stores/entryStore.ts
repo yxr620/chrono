@@ -18,8 +18,8 @@ interface EntryStore {
   // 操作方法
   loadEntries: (date?: string) => Promise<void>;
   startTracking: (activity: string, goalId?: string, startTime?: Date, categoryId?: string) => Promise<void>;
-  stopTracking: () => Promise<void>;
-  addEntry: (entry: Omit<TimeEntry, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  stopTracking: () => Promise<string | null>;
+  addEntry: (entry: Omit<TimeEntry, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>;
   updateEntry: (id: string, updates: Partial<TimeEntry>) => Promise<void>;
   deleteEntry: (id: string) => Promise<void>;
   setNextStartTime: (time: Date | null) => void;
@@ -73,21 +73,23 @@ export const useEntryStore = create<EntryStore>((set, get) => ({
 
   stopTracking: async () => {
     const { currentEntry } = get();
-    if (!currentEntry?.id) return;
+    if (!currentEntry?.id) return null;
 
-    await dataService.entries.update(currentEntry.id, {
+    const visibleEntryId = await dataService.entries.update(currentEntry.id, {
       endTime: new Date(),
     });
 
     set({ currentEntry: null });
     await get().loadEntries();
     autoPush('记录完成后');
+    return visibleEntryId;
   },
 
   addEntry: async (entry) => {
-    await dataService.entries.add(entry);
+    const id = await dataService.entries.add(entry);
     await get().loadEntries();
     autoPush('添加记录后');
+    return id;
   },
 
   updateEntry: async (id, updates) => {

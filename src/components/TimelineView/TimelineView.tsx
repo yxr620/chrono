@@ -31,6 +31,7 @@ interface GapBlock {
 interface TimelineViewProps {
   selectedDate: Date;
   onDateChange: (date: Date) => void;
+  animatedEntryId?: string | null;
 }
 
 const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日'];
@@ -53,7 +54,11 @@ const getDatePickerContentStyle = (): React.CSSProperties => ({
 });
 
 
-export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDateChange }) => {
+export const TimelineView: React.FC<TimelineViewProps> = ({
+  selectedDate,
+  onDateChange,
+  animatedEntryId = null,
+}) => {
   const { entries, loadEntries, setNextStartTime, setTimeRange, getEarliestEntryDate } = useEntryStore();
   const { loadCategories, getCategoryColor } = useCategoryStore();
   const { goals, loadGoals } = useGoalStore();
@@ -658,7 +663,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
             {timeBlocks.map((block) => (
               <div
                 key={block.id}
-                className="timeline-block"
+                className={`timeline-block${block.id === animatedEntryId ? ' is-new-entry' : ''}`}
                 style={{
                   left: `${block.startPercent}%`,
                   width: `${block.widthPercent}%`,

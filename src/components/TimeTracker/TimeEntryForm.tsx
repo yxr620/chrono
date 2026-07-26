@@ -98,7 +98,11 @@ const MODAL_BUTTON_ROW_STYLE: React.CSSProperties = {
 
 // ============ 主组件 ============
 
-export const TimeEntryForm: React.FC = () => {
+interface TimeEntryFormProps {
+  onEntryCreated?: (entryId: string) => void;
+}
+
+export const TimeEntryForm: React.FC<TimeEntryFormProps> = ({ onEntryCreated }) => {
   // Store hooks
   const {
     entries,
@@ -417,7 +421,10 @@ export const TimeEntryForm: React.FC = () => {
 
   const handleStopTracking = async () => {
     const stopDateStr = dayjs().format('YYYY-MM-DD');
-    await stopTracking();
+    const completedEntryId = await stopTracking();
+    if (completedEntryId) {
+      onEntryCreated?.(completedEntryId);
+    }
     showToast('已停止计时', 'success');
     // 跨午夜停止：切到 endTime 所在的日期，让下一条预设跟着真实活动走，
     // 而不是把跨夜的 endTime 倒回到起始日凌晨。
@@ -447,8 +454,9 @@ export const TimeEntryForm: React.FC = () => {
       return;
     }
 
+    let createdEntryId: string;
     try {
-      await addEntry({
+      createdEntryId = await addEntry({
         startTime,
         endTime,
         activity,
@@ -460,7 +468,7 @@ export const TimeEntryForm: React.FC = () => {
       showEntrySaveError(error);
       return;
     }
-    showToast('记录已保存', 'success');
+    onEntryCreated?.(createdEntryId);
 
     // 跨午夜手动补录：切到 endTime 所在日期，让下一条预设跟着真实时间走，
     // 与 handleStopTracking 走同一路径。

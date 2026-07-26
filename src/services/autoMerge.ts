@@ -52,24 +52,28 @@ async function findLeftNeighbor(entry: TimeEntry): Promise<TimeEntry | null> {
   return filtered[0];
 }
 
-export async function tryMergeWithLeftNeighbor(entry: TimeEntry): Promise<void> {
-  if (!isAutoMergeEnabled()) return;
-  if (!entry.id || !entry.endTime || entry.deleted) return;
+export async function tryMergeWithLeftNeighbor(entry: TimeEntry): Promise<string | null> {
+  let visibleEntryId = entry.id ?? null;
+  if (!isAutoMergeEnabled()) return visibleEntryId;
+  if (!entry.id || !entry.endTime || entry.deleted) return visibleEntryId;
 
   let current = entry;
   for (let i = 0; i < MAX_CHAIN; i++) {
     const left = await findLeftNeighbor(current);
-    if (!left || !left.id) return;
-    if (!isIdentical(left, current)) return;
+    if (!left || !left.id) return visibleEntryId;
+    if (!isIdentical(left, current)) return visibleEntryId;
 
     try {
       await syncDb.entries.update(left.id, { endTime: current.endTime });
       await syncDb.entries.delete(current.id!);
     } catch (err) {
       console.warn('[autoMerge] merge failed', err);
-      return;
+      return visibleEntryId;
     }
 
     current = { ...left, endTime: current.endTime };
+    visibleEntryId = left.id;
   }
+
+  return visibleEntryId;
 }

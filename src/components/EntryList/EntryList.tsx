@@ -15,9 +15,10 @@ import './EntryList.css';
 
 interface EntryListProps {
   selectedDate?: Date;
+  animatedEntryId?: string | null;
 }
 
-export const EntryList: React.FC<EntryListProps> = ({ selectedDate }) => {
+export const EntryList: React.FC<EntryListProps> = ({ selectedDate, animatedEntryId = null }) => {
   const { entries, loadEntries, deleteEntry, updateEntry, setNextStartTime } = useEntryStore();
   const { goals, loadGoals } = useGoalStore();
   const { loadCategories, getCategoryColor } = useCategoryStore();
@@ -105,7 +106,7 @@ export const EntryList: React.FC<EntryListProps> = ({ selectedDate }) => {
               ]}
             >
               <div
-                className="entry-item"
+                className={`entry-item${entry.id === animatedEntryId ? ' is-new-entry' : ''}`}
                 onClick={() => {
                   if (entry.endTime) {
                     setNextStartTime(entry.endTime);
