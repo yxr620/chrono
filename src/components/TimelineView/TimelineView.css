@@ -1,10 +1,18 @@
 .timeline-view {
+  --timeline-week-accent: #718096;
+  --timeline-now-marker: #ff4d4f;
+  --timeline-track-height: 8px;
   padding: 10px 16px 8px;
   background: hsl(var(--card));
   border-radius: 16px;
   margin-bottom: 0;
   width: 100%;
   /* 不设 overflow:hidden，tooltip 向下展开不会被裁切 */
+}
+
+.dark .timeline-view {
+  --timeline-week-accent: #94a3b8;
+  --timeline-now-marker: #ff4d4f;
 }
 
 /* ── Header：日期导航 + 周记录覆盖率 合并一行 ── */
@@ -113,33 +121,38 @@
 }
 
 .timeline-week-coverage {
-  width: 96px;
-  flex: 0 0 96px;
+  width: 154px;
+  min-width: 88px;
+  flex: 0 1 154px;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: 7px;
 }
 
-.timeline-week-coverage-meta {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
+.timeline-week-coverage-label {
+  flex: 0 0 auto;
   font-size: 11px;
   line-height: 1;
   color: hsl(var(--muted-foreground));
+  white-space: nowrap;
 }
 
-.timeline-week-coverage-meta strong {
-  color: hsl(var(--primary));
+.timeline-week-coverage-value {
+  min-width: 34px;
+  flex: 0 0 34px;
+  color: var(--timeline-week-accent);
   font-family: var(--app-number-family);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   font-weight: 650;
+  line-height: 1;
+  text-align: right;
 }
 
 .timeline-week-coverage-track {
-  height: 4px;
+  min-width: 24px;
+  flex: 1 1 auto;
+  height: var(--timeline-track-height);
   overflow: hidden;
   background: hsl(var(--secondary));
   border-radius: 9999px;
@@ -147,21 +160,28 @@
 
 .timeline-week-coverage-fill {
   height: 100%;
-  background: hsl(var(--primary));
+  background: var(--timeline-week-accent);
   border-radius: inherit;
   transition: width 280ms ease-out;
 }
 
 /* ── Timeline container ── */
+.timeline-day-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
 .timeline-container {
   position: relative;
-  width: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 /* ── Timeline bar ── */
 .timeline-bar {
   position: relative;
-  height: 10px;
+  height: var(--timeline-track-height);
   background: hsl(var(--secondary));
   border-radius: 9999px;
   overflow: hidden; /* 在 bar 内部裁切色块，保持圆角 */
@@ -200,59 +220,54 @@
   opacity: 0.85;
 }
 
-/* 当前时间指示线 — 相对于 .timeline-container 绝对定位 */
+/* 当前时间指示线 — 相对于 .timeline-container 绝对定位并持续移动 */
 .timeline-current-time {
   position: absolute;
-  top: -2px;
-  height: 14px; /* 比 bar 略长一点，视觉更清晰 */
+  top: 0;
+  height: calc(var(--timeline-track-height) + 1px);
   width: 2px;
-  background: #ff4d4f;
+  background: var(--timeline-now-marker);
   z-index: 20;
   pointer-events: none;
   border-radius: 9999px;
-  box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.18);
+  animation-name: timeline-current-time-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+  will-change: left;
+}
+
+@keyframes timeline-current-time-progress {
+  to {
+    left: 100%;
+  }
 }
 
 .timeline-current-time::before {
   content: '';
   position: absolute;
-  top: -4px;
+  top: -3px;
   left: 50%;
   transform: translateX(-50%);
-  width: 6px;
-  height: 6px;
-  background: #ff4d4f;
-  border-radius: 50%;
-  box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.25);
+  width: 0;
+  height: 0;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-top: 4px solid var(--timeline-now-marker);
 }
 
-/* ── 时间刻度 — 放在 bar 下方 ── */
-.timeline-labels {
-  position: relative;
-  height: 14px;
-  margin-top: 3px;
-}
-
-.timeline-label {
-  position: absolute;
-  transform: translateX(-50%);
-  font-size: 9px;
+.timeline-day-coverage-value {
+  min-width: 35px;
+  flex: 0 0 35px;
   color: hsl(var(--muted-foreground));
-  opacity: 0.5;
+  font-family: var(--app-number-family);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
   line-height: 1;
+  text-align: right;
 }
 
-.timeline-label-start {
-  transform: translateX(0) !important;
-  left: 0 !important;
-}
-
-.timeline-label-end {
-  transform: translateX(-100%) !important;
-  left: 100% !important;
-}
-
-/* ── Tooltip — 出现在 bar+labels 下方，无裁切问题 ── */
+/* ── Tooltip — 出现在 bar 下方，无裁切问题 ── */
 .timeline-tooltip-area {
   position: relative;
   width: 100%;
@@ -338,10 +353,6 @@
     padding: 8px 12px 6px;
   }
 
-  .timeline-bar {
-    height: 10px;
-  }
-
   .date-nav-btn {
     font-size: 18px;
     padding: 8px 6px;
@@ -352,35 +363,17 @@
   }
 
   .timeline-week-coverage {
-    width: 90px;
-    flex-basis: 90px;
+    width: 142px;
+    flex-basis: 142px;
   }
 }
 
 /* ── Desktop ── */
 @media (min-width: 1024px) {
   .timeline-view {
+    --timeline-track-height: 9px;
     padding: 14px 20px 10px;
     margin-bottom: 0;
-  }
-
-  .timeline-bar {
-    height: 14px;
-  }
-
-  .timeline-current-time {
-    top: -2px;
-    height: 18px;
-  }
-
-  .timeline-labels {
-    height: 16px;
-    margin-top: 4px;
-  }
-
-  .timeline-label {
-    font-size: 10px;
-    opacity: 0.6;
   }
 
   .date-display {
@@ -398,15 +391,16 @@
   }
 
   .timeline-week-coverage {
-    width: 108px;
-    flex-basis: 108px;
+    width: 180px;
+    flex-basis: 180px;
   }
 
-  .timeline-week-coverage-meta {
+  .timeline-week-coverage-label {
     font-size: 12px;
   }
 
-  .timeline-week-coverage-meta strong {
+  .timeline-week-coverage-value,
+  .timeline-day-coverage-value {
     font-size: 13px;
   }
 

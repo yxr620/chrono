@@ -8,7 +8,7 @@ import dayjs from 'dayjs';
 import { IonDatetime, IonModal } from '@ionic/react';
 import { WheelMonthYearPicker } from '../common/WheelTimePicker';
 import { useDarkMode } from '../../hooks/useDarkMode';
-import { calculateWeeklyCoverage } from '../../services/weeklyCoverage';
+import { calculateDailyCoverage, calculateWeeklyCoverage } from '../../services/weeklyCoverage';
 import './TimelineView.css';
 
 interface TimeBlock {
@@ -202,8 +202,8 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
   }, [tooltip]);
 
   const getTimePercent = (time: Date, dayStart: Date): number => {
-    const diff = dayjs(time).diff(dayjs(dayStart), 'minute');
-    return (diff / (24 * 60)) * 100;
+    const diff = dayjs(time).diff(dayjs(dayStart), 'millisecond');
+    return (diff / (24 * 60 * 60 * 1000)) * 100;
   };
 
   const processTimelineData = useCallback(() => {
@@ -326,8 +326,6 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
     return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
   };
 
-  const timeLabels = [0, 6, 12, 18, 24];
-
   const earliestDayJs = earliestDate ? dayjs(earliestDate) : null;
   const isEarliestDay = earliestDayJs
     ? dayjs(selectedDate).isSame(earliestDayJs, 'day') || dayjs(selectedDate).isBefore(earliestDayJs, 'day')
@@ -338,6 +336,14 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
   const weeklyCoverage = useMemo(
     () => calculateWeeklyCoverage(entries, selectedDate, new Date(nowTick)),
     [entries, selectedDate, nowTick]
+  );
+  const dailyCoverage = useMemo(
+    () => calculateDailyCoverage(entries, selectedDate, new Date(nowTick)),
+    [entries, selectedDate, nowTick]
+  );
+  const currentTimeAnimationDuration = Math.max(
+    1_000,
+    dayjs(new Date(nowTick)).endOf('day').valueOf() - nowTick
   );
 
   useEffect(() => {
@@ -400,10 +406,9 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
           className="timeline-week-coverage"
           title={`${weeklyCoverage.isCurrentWeek ? '本周' : '当周'}时间记录覆盖率 ${weeklyCoverage.percentage}%`}
         >
-          <div className="timeline-week-coverage-meta">
-            <span>{weeklyCoverage.isCurrentWeek ? '本周' : '当周'}</span>
-            <strong>{weeklyCoverage.percentage}%</strong>
-          </div>
+          <span className="timeline-week-coverage-label">
+            {weeklyCoverage.isCurrentWeek ? '本周' : '当周'}
+          </span>
           <div
             className="timeline-week-coverage-track"
             role="progressbar"
@@ -417,6 +422,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
               style={{ width: `${weeklyCoverage.percentage}%` }}
             />
           </div>
+          <strong className="timeline-week-coverage-value">{weeklyCoverage.percentage}%</strong>
         </div>
       </div>
 
@@ -627,89 +633,87 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ selectedDate, onDate
       </IonModal>
 
       {/* 时间轴 */}
-      <div
-        ref={containerRef}
-        className="timeline-container"
-        onClick={(e) => {
-          if (!(e.target as HTMLElement).closest('.timeline-block')) {
-            setTooltip(null);
-          }
-        }}
-      >
-        {/* 时间轴条 */}
-        <div className="timeline-bar">
-          {gapBlocks.map((gap) => (
-            <div
-              key={gap.id}
-              className="timeline-gap-block"
-              style={{ left: `${gap.startPercent}%`, width: `${gap.widthPercent}%` }}
-              onClick={() => setTimeRange(gap.startTime, gap.endTime)}
-              title={`${dayjs(gap.startTime).format('HH:mm')} - ${dayjs(gap.endTime).format('HH:mm')}`}
-            />
-          ))}
+      <div className="timeline-day-row">
+        <div
+          ref={containerRef}
+          className="timeline-container"
+          onClick={(e) => {
+            if (!(e.target as HTMLElement).closest('.timeline-block')) {
+              setTooltip(null);
+            }
+          }}
+        >
+          {/* 时间轴条 */}
+          <div className="timeline-bar">
+            {gapBlocks.map((gap) => (
+              <div
+                key={gap.id}
+                className="timeline-gap-block"
+                style={{ left: `${gap.startPercent}%`, width: `${gap.widthPercent}%` }}
+                onClick={() => setTimeRange(gap.startTime, gap.endTime)}
+                title={`${dayjs(gap.startTime).format('HH:mm')} - ${dayjs(gap.endTime).format('HH:mm')}`}
+              />
+            ))}
 
-          {timeBlocks.map((block) => (
+            {timeBlocks.map((block) => (
+              <div
+                key={block.id}
+                className="timeline-block"
+                style={{
+                  left: `${block.startPercent}%`,
+                  width: `${block.widthPercent}%`,
+                  backgroundColor: block.color
+                }}
+                title={block.label}
+                onClick={() => {
+                  const centerPercent = block.startPercent + block.widthPercent / 2;
+                  setTooltip({ block, positionPercent: centerPercent });
+                  if (block.entry.endTime) {
+                    setNextStartTime(block.entry.endTime);
+                  }
+                }}
+              />
+            ))}
+          </div>
+
+          {/* 当前时间指示线：CSS 持续移动，每分钟用 nowTick 校准一次 */}
+          {isToday && (
             <div
-              key={block.id}
-              className="timeline-block"
+              key={nowTick}
+              className="timeline-current-time"
               style={{
-                left: `${block.startPercent}%`,
-                width: `${block.widthPercent}%`,
-                backgroundColor: block.color
-              }}
-              title={block.label}
-              onClick={() => {
-                const centerPercent = block.startPercent + block.widthPercent / 2;
-                setTooltip({ block, positionPercent: centerPercent });
-                if (block.entry.endTime) {
-                  setNextStartTime(block.entry.endTime);
-                }
+                left: `${getTimePercent(new Date(nowTick), dayjs().startOf('day').toDate())}%`,
+                animationDuration: `${currentTimeAnimationDuration}ms`,
               }}
             />
-          ))}
-
-        </div>
-
-        {/* 当前时间指示线 — 覆盖在 bar+labels 上，不受 bar overflow:hidden 约束 */}
-        {isToday && (
-          <div
-            className="timeline-current-time"
-            style={{ left: `${getTimePercent(new Date(nowTick), dayjs().startOf('day').toDate())}%` }}
-          />
-        )}
-
-        {/* 时间刻度 — bar 下方 */}
-        <div className="timeline-labels">
-          {timeLabels.map(hour => (
-            <div
-              key={hour}
-              className={`timeline-label ${hour === 0 ? 'timeline-label-start' : hour === 24 ? 'timeline-label-end' : ''}`}
-              style={{ left: `${(hour / 24) * 100}%` }}
-            >
-              {hour}
-            </div>
-          ))}
-        </div>
-
-        {/* Tooltip — 出现在 labels 下方，不会被裁切 */}
-        <div className="timeline-tooltip-area">
-          {tooltip && (
-            <div
-              className={`timeline-tooltip ${
-                tooltip.positionPercent < 15 ? 'tooltip-align-left' :
-                tooltip.positionPercent > 85 ? 'tooltip-align-right' : ''
-              }`}
-              style={{ left: `${Math.max(5, Math.min(95, tooltip.positionPercent))}%` }}
-            >
-              <div className="tooltip-activity">{tooltip.block.entry.activity}</div>
-              <div className="tooltip-time">
-                {dayjs(tooltip.block.entry.startTime).format('HH:mm')} –{' '}
-                {dayjs(tooltip.block.entry.endTime).format('HH:mm')}{' '}
-                ({formatDuration(tooltip.block.entry.startTime, tooltip.block.entry.endTime)})
-              </div>
-            </div>
           )}
+
+          {/* Tooltip — 出现在时间轴下方，不会被裁切 */}
+          <div className="timeline-tooltip-area">
+            {tooltip && (
+              <div
+                className={`timeline-tooltip ${
+                  tooltip.positionPercent < 15 ? 'tooltip-align-left' :
+                  tooltip.positionPercent > 85 ? 'tooltip-align-right' : ''
+                }`}
+                style={{ left: `${Math.max(5, Math.min(95, tooltip.positionPercent))}%` }}
+              >
+                <div className="tooltip-activity">{tooltip.block.entry.activity}</div>
+                <div className="tooltip-time">
+                  {dayjs(tooltip.block.entry.startTime).format('HH:mm')} –{' '}
+                  {dayjs(tooltip.block.entry.endTime).format('HH:mm')}{' '}
+                  ({formatDuration(tooltip.block.entry.startTime, tooltip.block.entry.endTime)})
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+        <strong
+          className="timeline-day-coverage-value"
+          title={`${dailyCoverage.isToday ? '今日' : '当日'}时间记录覆盖率 ${dailyCoverage.percentage}%`}
+        >
+          {dailyCoverage.percentage}%
+        </strong>
       </div>
     </div>
   );

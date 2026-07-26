@@ -10,32 +10,36 @@ export interface WeeklyCoverage {
   coverageEnd: Date;
 }
 
+export interface DailyCoverage {
+  percentage: number;
+  coveredMilliseconds: number;
+  totalMilliseconds: number;
+  isToday: boolean;
+  dayStart: Date;
+  coverageEnd: Date;
+}
+
 const getMondayWeekStart = (value: Date): Date => {
   const date = dayjs(value).startOf('day');
   const daysSinceMonday = (date.day() + 6) % 7;
   return date.subtract(daysSinceMonday, 'day').toDate();
 };
 
-export const calculateWeeklyCoverage = (
+const calculateCoverageTotals = (
   entries: TimeEntry[],
-  selectedDate: Date,
-  now: Date = new Date(),
-): WeeklyCoverage => {
-  const weekStart = dayjs(getMondayWeekStart(selectedDate));
-  const weekEnd = weekStart.add(7, 'day');
-  const currentWeekStart = dayjs(getMondayWeekStart(now));
-  const isCurrentWeek = weekStart.isSame(currentWeekStart);
-  const coverageEnd = isCurrentWeek ? dayjs(now) : weekEnd;
-
-  const rangeStartMs = weekStart.valueOf();
-  const rangeEndMs = coverageEnd.valueOf();
+  rangeStart: Date,
+  rangeEnd: Date,
+  ongoingEnd: Date,
+) => {
+  const rangeStartMs = rangeStart.getTime();
+  const rangeEndMs = rangeEnd.getTime();
   const totalMilliseconds = Math.max(0, rangeEndMs - rangeStartMs);
 
   const intervals = entries
     .filter(entry => !entry.deleted)
     .map(entry => {
       const entryStartMs = dayjs(entry.startTime).valueOf();
-      const entryEndMs = dayjs(entry.endTime ?? now).valueOf();
+      const entryEndMs = dayjs(entry.endTime ?? ongoingEnd).valueOf();
 
       if (
         !Number.isFinite(entryStartMs)
@@ -85,8 +89,54 @@ export const calculateWeeklyCoverage = (
     percentage,
     coveredMilliseconds,
     totalMilliseconds,
+  };
+};
+
+export const calculateWeeklyCoverage = (
+  entries: TimeEntry[],
+  selectedDate: Date,
+  now: Date = new Date(),
+): WeeklyCoverage => {
+  const weekStart = dayjs(getMondayWeekStart(selectedDate));
+  const weekEnd = weekStart.add(7, 'day');
+  const currentWeekStart = dayjs(getMondayWeekStart(now));
+  const isCurrentWeek = weekStart.isSame(currentWeekStart);
+  const coverageEnd = isCurrentWeek ? dayjs(now) : weekEnd;
+  const totals = calculateCoverageTotals(
+    entries,
+    weekStart.toDate(),
+    coverageEnd.toDate(),
+    now,
+  );
+
+  return {
+    ...totals,
     isCurrentWeek,
     weekStart: weekStart.toDate(),
+    coverageEnd: coverageEnd.toDate(),
+  };
+};
+
+export const calculateDailyCoverage = (
+  entries: TimeEntry[],
+  selectedDate: Date,
+  now: Date = new Date(),
+): DailyCoverage => {
+  const dayStart = dayjs(selectedDate).startOf('day');
+  const dayEnd = dayStart.add(1, 'day');
+  const isToday = dayStart.isSame(dayjs(now).startOf('day'));
+  const coverageEnd = isToday ? dayjs(now) : dayEnd;
+  const totals = calculateCoverageTotals(
+    entries,
+    dayStart.toDate(),
+    coverageEnd.toDate(),
+    now,
+  );
+
+  return {
+    ...totals,
+    isToday,
+    dayStart: dayStart.toDate(),
     coverageEnd: coverageEnd.toDate(),
   };
 };

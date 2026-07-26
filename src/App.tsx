@@ -19,9 +19,12 @@ import { APP_NAVIGATE_EVENT } from './services/appNavigation';
 import { useSyncStore } from './stores/syncStore';
 import { useFeatureModeStore } from './stores/featureModeStore';
 import { useAuthStore } from './stores/authStore';
+import { useEntryStore } from './stores/entryStore';
+import { useGoalStore } from './stores/goalStore';
+import { useCategoryStore } from './stores/categoryStore';
 import { isSyncReady } from './services/syncAvailability';
 import { syncEngine } from './services/syncEngine';
-import { emitSyncToast, emitSyncStatus } from './services/syncToast';
+import { addSyncStatusListener, emitSyncToast, emitSyncStatus } from './services/syncToast';
 import { DesktopSidebar } from './components/Desktop/DesktopSidebar';
 import { getDesktopShellTheme } from './components/Desktop/desktopNavigation';
 import { SyncToastListener } from './components/common/SyncToastListener';
@@ -288,6 +291,24 @@ function App() {
   useEffect(() => {
     void useSyncStore.getState().refreshStats();
   }, []);
+
+  // Pull 会直接更新 IndexedDB；完成后重新加载内存 stores，让当前页面立即反映远端数据。
+  useEffect(() => addSyncStatusListener((payload) => {
+    if (
+      payload.phase !== 'done'
+      || (payload.direction !== 'pull' && payload.direction !== 'both')
+    ) {
+      return;
+    }
+
+    void Promise.all([
+      useEntryStore.getState().loadEntries(),
+      useGoalStore.getState().loadGoals(),
+      useCategoryStore.getState().loadCategories(),
+    ]).catch((error) => {
+      console.error('[App] Pull 后刷新本地数据失败:', error);
+    });
+  }), []);
 
   // 应用启动时自动 Pull
   useEffect(() => {

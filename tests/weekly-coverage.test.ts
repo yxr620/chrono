@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import dayjs from 'dayjs';
 
-import { calculateWeeklyCoverage } from '../src/services/weeklyCoverage';
+import { calculateDailyCoverage, calculateWeeklyCoverage } from '../src/services/weeklyCoverage';
 import type { TimeEntry } from '../src/services/db';
 
 const d = (value: string): Date => dayjs(value).toDate();
@@ -99,4 +99,28 @@ test('deleted entries do not contribute to coverage', () => {
   );
 
   assert.equal(result.percentage, 0);
+});
+
+test('current-day coverage runs from midnight to now', () => {
+  const result = calculateDailyCoverage(
+    [entry('morning', '2026-07-20 00:00', '2026-07-20 06:00')],
+    d('2026-07-20 08:00'),
+    d('2026-07-20 12:00'),
+  );
+
+  assert.equal(result.isToday, true);
+  assert.equal(result.coveredMilliseconds, 6 * 60 * 60 * 1000);
+  assert.equal(result.percentage, 50);
+});
+
+test('a historical day uses the complete 24-hour day', () => {
+  const result = calculateDailyCoverage(
+    [entry('recorded', '2026-07-18 00:00', '2026-07-18 18:00')],
+    d('2026-07-18 12:00'),
+    d('2026-07-20 12:00'),
+  );
+
+  assert.equal(result.isToday, false);
+  assert.equal(result.totalMilliseconds, 24 * 60 * 60 * 1000);
+  assert.equal(result.percentage, 75);
 });
