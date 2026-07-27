@@ -135,6 +135,20 @@ function overlapScore(a: Set<string>, b: Set<string>): number {
     return score;
 }
 
+function fullyCoversFragments(container: TextProfile, target: TextProfile): boolean {
+    if (target.fragments.size === 0) {
+        return false;
+    }
+
+    for (const fragment of target.fragments) {
+        if (!container.fragments.has(fragment)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 function hasSubstringRelationship(a: string, b: string): boolean {
     return a.includes(b) || b.includes(a);
 }
@@ -553,26 +567,54 @@ function predictGoalFromMatches(
         return emptyField(matches.hasWeak ? 'weakMatch' : 'noMatch');
     }
 
+    let deferredHistoricalResult: MetadataPredictionField | null = null;
+
     if (matches.exact && matches.exact.goalNameFreq.size > 0) {
         const exactResult = findHistoricalGoalNameMatch(matches.exact.goalNameFreq, candidateGoals, 'exact');
         if (exactResult) {
-            return exactResult;
+            if (exactResult.confidence === 'high') {
+                return exactResult;
+            }
+            deferredHistoricalResult = exactResult;
         }
     }
 
-    const mergedStrong = new Map<string, number>();
-    for (const stats of matches.strong) {
-        mergeFrequencies(mergedStrong, stats.goalNameFreq);
-    }
+    if (!deferredHistoricalResult) {
+        const mergedStrong = new Map<string, number>();
+        for (const stats of matches.strong) {
+            mergeFrequencies(mergedStrong, stats.goalNameFreq);
+        }
 
-    if (mergedStrong.size > 0) {
-        const strongResult = findHistoricalGoalNameMatch(mergedStrong, candidateGoals, 'strong');
-        if (strongResult) {
-            return strongResult;
+        if (mergedStrong.size > 0) {
+            const strongResult = findHistoricalGoalNameMatch(mergedStrong, candidateGoals, 'strong');
+            if (strongResult) {
+                if (strongResult.confidence === 'high') {
+                    return strongResult;
+                }
+                deferredHistoricalResult = strongResult;
+            }
         }
     }
 
     const directResult = predictDirectGoal(input, candidateGoals);
+    const directGoal = directResult?.id
+        ? candidateGoals.find(candidate => candidate.id === directResult.id)
+        : null;
+    const hasCompleteDirectMatch = Boolean(
+        directGoal && fullyCoversFragments(input, directGoal.name),
+    );
+
+    if (
+        directResult?.confidence === 'high'
+        && (!deferredHistoricalResult || hasCompleteDirectMatch)
+    ) {
+        return directResult;
+    }
+
+    if (deferredHistoricalResult) {
+        return deferredHistoricalResult;
+    }
+
     if (directResult) {
         return directResult;
     }

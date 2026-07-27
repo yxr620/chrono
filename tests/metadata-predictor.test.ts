@@ -422,6 +422,25 @@ test('direct goal token match supports Chinese bigram and project tokens', async
   assert.equal(comp.goal.reason, 'directGoalToken');
 });
 
+test('direct mixed-language goal match is not blocked by a medium historical match', async () => {
+  const historicalGoal = makeGoal('hist-gpu', 'GPU cache研究', '2026-06-20');
+  const todayGoal = makeGoal('today-gpu', '看GPU cache');
+  await db.goals.bulkPut([historicalGoal, todayGoal]);
+  await db.entries.put(makeEntry({
+    id: 'entry-design',
+    activity: '系统设计',
+    goalId: historicalGoal.id!,
+    endTime: new Date(Date.now() - 1 * day),
+  }));
+
+  const result = await predictMetadata('看gpu cache的设计', [todayGoal]);
+
+  assert.equal(result.goalId, todayGoal.id);
+  assert.equal(result.goal.id, todayGoal.id);
+  assert.equal(result.goal.confidence, 'high');
+  assert.equal(result.goal.reason, 'directGoalToken');
+});
+
 test('direct goal match does not auto-select when top fragment score ties', async () => {
   const summaryGoal = makeGoal('today-summary', '论文总结');
   const readingGoal = makeGoal('today-reading', '读论文');
