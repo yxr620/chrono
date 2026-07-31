@@ -128,6 +128,7 @@ xattr -cr /Applications/Chrono.app
 | [Action Registry](docs/action-registry.md) | Local AI tool registry, confirmation flow, read/write/maintenance action contracts |
 | [Metadata Predictor](docs/metadata-predictor.md) | Local category / goal prediction for the main form and Quick Capture |
 | [Browser Testing](docs/browser-testing.md) | Isolated browser validation workflow and test data setup |
+| [Real-data Debugging](docs/real-data-debugging.md) | Authorized, read-only diagnosis using an isolated snapshot of local Chrono data |
 | [Managed Backend](server/README.md) | Function Compute backend setup for managed services |
 
 ## Data and Privacy

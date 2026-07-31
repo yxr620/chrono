@@ -14,6 +14,8 @@
 1. **Server 隔离**：Claude 只起 `dev:test`（5180），**永不启动、永不依赖、永不干扰用户的 `npm run dev`（5173）**。
 2. **数据隔离**：MCP 拉起的是独立 Chrome profile（独立 user-data-dir），其 IndexedDB / localStorage 与用户日常 Chrome 完全分开；且 5180 与 5173 是不同 origin，IndexedDB 本就各自独立。
 
+> **受控例外：**当用户明确要求用其真实本地历史诊断数据依赖型 bug 时，必须改用 [真实本地数据诊断](real-data-debugging.md) 中的只读快照流程。该例外不适用于普通 UI 验证或回归测试。
+
 ## 标准步骤
 
 ### 1. 起测试 server（后台）

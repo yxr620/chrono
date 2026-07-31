@@ -35,6 +35,8 @@ When verifying UI/interaction in a real browser (via the `chrome-devtools` MCP),
 - Seed/reset test data per `docs/browser-testing.md` (import `tests/fixtures/sample-entries.json`; reset via `indexedDB.deleteDatabase('TimeTrackerDB')`).
 - **When done, stop the `dev:test` background process you started** (don't leave orphan servers); never touch the user's `npm run dev` (5173).
 
+The only exception is a user-authorized diagnosis of a bug that depends on their real local history. In that case, follow `docs/real-data-debugging.md`: use a read-only IndexedDB snapshot in an isolated temporary Chrome profile, never operate on the source database, return only minimal relevant evidence, and delete the exact temporary snapshot afterward. This exception does not apply to ordinary UI verification or regression testing.
+
 ## Architecture
 
 **Chrono** is a multiplatform time tracker (web, Android, iOS, macOS) built with React + Ionic + Capacitor. The same web codebase targets all platforms.

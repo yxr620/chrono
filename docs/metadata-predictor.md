@@ -123,6 +123,12 @@ Quick Capture 会先让 AI 解析用户口述，再用本地 `predictMetadata()`
 
 AI Assistant 的 `add_entry` 确认卡和最终 handler 共用 Category 解析流程，因此预览会显示最终实际写入的 Category。
 
+## 真实数据诊断
+
+当误预选只能在用户自己的历史数据上复现时，不要先根据表面文本猜测相似度。在用户明确授权后，按 [真实本地数据诊断](real-data-debugging.md) 创建只读 IndexedDB 快照，在隔离 Chrome 中调用当前 `predictMetadata()` 重放，并输出从历史活动到当天候选目标的完整决策链。
+
+当前尚未实现专用的 prediction debug bundle / CLI；不要把完整数据库导出当作默认诊断方式，也不要在未授权时读取用户的 Chrome profile。
+
 ## 仍未做的优化
 
 当前暂不包含这些项：
