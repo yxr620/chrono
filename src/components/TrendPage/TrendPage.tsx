@@ -112,7 +112,7 @@ export const TrendPage: React.FC<TrendPageProps> = ({
     setLoading(true);
     try {
       const { entries: rawEntries, goals, categories } = await loadRawData({ dateRange });
-      const processed = processEntries(rawEntries, goals, categories);
+      const processed = processEntries(rawEntries, goals, categories, dateRange);
       setEntries(processed);
       setCategoryTrendData(groupByDayAndCategory(processed, dateRange, categories));
 
@@ -134,14 +134,13 @@ export const TrendPage: React.FC<TrendPageProps> = ({
         };
       });
 
-      const { entries: compEntries } = await loadRawData({
-        dateRange: {
-          start: weeks[0].start,
-          end: weeks[2].end,
-        },
-      });
+      const comparisonDateRange = {
+        start: weeks[0].start,
+        end: weeks[2].end,
+      };
+      const { entries: compEntries } = await loadRawData({ dateRange: comparisonDateRange });
 
-      const compProcessed = processEntries(compEntries, goals, categories);
+      const compProcessed = processEntries(compEntries, goals, categories, comparisonDateRange);
       setWeeklyComparisonData(groupByWeekAndCategory(compProcessed, weeks, categories));
     } catch (error) {
       console.error('加载趋势数据失败:', error);

@@ -37,6 +37,85 @@ function buildCategoryOrderMap(categories?: Category[]): Map<string, number> {
   return map;
 }
 
+export interface AnalysisTimeSegment {
+  startTime: Date;
+  endTime: Date;
+  duration: number;
+}
+
+/** 将记录裁剪到分析区间；完全不相交或时间无效时返回 null。 */
+export function clipTimeEntryToDateRange(
+  entry: TimeEntry,
+  dateRange: DateRange,
+): TimeEntry | null {
+  if (!entry.endTime) return null;
+
+  const entryStartTs = new Date(entry.startTime).getTime();
+  const entryEndTs = new Date(entry.endTime).getTime();
+  const rangeStartTs = dateRange.start.getTime();
+  const rangeEndTs = dateRange.end.getTime();
+
+  if (
+    !Number.isFinite(entryStartTs)
+    || !Number.isFinite(entryEndTs)
+    || !Number.isFinite(rangeStartTs)
+    || !Number.isFinite(rangeEndTs)
+  ) {
+    return null;
+  }
+
+  const clippedStartTs = Math.max(entryStartTs, rangeStartTs);
+  const clippedEndTs = Math.min(entryEndTs, rangeEndTs);
+  if (clippedEndTs <= clippedStartTs) return null;
+
+  return {
+    ...entry,
+    startTime: new Date(clippedStartTs),
+    endTime: new Date(clippedEndTs),
+  };
+}
+
+const splitInterval = (
+  startTime: Date,
+  endTime: Date,
+  unit: 'hour' | 'day',
+): AnalysisTimeSegment[] => {
+  const endTs = endTime.getTime();
+  let cursor = dayjs(startTime);
+  const segments: AnalysisTimeSegment[] = [];
+
+  if (!cursor.isValid() || !Number.isFinite(endTs) || endTs <= cursor.valueOf()) {
+    return segments;
+  }
+
+  while (cursor.valueOf() < endTs) {
+    const nextBoundary = cursor.startOf(unit).add(1, unit);
+    const segmentEndTs = Math.min(endTs, nextBoundary.valueOf());
+    const segmentStartTs = cursor.valueOf();
+
+    if (segmentEndTs <= segmentStartTs) break;
+
+    segments.push({
+      startTime: cursor.toDate(),
+      endTime: new Date(segmentEndTs),
+      duration: (segmentEndTs - segmentStartTs) / (1000 * 60),
+    });
+    cursor = dayjs(segmentEndTs);
+  }
+
+  return segments;
+};
+
+/** 将时间段按本地自然小时拆分。 */
+export const splitIntervalByHour = (startTime: Date, endTime: Date): AnalysisTimeSegment[] => (
+  splitInterval(startTime, endTime, 'hour')
+);
+
+/** 将时间段按本地自然日拆分。 */
+export const splitIntervalByDay = (startTime: Date, endTime: Date): AnalysisTimeSegment[] => (
+  splitInterval(startTime, endTime, 'day')
+);
+
 /** 默认时间范围：最近30天（不含今天） */
 export function getDefaultDateRange(): DateRange {
   const today = new Date();
@@ -57,16 +136,8 @@ export async function loadRawData(filters: AnalysisFilters): Promise<{
   // 因为 startTime 在数据库中可能存储为字符串或 Date 对象
   let entries = await db.entries.toArray();
 
-  // 转换日期范围为时间戳进行比较
-  const startTs = dateRange.start.getTime();
-  const endTs = dateRange.end.getTime();
-
-  // 过滤时间范围和软删除
-  entries = entries.filter(e => {
-    if (e.deleted || !e.endTime) return false;
-    const entryTs = new Date(e.startTime).getTime();
-    return entryTs >= startTs && entryTs <= endTs;
-  });
+  // 过滤与时间范围相交的已完成记录和软删除记录
+  entries = entries.filter(e => !e.deleted && clipTimeEntryToDateRange(e, dateRange) !== null);
 
   // 按目标筛选
   if (goalIds && goalIds.length > 0) {
@@ -88,7 +159,8 @@ export async function loadRawData(filters: AnalysisFilters): Promise<{
 export function processEntries(
   entries: TimeEntry[],
   goals: Goal[],
-  categories: Category[]
+  categories: Category[],
+  dateRange?: DateRange,
 ): ProcessedEntry[] {
   const goalMap = new Map(goals.map(g => [g.id, g.name]));
   const categoryMap = new Map(categories.map(c => [c.id, c.name]));
@@ -96,26 +168,29 @@ export function processEntries(
   return entries
     .filter(e => e.endTime) // 确保有结束时间
     .map(entry => {
-      const startTime = new Date(entry.startTime);
-      const endTime = new Date(entry.endTime!);
-      const duration = dayjs(endTime).diff(startTime, 'minute');
+      const clippedEntry = dateRange ? clipTimeEntryToDateRange(entry, dateRange) : entry;
+      if (!clippedEntry?.endTime) return null;
+
+      const startTime = new Date(clippedEntry.startTime);
+      const endTime = new Date(clippedEntry.endTime);
+      const duration = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
 
       return {
-        id: entry.id!,
+        id: clippedEntry.id!,
         startTime,
         endTime,
         duration: Math.max(0, duration),
-        activity: entry.activity,
-        categoryId: entry.categoryId,
-        categoryName: entry.categoryId ? (categoryMap.get(entry.categoryId) || '未分类') : '未分类',
-        goalId: entry.goalId,
-        goalName: entry.goalId ? (goalMap.get(entry.goalId) || '无目标') : '无目标',
+        activity: clippedEntry.activity,
+        categoryId: clippedEntry.categoryId,
+        categoryName: clippedEntry.categoryId ? (categoryMap.get(clippedEntry.categoryId) || '未分类') : '未分类',
+        goalId: clippedEntry.goalId,
+        goalName: clippedEntry.goalId ? (goalMap.get(clippedEntry.goalId) || '无目标') : '无目标',
         date: dayjs(startTime).format('YYYY-MM-DD'),
         hour: startTime.getHours(),
         weekday: startTime.getDay(),
       };
     })
-    .filter(e => e.duration > 0); // 过滤无效记录
+    .filter((entry): entry is ProcessedEntry => entry !== null && entry.duration > 0); // 过滤无效记录
 }
 
 /** 计算分析指标 */
@@ -132,7 +207,12 @@ export function calculateMetrics(entries: ProcessedEntry[]): AnalysisMetrics {
   }
 
   const totalTime = entries.reduce((sum, e) => sum + e.duration, 0);
-  const uniqueDates = new Set(entries.map(e => e.date));
+  const uniqueDates = new Set<string>();
+  entries.forEach(entry => {
+    splitIntervalByDay(entry.startTime, entry.endTime).forEach(segment => {
+      uniqueDates.add(dayjs(segment.startTime).format('YYYY-MM-DD'));
+    });
+  });
 
   // 按目标分组计算
   const goalTimes = groupByGoal(entries);
@@ -212,9 +292,14 @@ export function groupByDay(entries: ProcessedEntry[], dateRange: DateRange): Tre
     groups.set(dayjs(day).format('YYYY-MM-DD'), 0);
   });
 
-  // 聚合数据
+  // 聚合数据；跨日记录按自然日拆分
   entries.forEach(e => {
-    groups.set(e.date, (groups.get(e.date) || 0) + e.duration);
+    splitIntervalByDay(e.startTime, e.endTime).forEach(segment => {
+      const date = dayjs(segment.startTime).format('YYYY-MM-DD');
+      if (groups.has(date)) {
+        groups.set(date, (groups.get(date) || 0) + segment.duration);
+      }
+    });
   });
 
   return Array.from(groups.entries())
@@ -278,15 +363,18 @@ export function groupByDayAndCategory(
   const dailyRecordedTime = new Map<string, number>(); // 每天已记录的总分钟数
   
   entries.forEach(e => {
-    const idx = dateIndexMap.get(e.date);
-    if (idx !== undefined) {
+    splitIntervalByDay(e.startTime, e.endTime).forEach(segment => {
+      const date = dayjs(segment.startTime).format('YYYY-MM-DD');
+      const idx = dateIndexMap.get(date);
+      if (idx === undefined) return;
+
       const categoryId = e.categoryId || 'uncategorized';
       const current = data[idx][categoryId];
-      data[idx][categoryId] = (typeof current === 'number' ? current : 0) + e.duration / 60;
-      
+      data[idx][categoryId] = (typeof current === 'number' ? current : 0) + segment.duration / 60;
+
       // 累计该天已记录的时间
-      dailyRecordedTime.set(e.date, (dailyRecordedTime.get(e.date) || 0) + e.duration);
-    }
+      dailyRecordedTime.set(date, (dailyRecordedTime.get(date) || 0) + segment.duration);
+    });
   });
 
   // 计算每天未记录的时间，加入"未分类"
@@ -339,7 +427,10 @@ export function groupByHour(entries: ProcessedEntry[]): ChartDataPoint[] {
   }
 
   entries.forEach(e => {
-    groups.set(e.hour, (groups.get(e.hour) || 0) + e.duration);
+    splitIntervalByHour(e.startTime, e.endTime).forEach(segment => {
+      const hour = segment.startTime.getHours();
+      groups.set(hour, (groups.get(hour) || 0) + segment.duration);
+    });
   });
 
   return Array.from(groups.entries())
@@ -361,7 +452,10 @@ export function groupByWeekday(entries: ProcessedEntry[]): ChartDataPoint[] {
   }
 
   entries.forEach(e => {
-    groups.set(e.weekday, (groups.get(e.weekday) || 0) + e.duration);
+    splitIntervalByDay(e.startTime, e.endTime).forEach(segment => {
+      const weekday = segment.startTime.getDay();
+      groups.set(weekday, (groups.get(weekday) || 0) + segment.duration);
+    });
   });
 
   return Array.from(groups.entries())
@@ -418,30 +512,30 @@ export function groupByWeekAndCategory(
   const weeklyRecordedTime = new Map<number, number>();
   weeks.forEach((_, idx) => weeklyRecordedTime.set(idx, 0));
 
-  // 遍历记录
+  // 遍历记录；跨周记录按各周的实际重叠时长分摊
   entries.forEach(e => {
-    // 找到所属的周
-    const weekIndex = weeks.findIndex(w => 
-      e.startTime.getTime() >= w.start.getTime() && e.startTime.getTime() <= w.end.getTime()
-    );
-
-    if (weekIndex !== -1) {
-      const categoryId = e.categoryId || 'uncategorized';
-      const categoryName = e.categoryName || '未分类';
+    weeks.forEach((week, weekIndex) => {
+      const overlapStartTs = Math.max(e.startTime.getTime(), week.start.getTime());
+      const overlapEndTs = Math.min(e.endTime.getTime(), week.end.getTime());
+      if (overlapEndTs > overlapStartTs) {
+        const categoryId = e.categoryId || 'uncategorized';
+        const categoryName = e.categoryName || '未分类';
+        const durationMinutes = (overlapEndTs - overlapStartTs) / (1000 * 60);
       
-      // 记录类别信息
-      if (!categorySet.has(categoryId)) {
-        const color = categoryColorMap.get(categoryId) || '#999999';
-        categorySet.set(categoryId, { name: categoryName, color });
+        // 记录类别信息
+        if (!categorySet.has(categoryId)) {
+          const color = categoryColorMap.get(categoryId) || '#999999';
+          categorySet.set(categoryId, { name: categoryName, color });
+        }
+
+        // 累加时长 (小时)
+        const currentVal = (data[weekIndex][categoryId] as number) || 0;
+        data[weekIndex][categoryId] = currentVal + (durationMinutes / 60);
+      
+        // 累计该周已记录的时间（分钟）
+        weeklyRecordedTime.set(weekIndex, (weeklyRecordedTime.get(weekIndex) || 0) + durationMinutes);
       }
-
-      // 累加时长 (小时)
-      const currentVal = (data[weekIndex][categoryId] as number) || 0;
-      data[weekIndex][categoryId] = currentVal + (e.duration / 60);
-      
-      // 累计该周已记录的时间（分钟）
-      weeklyRecordedTime.set(weekIndex, (weeklyRecordedTime.get(weekIndex) || 0) + e.duration);
-    }
+    });
   });
 
   // 计算每周未记录的时间，加入"未分类"

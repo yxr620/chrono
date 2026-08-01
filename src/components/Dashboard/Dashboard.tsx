@@ -1,22 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { IonSpinner, IonIcon } from '@ionic/react';
 import { calendarOutline, analyticsOutline, chatbubbleEllipsesOutline } from 'ionicons/icons';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
 import dayjs from 'dayjs';
 import {
   loadRawData,
   processEntries,
   calculateMetrics,
   groupByCategory,
-  groupByHour,
   formatDuration,
   getDefaultDateRange,
 } from '../../services/analysis/processor';
@@ -37,33 +27,6 @@ import type {
 import { db, type TimeEntry } from '../../services/db';
 import { useDateStore } from '../../stores/dateStore';
 import './Dashboard.css';
-
-const CHART_STYLES = {
-  tooltip: {
-    contentStyle: {
-      backgroundColor: '#f8f3eb',
-      border: '1px solid rgba(67, 51, 35, 0.1)',
-      borderRadius: 14,
-      boxShadow: '0 18px 38px -28px rgba(63, 43, 21, 0.36)',
-      color: '#1d1712',
-      fontFamily: 'var(--app-number-family)',
-      fontSize: 12,
-      fontVariantNumeric: 'tabular-nums',
-      padding: 10,
-    },
-  },
-  axis: {
-    tick: {
-      fill: '#7f7264',
-      fontFamily: 'var(--app-number-family)',
-    },
-    stroke: 'rgba(67, 51, 35, 0.16)',
-  },
-  grid: {
-    stroke: 'rgba(67, 51, 35, 0.08)',
-    strokeDasharray: '3 3',
-  },
-} as const;
 
 const DATE_RANGES = [
   { label: '最近7天', days: 7 },
@@ -98,7 +61,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [metrics, setMetrics] = useState<AnalysisMetrics | null>(null);
   const [goalSummaryData, setGoalSummaryData] = useState<GoalDistributionItem[]>([]);
   const [categoryData, setCategoryData] = useState<ChartDataPoint[]>([]);
-  const [hourData, setHourData] = useState<ChartDataPoint[]>([]);
   const [recentMemos, setRecentMemos] = useState<TimeEntry[]>([]);
   const setSelectedDate = useDateStore(state => state.setSelectedDate);
 
@@ -121,13 +83,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
         loadRawData({ dateRange }),
         analyzeGoals(dateRange, DEFAULT_CLUSTER_SETTINGS),
       ]);
-      const processed = processEntries(rawEntries, goals, categories);
+      const processed = processEntries(rawEntries, goals, categories, dateRange);
 
       setEntries(processed);
       setMetrics(calculateMetrics(processed));
       setGoalSummaryData(goalAnalysis.distribution);
       setCategoryData(groupByCategory(processed, categories));
-      setHourData(groupByHour(processed));
     } catch (error) {
       console.error('加载分析数据失败:', error);
     } finally {
@@ -292,13 +253,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <SectionTitle title="类别摘要" compact />
               <CategoryDonutSummary data={categoryDisplayData} />
             </div>
-
-            <div className="dashboard-side-card">
-              <SectionTitle title="时段节奏" compact />
-              <div className="dashboard-hour-chart">
-                <HourDistributionChart data={hourData} />
-              </div>
-            </div>
           </aside>
         </section>
 
@@ -401,9 +355,9 @@ const EditorialMetricStrip: React.FC<{
 }> = ({ metrics, goalCoverage }) => {
   const items = [
     {
-      label: '日均投入',
+      label: '活跃日均投入',
       value: formatDuration(metrics.totalTime / Math.max(1, metrics.activeDays)),
-      description: '过去一段时间平均每天的记录时长。',
+      description: '只按有记录的活跃日计算。',
     },
     {
       label: '目标覆盖率',
@@ -470,7 +424,6 @@ const AnalysisEntryCard: React.FC<{
     <span className="analysis-entry-accent" style={{ backgroundColor: accentColor }} />
     <span className="analysis-entry-title" style={{ color: accentColor }}>{title}</span>
     <span className="analysis-entry-description">{description}</span>
-    <span className="analysis-entry-action">阅读章节</span>
   </button>
 );
 
@@ -524,36 +477,6 @@ const CategoryDonutSummary: React.FC<{
         ))}
       </div>
     </div>
-  );
-};
-
-const HourDistributionChart: React.FC<{ data: ChartDataPoint[] }> = ({ data }) => {
-  if (data.length === 0) {
-    return <div className="dashboard-chart-empty">时段节奏会在记录足够后显示。</div>;
-  }
-
-  return (
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={data} margin={{ top: 10, right: 10, left: -18, bottom: 0 }}>
-        <CartesianGrid {...CHART_STYLES.grid} vertical={false} />
-        <XAxis
-          dataKey="name"
-          tick={{ fontSize: 11, ...CHART_STYLES.axis.tick }}
-          stroke={CHART_STYLES.axis.stroke}
-          interval={1}
-        />
-        <YAxis
-          tick={{ fontSize: 11, ...CHART_STYLES.axis.tick }}
-          stroke={CHART_STYLES.axis.stroke}
-          unit="h"
-        />
-        <Tooltip
-          formatter={(value: number) => [`${value} 小时`, '时长']}
-          {...CHART_STYLES.tooltip}
-        />
-        <Bar dataKey="value" fill={ANALYSIS_NEUTRAL_COLOR} radius={[8, 8, 0, 0]} barSize={14} />
-      </BarChart>
-    </ResponsiveContainer>
   );
 };
 

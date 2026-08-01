@@ -168,7 +168,7 @@ async function queryTimeEntries(args: Record<string, unknown>): Promise<string> 
         categoryIds,
     });
 
-    const processed = processEntries(rawEntries, goals, categories);
+    const processed = processEntries(rawEntries, goals, categories, { start: startDate, end: endDate });
 
     if (processed.length === 0) {
         const rangeLabel = `${dayjs(startDate).format('YYYY-MM-DD')} 至 ${dayjs(endDate).format('YYYY-MM-DD')}`;

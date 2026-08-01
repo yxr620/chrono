@@ -320,16 +320,6 @@
   color: #64584d;
 }
 
-.analysis-entry-action {
-  display: inline-block;
-  margin-top: 12px;
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: #938679;
-  font-weight: 700;
-}
-
 .dashboard-side-card {
   padding: 18px;
   border: 1px solid rgba(67, 51, 35, 0.08);
@@ -410,10 +400,6 @@
   height: 10px;
   border-radius: 50%;
   flex-shrink: 0;
-}
-
-.dashboard-hour-chart {
-  height: 210px;
 }
 
 .dashboard-chart-empty {

@@ -49,6 +49,7 @@ import type {
   GoalDistributionItem,
 } from '../../types/goalAnalysis';
 import type { DateRange } from '../../types/analysis';
+import { clipTimeEntryToDateRange, splitIntervalByDay } from '../../services/analysis/processor';
 import './GoalAnalysisPage.css';
 
 const DATE_RANGES = [
@@ -122,17 +123,14 @@ interface GoalAnalysisPageProps {
 }
 
 const filterEntriesForDateRange = (entries: TimeEntry[], dateRange: DateRange): TimeEntry[] => {
-  const startTs = dayjs(dateRange.start).startOf('day').valueOf();
-  const endTs = dayjs(dateRange.end).endOf('day').valueOf();
+  const normalizedRange = {
+    start: dayjs(dateRange.start).startOf('day').toDate(),
+    end: dayjs(dateRange.end).endOf('day').toDate(),
+  };
 
-  return entries.filter((entry) => {
-    if (entry.deleted || !entry.endTime) {
-      return false;
-    }
-
-    const entryTs = new Date(entry.startTime).getTime();
-    return entryTs >= startTs && entryTs <= endTs;
-  });
+  return entries
+    .map((entry) => (entry.deleted ? null : clipTimeEntryToDateRange(entry, normalizedRange)))
+    .filter((entry): entry is TimeEntry => entry !== null);
 };
 
 const getRecentDayKeys = (dateRange: DateRange, windowDays: number): string[] => {
@@ -229,16 +227,6 @@ const buildClusterHeatMap = (
       return;
     }
 
-    const dayKey = dayjs(entry.startTime).format('YYYY-MM-DD');
-    if (!dayKeySet.has(dayKey)) {
-      return;
-    }
-
-    const duration = Math.max(
-      0,
-      (new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()) / (1000 * 60),
-    );
-
     if (!durations.has(clusterId)) {
       durations.set(clusterId, new Map<string, number>());
     }
@@ -248,7 +236,12 @@ const buildClusterHeatMap = (
       return;
     }
 
-    clusterDurations.set(dayKey, (clusterDurations.get(dayKey) ?? 0) + duration);
+    splitIntervalByDay(new Date(entry.startTime), new Date(entry.endTime)).forEach((segment) => {
+      const dayKey = dayjs(segment.startTime).format('YYYY-MM-DD');
+      if (dayKeySet.has(dayKey)) {
+        clusterDurations.set(dayKey, (clusterDurations.get(dayKey) ?? 0) + segment.duration);
+      }
+    });
   });
 
   const heatMap: Record<string, ClusterHeatCell[]> = {};
@@ -311,22 +304,17 @@ const buildRhythmModel = (
       return;
     }
 
-    const dayKey = dayjs(entry.startTime).format('YYYY-MM-DD');
-    if (!dayKeySet.has(dayKey)) {
-      return;
-    }
+    splitIntervalByDay(new Date(entry.startTime), new Date(entry.endTime)).forEach((segment) => {
+      const dayKey = dayjs(segment.startTime).format('YYYY-MM-DD');
+      if (!dayKeySet.has(dayKey)) return;
 
-    const point = pointsByDay.get(dayKey);
-    if (!point) {
-      return;
-    }
+      const point = pointsByDay.get(dayKey);
+      if (!point) return;
 
-    const durationHours = Math.max(
-      0,
-      (new Date(entry.endTime).getTime() - new Date(entry.startTime).getTime()) / (1000 * 60 * 60),
-    );
-    const previousValue = typeof point[clusterId] === 'number' ? point[clusterId] : 0;
-    point[clusterId] = Math.round((previousValue + durationHours) * 10) / 10;
+      const durationHours = segment.duration / 60;
+      const previousValue = typeof point[clusterId] === 'number' ? point[clusterId] : 0;
+      point[clusterId] = Math.round((previousValue + durationHours) * 10) / 10;
+    });
   });
 
   return {

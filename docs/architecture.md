@@ -94,6 +94,8 @@ window.innerWidth  < 1024 → MobileLayout（底部 tab 栏）
 
 `TrendPage` 和 `GoalAnalysisPage` 是 Dashboard 内的二级页面，由 Dashboard 内的按钮跳转进入，并有返回 Dashboard 的按钮，不出现在侧边栏导航中。
 
+趋势分析中的“未分类”同时包含未设置类别的记录和未记录的空白时间，用于直观看到一天或一周尚未完整记录的部分。
+
 ## 目录结构
 
 > 仅列出目录级结构 + 用途说明。文件级清单以 IDE / `ls` 为准，避免文档与代码漂移。

@@ -23,6 +23,7 @@ import type {
   GoalDistributionItem,
 } from '../../types/goalAnalysis';
 import type { DateRange } from '../../types/analysis';
+import { clipTimeEntryToDateRange, splitIntervalByDay } from './processor';
 
 /**
  * 加载目标分析所需的原始数据
@@ -31,16 +32,11 @@ export async function loadGoalAnalysisData(dateRange: DateRange): Promise<{
   entries: TimeEntry[];
   goals: Goal[];
 }> {
-  const startTs = dateRange.start.getTime();
-  const endTs = dateRange.end.getTime();
-
-  // 加载时间范围内的所有记录
-  let entries = await db.entries.toArray();
-  entries = entries.filter(e => {
-    if (e.deleted || !e.endTime) return false;
-    const entryTs = new Date(e.startTime).getTime();
-    return entryTs >= startTs && entryTs <= endTs;
-  });
+  // 加载与时间范围相交的所有记录，并裁剪到范围边界
+  const allEntries = await db.entries.toArray();
+  const entries = allEntries
+    .map(entry => (entry.deleted ? null : clipTimeEntryToDateRange(entry, dateRange)))
+    .filter((entry): entry is TimeEntry => entry !== null);
 
   // 加载所有目标（不限制日期范围，因为聚类需要看全局）
   // check 型目标（吃药/早休息等）不参与时长分析
@@ -88,8 +84,9 @@ export function calculateClusterStats(
     
     totalDuration += Math.max(0, duration);
     
-    const dateStr = dayjs(startTime).format('YYYY-MM-DD');
-    activeDates.add(dateStr);
+    splitIntervalByDay(startTime, endTime).forEach(segment => {
+      activeDates.add(dayjs(segment.startTime).format('YYYY-MM-DD'));
+    });
 
     if (!lastActiveDate || startTime > lastActiveDate) {
       lastActiveDate = startTime;
