@@ -91,6 +91,40 @@ test('daily category trend preserves the full-day uncategorized design after spl
   assert.equal(result.data[1].uncategorized, 22.5);
 });
 
+test('daily category trend preserves full precision so a complete day still totals 24 hours', () => {
+  const categories: Category[] = [419, 41, 113, 419, 448].map((_, index) => ({
+    ...category,
+    id: `category-${index}`,
+    name: `类别 ${index}`,
+    order: index,
+  }));
+  let cursor = d('2026-07-10 00:00');
+  const entries = [419, 41, 113, 419, 448].map((duration, index) => {
+    const startTime = cursor;
+    const endTime = dayjs(startTime).add(duration, 'minute').toDate();
+    cursor = endTime;
+    return {
+      ...entry(dayjs(startTime).format('YYYY-MM-DD HH:mm'), dayjs(endTime).format('YYYY-MM-DD HH:mm')),
+      id: `precision-entry-${index}`,
+      startTime,
+      endTime,
+      categoryId: categories[index].id,
+    };
+  });
+  const dateRange = {
+    start: d('2026-07-10 00:00'),
+    end: d('2026-07-10 23:59:59'),
+  };
+  const processed = processEntries(entries, [], categories, dateRange);
+  const result = groupByDayAndCategory(processed, dateRange, categories);
+  const totalHours = result.categoryKeys.reduce((sum, item) => (
+    sum + Number(result.data[0][item.id] ?? 0)
+  ), 0);
+
+  assert.ok(Math.abs(totalHours - 24) < 1e-9);
+  assert.ok(Math.abs(Number(result.data[0][categories[0].id]) - (419 / 60)) < 1e-9);
+});
+
 test('weekly category trend allocates a cross-week record to both complete weeks', () => {
   const weeks = [
     {

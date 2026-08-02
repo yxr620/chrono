@@ -260,10 +260,7 @@ export const TrendPage: React.FC<TrendPageProps> = ({
         </div>
 
         <section className="trend-chapter-card">
-          <SectionHeader
-            title="总体叠加"
-            subtitle="趋势页进入更冷静的阅读模式，视觉权重让给图表本身。"
-          />
+          <SectionHeader title="总体叠加" />
           <StackedAreaOverview
             data={categoryTrendData.data}
             categories={displayCategories.map(category => ({ ...category, color: category.displayColor }))}
@@ -399,7 +396,8 @@ const StackedAreaOverview: React.FC<StackedAreaOverviewProps> = ({ data, categor
               tick={{ fontSize: 10, ...CHART_STYLES.axis.tick }}
               stroke={CHART_STYLES.axis.stroke}
               domain={[0, 24]}
-              tickFormatter={(value) => `${value}`}
+              ticks={[0, 6, 12, 18, 24]}
+              tickFormatter={(value) => `${Math.round(Number(value))}`}
             />
             <Tooltip
               content={(props) => {
@@ -503,7 +501,8 @@ const SingleCategoryChart: React.FC<{
               tick={{ fontSize: 10, ...CHART_STYLES.axis.tick }}
               stroke={CHART_STYLES.axis.stroke}
               domain={[0, 24]}
-              tickFormatter={(value) => `${value}`}
+              ticks={[0, 6, 12, 18, 24]}
+              tickFormatter={(value) => `${Math.round(Number(value))}`}
             />
             <Tooltip
               content={(props) => {

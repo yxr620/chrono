@@ -393,16 +393,6 @@ export function groupByDayAndCategory(
     d['uncategorized'] = (typeof current === 'number' ? current : 0) + unrecordedHours;
   });
 
-  // 四舍五入保留1位小数
-  data.forEach(d => {
-    categorySet.forEach((_, id) => {
-      const val = d[id];
-      if (typeof val === 'number') {
-        d[id] = Math.round(val * 10) / 10;
-      }
-    });
-  });
-
   // 构建类别列表，未分类放最后
   const categoryKeys = Array.from(categorySet.entries())
     .map(([id, info]) => ({ id, ...info }))

@@ -17,6 +17,11 @@ import {
   getAnalysisDisplayColor,
   getAnalysisSurfaceTint,
 } from '../../services/analysis/displayColors';
+import {
+  buildDashboardCategorySummary,
+  selectRecentMemos,
+  type DashboardCategorySummaryItem,
+} from '../../services/analysis/dashboardSummary';
 import type { GoalDistributionItem } from '../../types/goalAnalysis';
 import type {
   ProcessedEntry,
@@ -24,7 +29,7 @@ import type {
   ChartDataPoint,
   DateRange,
 } from '../../types/analysis';
-import { db, type TimeEntry } from '../../services/db';
+import type { TimeEntry } from '../../services/db';
 import { useDateStore } from '../../stores/dateStore';
 import './Dashboard.css';
 
@@ -34,10 +39,7 @@ const DATE_RANGES = [
   { label: '自定义', days: -1 },
 ];
 
-type DisplayChartDataPoint = ChartDataPoint & {
-  displayColor: string;
-  tint?: string;
-};
+type DisplayChartDataPoint = DashboardCategorySummaryItem;
 
 interface DashboardProps {
   onOpenTrend?: () => void;
@@ -89,6 +91,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       setMetrics(calculateMetrics(processed));
       setGoalSummaryData(goalAnalysis.distribution);
       setCategoryData(groupByCategory(processed, categories));
+      setRecentMemos(selectRecentMemos(rawEntries, dateRange));
     } catch (error) {
       console.error('加载分析数据失败:', error);
     } finally {
@@ -99,21 +102,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  useEffect(() => {
-    const load = async () => {
-      const sevenDaysAgo = dayjs().subtract(7, 'day').startOf('day').toDate();
-      const all = await db.entries
-        .filter(e => !e.deleted && !!e.memo && (e.memo as string).trim().length > 0)
-        .toArray();
-      const recent = all
-        .filter(e => new Date(e.startTime).getTime() >= sevenDaysAgo.getTime())
-        .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
-        .slice(0, 5);
-      setRecentMemos(recent);
-    };
-    load();
-  }, [dateRange]);
 
   const handleRangeChange = (days: number) => {
     setSelectedRange(days);
@@ -149,6 +137,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     displayColor: getAnalysisDisplayColor(undefined, item.color),
     tint: getAnalysisSurfaceTint(undefined, item.color, 0.16),
   }));
+  const categorySummaryData = buildDashboardCategorySummary(categoryDisplayData);
 
   const dashboardCategoryHighlights = categoryDisplayData.slice(0, 3);
   const goalDisplayData: DisplayChartDataPoint[] = goalSummaryData.slice(0, 4).map((item) => ({
@@ -251,7 +240,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
             <div className="dashboard-side-card">
               <SectionTitle title="类别摘要" compact />
-              <CategoryDonutSummary data={categoryDisplayData} />
+              <CategoryDonutSummary data={categorySummaryData} />
             </div>
           </aside>
         </section>
@@ -436,11 +425,10 @@ const CategoryDonutSummary: React.FC<{
 
   const total = data.reduce((sum, item) => sum + item.value, 0);
   const totalHours = Math.round((total / 60) * 10) / 10;
-  const topItems = data.slice(0, 4);
   const stops: string[] = [];
   let offset = 0;
 
-  topItems.forEach(item => {
+  data.forEach(item => {
     const percentage = total > 0 ? (item.value / total) * 100 : 0;
     stops.push(`${item.displayColor} ${offset}% ${offset + percentage}%`);
     offset += percentage;
@@ -458,13 +446,13 @@ const CategoryDonutSummary: React.FC<{
       >
         <div className="dashboard-category-ring-core">
           <strong>{totalHours}h</strong>
-          <span>总类别</span>
+          <span>总时长</span>
         </div>
       </div>
       <div className="dashboard-category-legend">
-        {topItems.map(item => (
+        {data.map((item, index) => (
           <div
-            key={item.name}
+            key={`${item.name}-${index}`}
             className="dashboard-category-legend-item"
             style={{ backgroundColor: item.tint }}
           >
