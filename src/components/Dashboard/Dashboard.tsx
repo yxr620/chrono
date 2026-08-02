@@ -19,6 +19,7 @@ import {
 } from '../../services/analysis/displayColors';
 import {
   buildDashboardCategorySummary,
+  formatDashboardDuration,
   selectRecentMemos,
   type DashboardCategorySummaryItem,
 } from '../../services/analysis/dashboardSummary';
@@ -210,7 +211,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <section className="dashboard-cover-card">
           <div className="dashboard-cover-main">
             <div className="dashboard-lead-band">
-              <div className="dashboard-lead-value">{formatDuration(metrics?.totalTime ?? 0)}</div>
+              <div
+                className="dashboard-lead-value"
+                aria-label={`总投入 ${formatDuration(metrics?.totalTime ?? 0)}`}
+              >
+                {formatDashboardDuration(metrics?.totalTime ?? 0)}
+              </div>
             </div>
 
             {metrics && <EditorialMetricStrip metrics={metrics} goalCoverage={goalCoverage} />}
@@ -233,7 +239,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             />
             <AnalysisEntryCard
               title="章节 02 · 目标深度分析"
-              description="查看目标分布、聚类结构、未关联事件和近期节奏。"
+              description="查看目标投入、聚类结构和未关联事件。"
               accentColor={dashboardCategoryHighlights[1]?.displayColor ?? ANALYSIS_NEUTRAL_COLOR}
               onClick={onOpenGoalAnalysis}
             />
@@ -352,11 +358,6 @@ const EditorialMetricStrip: React.FC<{
       label: '目标覆盖率',
       value: `${goalCoverage}%`,
       description: '已绑定目标的时间占比。',
-    },
-    {
-      label: '活跃天数',
-      value: `${metrics.activeDays} 天`,
-      description: '至少存在一条记录的日期数量。',
     },
   ];
 

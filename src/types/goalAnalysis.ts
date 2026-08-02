@@ -25,6 +25,7 @@ export interface ClusterStats {
   firstActiveDate: Date | null;  // 首次活动日期
   longestStreak: number;         // 最长连续天数
   entryCount: number;            // 记录数
+  activeGoalCount: number;       // 当前范围内有投入的原始目标数
 }
 
 /** 未关联事件推荐 */
@@ -68,7 +69,7 @@ export interface GoalAnalysisFilters {
 export interface OverviewStats {
   totalDuration: number;         // 总投入时长（分钟）
   dailyAvgDuration: number;      // 日均投入时长（分钟）
-  goalCoverageRate: number;      // 目标覆盖率（0-1）
+  goalCoverageRate: number;      // 有效时间型目标投入占全部记录的比例（0-1）
   activeClusters: number;        // 活跃聚类数（有时间记录的）
   totalEntries: number;          // 总记录数
   daysInRange: number;           // 日期范围天数

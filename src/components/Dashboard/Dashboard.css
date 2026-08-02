@@ -151,15 +151,16 @@
 .dashboard-lead-value {
   font-family: var(--app-number-family);
   font-variant-numeric: tabular-nums;
-  font-size: clamp(4.8rem, 10vw, 7.6rem);
-  line-height: 0.84;
+  font-size: clamp(4.4rem, 8vw, 6.8rem);
+  line-height: 0.88;
   letter-spacing: -0.05em;
   color: #1d1712;
+  white-space: nowrap;
 }
 
 .dashboard-metric-strip {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   margin-top: 20px;
 }
@@ -460,10 +461,6 @@
   .dashboard-cover-card {
     grid-template-columns: 1fr;
   }
-
-  .dashboard-metric-strip {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 900px) {
@@ -486,6 +483,16 @@
   }
 
   .dashboard-category-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-lead-value {
+    font-size: clamp(3.2rem, 15vw, 4.4rem);
+  }
+
+  .dashboard-metric-strip {
     grid-template-columns: 1fr;
   }
 }

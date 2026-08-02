@@ -68,12 +68,14 @@ export function calculateClusterStats(
       firstActiveDate: null,
       longestStreak: 0,
       entryCount: 0,
+      activeGoalCount: 0,
     };
   }
 
   // 计算总时长
   let totalDuration = 0;
   const activeDates = new Set<string>();
+  const activeGoalIds = new Set<string>();
   let lastActiveDate: Date | null = null;
   let firstActiveDate: Date | null = null;
 
@@ -83,6 +85,7 @@ export function calculateClusterStats(
     const duration = (endTime.getTime() - startTime.getTime()) / (1000 * 60); // 分钟
     
     totalDuration += Math.max(0, duration);
+    if (entry.goalId) activeGoalIds.add(entry.goalId);
     
     splitIntervalByDay(startTime, endTime).forEach(segment => {
       activeDates.add(dayjs(segment.startTime).format('YYYY-MM-DD'));
@@ -112,6 +115,7 @@ export function calculateClusterStats(
     firstActiveDate,
     longestStreak,
     entryCount: clusterEntries.length,
+    activeGoalCount: activeGoalIds.size,
   };
 }
 
@@ -207,16 +211,18 @@ export function getSubGoalDetails(
   }
 
   // 构建结果
-  const details: SubGoalDetail[] = cluster.goals.map(goal => {
-    const stat = goalStats.get(goal.id!) || { duration: 0, entryCount: 0 };
-    return {
-      goalId: goal.id!,
-      goalName: goal.name,
-      date: goal.date,
-      duration: Math.round(stat.duration),
-      entryCount: stat.entryCount,
-    };
-  });
+  const details: SubGoalDetail[] = cluster.goals
+    .map(goal => {
+      const stat = goalStats.get(goal.id!) || { duration: 0, entryCount: 0 };
+      return {
+        goalId: goal.id!,
+        goalName: goal.name,
+        date: goal.date,
+        duration: Math.round(stat.duration),
+        entryCount: stat.entryCount,
+      };
+    })
+    .filter(detail => detail.duration > 0);
 
   // 按时长排序
   details.sort((a, b) => b.duration - a.duration);
@@ -239,27 +245,28 @@ export async function analyzeGoals(
   // 3. 计算每个聚类的统计指标
   const stats = clusters.map(cluster => calculateClusterStats(cluster, entries));
 
-  // 4. 按总时长排序 stats 和 clusters（保持对应关系）
-  const sortedIndices = stats
-    .map((s, i) => ({ stat: s, index: i }))
-    .sort((a, b) => b.stat.totalDuration - a.stat.totalDuration)
-    .map(item => item.index);
-  
-  const sortedStats = sortedIndices.map(i => stats[i]);
-  const sortedClusters = sortedIndices.map(i => clusters[i]);
+  // 4. 当前页面只展示范围内真正有投入的目标主题；全量目标仍参与前面的跨日聚类。
+  const activePairs = stats
+    .map((stat, index) => ({ stat, cluster: clusters[index] }))
+    .filter(({ stat }) => stat.totalDuration > 0)
+    .sort((left, right) => right.stat.totalDuration - left.stat.totalDuration);
+
+  const activeStats = activePairs.map(({ stat }) => stat);
+  const activeClusters = activePairs.map(({ cluster }) => cluster);
 
   // 5. 查找未关联事件建议
-  const unlinkedSuggestions = findUnlinkedEventSuggestions(entries, sortedClusters);
+  const unlinkedSuggestions = findUnlinkedEventSuggestions(entries, activeClusters);
 
   // 6. 计算时间投入概览
-  const overviewStats = calculateOverviewStats(entries, sortedStats, dateRange);
+  const validGoalIds = new Set(goals.map(goal => goal.id).filter((id): id is string => Boolean(id)));
+  const overviewStats = calculateOverviewStats(entries, activeStats, dateRange, validGoalIds);
 
   // 7. 计算目标时间分布
-  const distribution = calculateGoalDistribution(sortedStats, sortedClusters);
+  const distribution = calculateGoalDistribution(activeStats, activeClusters);
 
   return {
-    clusters: sortedClusters,
-    stats: sortedStats,
+    clusters: activeClusters,
+    stats: activeStats,
     unlinkedSuggestions,
     overviewStats,
     distribution,
@@ -269,10 +276,11 @@ export async function analyzeGoals(
 /**
  * 计算时间投入概览统计
  */
-function calculateOverviewStats(
+export function calculateOverviewStats(
   entries: TimeEntry[],
   stats: ClusterStats[],
-  dateRange: DateRange
+  dateRange: DateRange,
+  validGoalIds: ReadonlySet<string>,
 ): OverviewStats {
   // 总投入时长（只计算有 goalId 的记录）
   let goalLinkedDuration = 0;
@@ -284,7 +292,7 @@ function calculateOverviewStats(
     const endTime = new Date(entry.endTime);
     const duration = Math.max(0, (endTime.getTime() - startTime.getTime()) / (1000 * 60));
     allDuration += duration;
-    if (entry.goalId) {
+    if (entry.goalId && validGoalIds.has(entry.goalId)) {
       goalLinkedDuration += duration;
     }
   }

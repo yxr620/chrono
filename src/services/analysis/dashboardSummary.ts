@@ -9,6 +9,17 @@ export interface DashboardCategorySummaryItem extends ChartDataPoint {
 
 const CATEGORY_LEGEND_LIMIT = 6;
 
+/** 将分析封面的总时长压缩为更适合大字号展示的格式。 */
+export function formatDashboardDuration(minutes: number): string {
+  const roundedMinutes = Math.max(0, Math.round(minutes));
+  const hours = Math.floor(roundedMinutes / 60);
+  const remainingMinutes = roundedMinutes % 60;
+
+  if (hours === 0) return `${remainingMinutes}M`;
+  if (remainingMinutes === 0) return `${hours}H`;
+  return `${hours}H ${remainingMinutes}M`;
+}
+
 /**
  * 类别较少时完整展示；类别较多时保留前五项，并将剩余类别合并为一项。
  * 这样环形图中的每个扇区始终都有对应图例，同时避免卡片无限增高。

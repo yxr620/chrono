@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 
 import {
   buildDashboardCategorySummary,
+  formatDashboardDuration,
   selectRecentMemos,
   type DashboardCategorySummaryItem,
 } from '../src/services/analysis/dashboardSummary';
@@ -32,6 +33,14 @@ const memoEntry = (
   deleted,
   createdAt: dayjs(startTime).toDate(),
   updatedAt: dayjs(startTime).toDate(),
+});
+
+test('dashboard duration uses a compact hour and minute display', () => {
+  assert.equal(formatDashboardDuration(0), '0M');
+  assert.equal(formatDashboardDuration(32), '32M');
+  assert.equal(formatDashboardDuration(60), '1H');
+  assert.equal(formatDashboardDuration((704 * 60) + 32), '704H 32M');
+  assert.equal(formatDashboardDuration(119.6), '2H');
 });
 
 test('category summary displays all categories when there are at most six', () => {

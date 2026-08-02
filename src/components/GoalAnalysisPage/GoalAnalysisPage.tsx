@@ -88,31 +88,18 @@ const CHART_STYLES = {
 
 const INITIAL_CLUSTER_COUNT = 10;
 const DISTRIBUTION_LIMIT = 6;
-const HEAT_WINDOW_DAYS = 7;
-const RHYTHM_WINDOW_DAYS = 14;
+const CLUSTER_TREND_WINDOW_DAYS = 14;
 
 type ClusterTone = {
   color: string;
   tint: string;
 };
 
-type ClusterHeatCell = {
-  label: string;
-  value: number;
-  intensity: number;
-};
-
 type DistributionDisplayItem = GoalDistributionItem & ClusterTone;
 
-type RhythmPoint = {
+type ClusterTrendPoint = {
   label: string;
-  [key: string]: string | number;
-};
-
-type RhythmLegendItem = {
-  id: string;
-  name: string;
-  color: string;
+  value: number;
 };
 
 interface GoalAnalysisPageProps {
@@ -143,18 +130,6 @@ const getRecentDayKeys = (dateRange: DateRange, windowDays: number): string[] =>
   return Array.from({ length: totalDays }, (_unused, index) => (
     startDay.add(index, 'day').format('YYYY-MM-DD')
   ));
-};
-
-const buildGoalIdToClusterIdMap = (clusters: GoalCluster[]): Map<string, string> => {
-  const goalIdToClusterId = new Map<string, string>();
-
-  clusters.forEach((cluster) => {
-    cluster.goalIds.forEach((goalId) => {
-      goalIdToClusterId.set(goalId, cluster.id);
-    });
-  });
-
-  return goalIdToClusterId;
 };
 
 const buildClusterToneMap = (distribution: GoalDistributionItem[]): Map<string, ClusterTone> => {
@@ -207,125 +182,31 @@ const buildDistributionDisplayItems = (
   ];
 };
 
-const buildClusterHeatMap = (
+const buildClusterTrend = (
   entries: TimeEntry[],
-  clusters: GoalCluster[],
+  cluster: GoalCluster,
   dateRange: DateRange,
-): Record<string, ClusterHeatCell[]> => {
-  const dayKeys = getRecentDayKeys(dateRange, HEAT_WINDOW_DAYS);
+): ClusterTrendPoint[] => {
+  const dayKeys = getRecentDayKeys(dateRange, CLUSTER_TREND_WINDOW_DAYS);
   const dayKeySet = new Set(dayKeys);
-  const goalIdToClusterId = buildGoalIdToClusterIdMap(clusters);
-  const durations = new Map<string, Map<string, number>>();
+  const goalIdSet = new Set(cluster.goalIds);
+  const durations = new Map(dayKeys.map(dayKey => [dayKey, 0]));
 
   entries.forEach((entry) => {
-    if (!entry.goalId || !entry.endTime) {
-      return;
-    }
-
-    const clusterId = goalIdToClusterId.get(entry.goalId);
-    if (!clusterId) {
-      return;
-    }
-
-    if (!durations.has(clusterId)) {
-      durations.set(clusterId, new Map<string, number>());
-    }
-
-    const clusterDurations = durations.get(clusterId);
-    if (!clusterDurations) {
-      return;
-    }
+    if (!entry.goalId || !entry.endTime || !goalIdSet.has(entry.goalId)) return;
 
     splitIntervalByDay(new Date(entry.startTime), new Date(entry.endTime)).forEach((segment) => {
       const dayKey = dayjs(segment.startTime).format('YYYY-MM-DD');
       if (dayKeySet.has(dayKey)) {
-        clusterDurations.set(dayKey, (clusterDurations.get(dayKey) ?? 0) + segment.duration);
+        durations.set(dayKey, (durations.get(dayKey) ?? 0) + (segment.duration / 60));
       }
     });
   });
 
-  const heatMap: Record<string, ClusterHeatCell[]> = {};
-
-  clusters.forEach((cluster) => {
-    const clusterDurations = durations.get(cluster.id);
-    const values = dayKeys.map((dayKey) => clusterDurations?.get(dayKey) ?? 0);
-    const maxValue = Math.max(...values, 1);
-
-    heatMap[cluster.id] = dayKeys.map((dayKey, index) => ({
-      label: dayjs(dayKey).format('MM/DD'),
-      value: values[index],
-      intensity: values[index] / maxValue,
-    }));
-  });
-
-  return heatMap;
-};
-
-const buildRhythmModel = (
-  entries: TimeEntry[],
-  clusters: GoalCluster[],
-  stats: ClusterStats[],
-  dateRange: DateRange,
-  clusterToneMap: Map<string, ClusterTone>,
-): {
-  data: RhythmPoint[];
-  legend: RhythmLegendItem[];
-} => {
-  const activeClusters = stats
-    .filter((stat) => stat.totalDuration > 0)
-    .slice(0, 3)
-    .map((stat) => clusters.find((cluster) => cluster.id === stat.clusterId))
-    .filter((cluster): cluster is GoalCluster => Boolean(cluster));
-
-  if (activeClusters.length === 0) {
-    return { data: [], legend: [] };
-  }
-
-  const dayKeys = getRecentDayKeys(dateRange, RHYTHM_WINDOW_DAYS);
-  const dayKeySet = new Set(dayKeys);
-  const goalIdToClusterId = buildGoalIdToClusterIdMap(activeClusters);
-  const pointsByDay = new Map<string, RhythmPoint>();
-
-  dayKeys.forEach((dayKey) => {
-    const point: RhythmPoint = { label: dayjs(dayKey).format('MM/DD') };
-    activeClusters.forEach((cluster) => {
-      point[cluster.id] = 0;
-    });
-    pointsByDay.set(dayKey, point);
-  });
-
-  entries.forEach((entry) => {
-    if (!entry.goalId || !entry.endTime) {
-      return;
-    }
-
-    const clusterId = goalIdToClusterId.get(entry.goalId);
-    if (!clusterId) {
-      return;
-    }
-
-    splitIntervalByDay(new Date(entry.startTime), new Date(entry.endTime)).forEach((segment) => {
-      const dayKey = dayjs(segment.startTime).format('YYYY-MM-DD');
-      if (!dayKeySet.has(dayKey)) return;
-
-      const point = pointsByDay.get(dayKey);
-      if (!point) return;
-
-      const durationHours = segment.duration / 60;
-      const previousValue = typeof point[clusterId] === 'number' ? point[clusterId] : 0;
-      point[clusterId] = Math.round((previousValue + durationHours) * 10) / 10;
-    });
-  });
-
-  return {
-    data: dayKeys.map((dayKey) => pointsByDay.get(dayKey) ?? { label: dayjs(dayKey).format('MM/DD') }),
-    legend: activeClusters.map((cluster, index) => ({
-      id: cluster.id,
-      name: cluster.name,
-      color: clusterToneMap.get(cluster.id)?.color
-        ?? getAnalysisClusterColor(cluster.name, index),
-    })),
-  };
+  return dayKeys.map(dayKey => ({
+    label: dayjs(dayKey).format('MM/DD'),
+    value: durations.get(dayKey) ?? 0,
+  }));
 };
 
 export const GoalAnalysisPage: React.FC<GoalAnalysisPageProps> = ({
@@ -341,6 +222,7 @@ export const GoalAnalysisPage: React.FC<GoalAnalysisPageProps> = ({
   const [filteredEntries, setFilteredEntries] = useState<TimeEntry[]>([]);
   const [expandedClusterId, setExpandedClusterId] = useState<string | null>(null);
   const [subGoalDetails, setSubGoalDetails] = useState<SubGoalDetail[]>([]);
+  const [clusterTrend, setClusterTrend] = useState<ClusterTrendPoint[]>([]);
   const [showAllClusters, setShowAllClusters] = useState(false);
 
   useEffect(() => {
@@ -367,6 +249,7 @@ export const GoalAnalysisPage: React.FC<GoalAnalysisPageProps> = ({
       setFilteredEntries(filterEntriesForDateRange(allEntries, dateRange));
       setExpandedClusterId(null);
       setSubGoalDetails([]);
+      setClusterTrend([]);
       setShowAllClusters(false);
     } catch (error) {
       console.error('加载目标分析数据失败:', error);
@@ -382,12 +265,14 @@ export const GoalAnalysisPage: React.FC<GoalAnalysisPageProps> = ({
   const loadSubGoalDetails = useCallback((cluster: GoalCluster) => {
     const details = getSubGoalDetails(cluster, filteredEntries);
     setSubGoalDetails(details);
-  }, [filteredEntries]);
+    setClusterTrend(buildClusterTrend(filteredEntries, cluster, dateRange));
+  }, [dateRange, filteredEntries]);
 
   const handleClusterClick = (cluster: GoalCluster) => {
     if (expandedClusterId === cluster.id) {
       setExpandedClusterId(null);
       setSubGoalDetails([]);
+      setClusterTrend([]);
       return;
     }
 
@@ -460,7 +345,7 @@ export const GoalAnalysisPage: React.FC<GoalAnalysisPageProps> = ({
           <div className="goal-status-card">
             <IonIcon icon={flagOutline} className="goal-status-icon" />
             <h2>这段时间还没有可阅读的目标结构</h2>
-            <p>开始设置目标并记录时间后，这一章会显示目标分布、聚类列表以及近期节奏。</p>
+            <p>开始设置目标并记录时间后，这一章会显示目标投入分布和跨日主题。</p>
           </div>
         </div>
       </div>
@@ -470,10 +355,8 @@ export const GoalAnalysisPage: React.FC<GoalAnalysisPageProps> = ({
   const { clusters, stats, unlinkedSuggestions, overviewStats, distribution } = analysisResult;
   const clusterToneMap = buildClusterToneMap(distribution);
   const distributionDisplayItems = buildDistributionDisplayItems(distribution, clusterToneMap);
-  const clusterHeatMap = buildClusterHeatMap(filteredEntries, clusters, dateRange);
-  const rhythmModel = buildRhythmModel(filteredEntries, clusters, stats, dateRange, clusterToneMap);
   const visibleStats = showAllClusters ? stats : stats.slice(0, INITIAL_CLUSTER_COUNT);
-  const totalGoalCount = clusters.reduce((sum, cluster) => sum + cluster.goals.length, 0);
+  const totalGoalCount = stats.reduce((sum, stat) => sum + stat.activeGoalCount, 0);
 
   return (
     <div className="goal-editorial-page">
@@ -516,7 +399,7 @@ export const GoalAnalysisPage: React.FC<GoalAnalysisPageProps> = ({
             <div className="goal-panel">
               <SectionHeader
                 title="目标聚类"
-                subtitle={`共 ${clusters.length} 个聚类，覆盖 ${totalGoalCount} 个原始目标。`}
+                subtitle={`共 ${clusters.length} 个活跃聚类，包含 ${totalGoalCount} 个有投入目标。`}
               />
               <div className="goal-cluster-list">
                 {visibleStats.map((stat, index) => {
@@ -539,9 +422,9 @@ export const GoalAnalysisPage: React.FC<GoalAnalysisPageProps> = ({
                       rank={index + 1}
                       isExpanded={expandedClusterId === cluster.id}
                       subGoalDetails={expandedClusterId === cluster.id ? subGoalDetails : []}
+                      trendData={expandedClusterId === cluster.id ? clusterTrend : []}
                       accentColor={tone.color}
                       accentTint={tone.tint}
-                      heatCells={clusterHeatMap[cluster.id] ?? []}
                       onClick={() => handleClusterClick(cluster)}
                     />
                   );
@@ -567,7 +450,6 @@ export const GoalAnalysisPage: React.FC<GoalAnalysisPageProps> = ({
               clusterToneMap={clusterToneMap}
               onRefresh={fetchData}
             />
-            <ClusterRhythmPanel data={rhythmModel.data} legend={rhythmModel.legend} />
           </div>
         </section>
       </div>
@@ -719,9 +601,9 @@ const ClusterCard: React.FC<{
   rank: number;
   isExpanded: boolean;
   subGoalDetails: SubGoalDetail[];
+  trendData: ClusterTrendPoint[];
   accentColor: string;
   accentTint: string;
-  heatCells: ClusterHeatCell[];
   onClick: () => void;
 }> = ({
   cluster,
@@ -729,9 +611,9 @@ const ClusterCard: React.FC<{
   rank,
   isExpanded,
   subGoalDetails,
+  trendData,
   accentColor,
   accentTint,
-  heatCells,
   onClick,
 }) => (
   <div className={`goal-cluster-card ${isExpanded ? 'expanded' : ''}`}>
@@ -749,22 +631,7 @@ const ClusterCard: React.FC<{
           <span className="goal-cluster-hours">{formatGoalHours(stat.totalDuration)}</span>
         </div>
         <div className="goal-cluster-meta">
-          {stat.activeDays}天 · {cluster.goals.length}个目标 · 最近 {getRelativeTimeDesc(stat.lastActiveDate)} · 连续最长 {stat.longestStreak}天
-        </div>
-        <div className="goal-cluster-heat">
-          {heatCells.map((cell) => (
-            <span
-              key={cell.label}
-              className="goal-cluster-heat-cell"
-              style={{
-                backgroundColor: cell.value > 0
-                  ? withAlpha(accentColor, 0.18 + (cell.intensity * 0.56))
-                  : 'rgba(67, 51, 35, 0.08)',
-                boxShadow: cell.value > 0 ? `inset 0 0 0 1px ${withAlpha(accentColor, 0.18)}` : 'none',
-              }}
-              title={`${cell.label} · ${formatGoalHours(cell.value)}`}
-            />
-          ))}
+          {stat.activeDays}天 · {stat.activeGoalCount}个目标 · {stat.entryCount}条记录 · 最近 {getRelativeTimeDesc(stat.lastActiveDate)}
         </div>
       </div>
       <IonIcon
@@ -776,6 +643,7 @@ const ClusterCard: React.FC<{
 
     {isExpanded && (
       <div id={`goal-cluster-details-${cluster.id}`} className="goal-cluster-details" style={{ backgroundColor: accentTint }}>
+        <ClusterTrendChart data={trendData} color={accentColor} />
         {subGoalDetails.length === 0 ? (
           <div className="goal-detail-empty">当前时间范围内没有可展开的子目标时长明细。</div>
         ) : (
@@ -791,6 +659,56 @@ const ClusterCard: React.FC<{
         )}
       </div>
     )}
+  </div>
+);
+
+const ClusterTrendChart: React.FC<{
+  data: ClusterTrendPoint[];
+  color: string;
+}> = ({ data, color }) => (
+  <div className="goal-cluster-trend">
+    <div className="goal-cluster-detail-title">所选范围末 14 天投入变化</div>
+    <div className="goal-cluster-trend-chart">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
+          <CartesianGrid {...CHART_STYLES.grid} />
+          <XAxis
+            dataKey="label"
+            interval="preserveStartEnd"
+            tick={{ fontSize: 11, ...CHART_STYLES.axis.tick }}
+            stroke={CHART_STYLES.axis.stroke}
+          />
+          <YAxis
+            width={44}
+            tick={{ fontSize: 11, ...CHART_STYLES.axis.tick }}
+            stroke={CHART_STYLES.axis.stroke}
+            tickFormatter={(value) => `${value}h`}
+          />
+          <Tooltip
+            content={(props) => {
+              const { active, payload, label } = props;
+              if (!active || !payload || payload.length === 0) return null;
+              const value = Number(payload[0].value ?? 0);
+              return (
+                <div style={CHART_STYLES.tooltip.contentStyle}>
+                  <div style={{ marginBottom: 4 }}>{label}</div>
+                  <strong>{value.toFixed(1)}h</strong>
+                </div>
+              );
+            }}
+          />
+          <Line
+            type="monotone"
+            dataKey="value"
+            stroke={color}
+            strokeWidth={2.2}
+            dot={{ r: 2, fill: color, strokeWidth: 0 }}
+            activeDot={{ r: 4, stroke: '#f8f3eb', strokeWidth: 2 }}
+            isAnimationActive={false}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
   </div>
 );
 
@@ -909,93 +827,5 @@ const UnlinkedEventSection: React.FC<{
     </div>
   );
 };
-
-const ClusterRhythmPanel: React.FC<{
-  data: RhythmPoint[];
-  legend: RhythmLegendItem[];
-}> = ({ data, legend }) => (
-  <div className="goal-support-panel">
-    <SectionHeader
-      title="活动节奏"
-      subtitle="追踪近两周内最活跃目标群的波动方式。"
-      compact
-    />
-
-    {data.length === 0 || legend.length === 0 ? (
-      <div className="goal-panel-empty">当前时间范围内还没有足够的数据来形成节奏线索。</div>
-    ) : (
-      <>
-        <div className="goal-rhythm-chart">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 12, right: 12, left: -16, bottom: 4 }}>
-              <CartesianGrid {...CHART_STYLES.grid} />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 11, ...CHART_STYLES.axis.tick }}
-                stroke={CHART_STYLES.axis.stroke}
-              />
-              <YAxis
-                tick={{ fontSize: 11, ...CHART_STYLES.axis.tick }}
-                stroke={CHART_STYLES.axis.stroke}
-                tickFormatter={(value) => `${value}`}
-              />
-              <Tooltip
-                content={(props) => {
-                  const { active, payload, label } = props;
-                  if (!active || !payload || payload.length === 0) {
-                    return null;
-                  }
-
-                  return (
-                    <div style={CHART_STYLES.tooltip.contentStyle}>
-                      <div style={{ marginBottom: 6, fontWeight: 600 }}>{label}</div>
-                      {payload.map((item) => (
-                        <div key={String(item.dataKey)} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 }}>
-                          <span
-                            style={{
-                              width: 8,
-                              height: 8,
-                              borderRadius: '50%',
-                              backgroundColor: item.color,
-                              flexShrink: 0,
-                            }}
-                          />
-                          <span style={{ color: '#64584d', minWidth: 0 }}>{item.name}</span>
-                          <span style={{ marginLeft: 'auto', fontWeight: 600 }}>{item.value}h</span>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                }}
-              />
-              {legend.map((item) => (
-                <Line
-                  key={item.id}
-                  type="monotone"
-                  dataKey={item.id}
-                  name={item.name}
-                  stroke={item.color}
-                  strokeWidth={2.2}
-                  dot={{ r: 2, fill: item.color, strokeWidth: 0 }}
-                  activeDot={{ r: 4, stroke: '#f8f3eb', strokeWidth: 2 }}
-                  isAnimationActive={false}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="goal-rhythm-legend">
-          {legend.map((item) => (
-            <div key={item.id} className="goal-rhythm-legend-item">
-              <span className="goal-rhythm-dot" style={{ backgroundColor: item.color }} />
-              <span>{item.name}</span>
-            </div>
-          ))}
-        </div>
-      </>
-    )}
-  </div>
-);
 
 export default GoalAnalysisPage;
