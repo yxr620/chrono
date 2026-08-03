@@ -206,16 +206,17 @@ export const TrendPage: React.FC<TrendPageProps> = ({
         <div className="trend-editorial-shell">
           <div className="trend-page-header trend-page-header-editorial">
             <div className="trend-heading-group">
-              {onBack && (
-                <button className="trend-back-btn trend-back-btn-editorial" onClick={onBack} type="button">
-                  <IonIcon icon={arrowBackOutline} />
-                </button>
-              )}
-              <div>
+              <div className="trend-header-breadcrumb">
+                {onBack && (
+                  <button className="trend-back-btn trend-back-btn-editorial" onClick={onBack} type="button">
+                    <IonIcon icon={arrowBackOutline} />
+                    <span>数据分析</span>
+                  </button>
+                )}
+                {onBack && <span className="trend-header-divider" aria-hidden="true" />}
                 <p className="trend-kicker">Chapter 01</p>
-                <h1>类别趋势分析</h1>
-                <p className="trend-header-meta">观察不同类别在时间中的流动方式。</p>
               </div>
+              <h1>类别趋势分析</h1>
             </div>
             <DateRangeSelector
               selected={selectedRange}
@@ -240,16 +241,17 @@ export const TrendPage: React.FC<TrendPageProps> = ({
       <div className="trend-editorial-shell">
         <div className="trend-page-header trend-page-header-editorial">
           <div className="trend-heading-group">
-            {onBack && (
-              <button className="trend-back-btn trend-back-btn-editorial" onClick={onBack} type="button">
-                <IonIcon icon={arrowBackOutline} />
-              </button>
-            )}
-            <div>
+            <div className="trend-header-breadcrumb">
+              {onBack && (
+                <button className="trend-back-btn trend-back-btn-editorial" onClick={onBack} type="button">
+                  <IonIcon icon={arrowBackOutline} />
+                  <span>数据分析</span>
+                </button>
+              )}
+              {onBack && <span className="trend-header-divider" aria-hidden="true" />}
               <p className="trend-kicker">Chapter 01</p>
-              <h1>类别趋势分析</h1>
-              <p className="trend-header-meta">观察不同类别在时间中的流动方式。</p>
             </div>
+            <h1>类别趋势分析</h1>
           </div>
           <DateRangeSelector
             selected={selectedRange}

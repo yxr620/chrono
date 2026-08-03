@@ -457,11 +457,12 @@ export function groupByWeekday(entries: ProcessedEntry[]): ChartDataPoint[] {
 
 /** 格式化时长显示 */
 export function formatDuration(minutes: number): string {
-  if (minutes < 60) {
-    return `${Math.round(minutes)}分钟`;
+  const roundedMinutes = Math.max(0, Math.round(minutes));
+  if (roundedMinutes < 60) {
+    return `${roundedMinutes}分钟`;
   }
-  const hours = Math.floor(minutes / 60);
-  const mins = Math.round(minutes % 60);
+  const hours = Math.floor(roundedMinutes / 60);
+  const mins = roundedMinutes % 60;
   return mins > 0 ? `${hours}小时${mins}分钟` : `${hours}小时`;
 }
 

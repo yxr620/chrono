@@ -323,16 +323,18 @@ export const GoalAnalysisPage: React.FC<GoalAnalysisPageProps> = ({
         <div className="goal-editorial-shell">
           <div className="goal-page-header goal-page-header-editorial">
             <div className="goal-heading-group">
-              {onBack && (
-                <button className="goal-back-btn" onClick={onBack} type="button">
-                  <IonIcon icon={arrowBackOutline} />
-                </button>
-              )}
-              <div>
+              <div className="goal-header-breadcrumb">
+                {onBack && (
+                  <button className="goal-back-btn" onClick={onBack} type="button">
+                    <IonIcon icon={arrowBackOutline} />
+                    <span>数据分析</span>
+                  </button>
+                )}
+                {onBack && <span className="goal-header-divider" aria-hidden="true" />}
                 <p className="goal-kicker">Chapter 02</p>
-                <h1>目标深度分析</h1>
-                <p className="goal-header-meta">读目标结构、聚类关系和待关联记录。</p>
               </div>
+              <h1>目标深度分析</h1>
+              <p className="goal-header-meta">读目标结构、聚类关系和待关联记录。</p>
             </div>
             <DateRangeSelector
               selected={selectedRange}
@@ -363,25 +365,29 @@ export const GoalAnalysisPage: React.FC<GoalAnalysisPageProps> = ({
       <div className="goal-editorial-shell">
         <div className="goal-page-header goal-page-header-editorial">
           <div className="goal-heading-group">
-            {onBack && (
-              <button className="goal-back-btn" onClick={onBack} type="button">
-                <IonIcon icon={arrowBackOutline} />
-              </button>
-            )}
-            <div>
+            <div className="goal-header-breadcrumb">
+              {onBack && (
+                <button className="goal-back-btn" onClick={onBack} type="button">
+                  <IonIcon icon={arrowBackOutline} />
+                  <span>数据分析</span>
+                </button>
+              )}
+              {onBack && <span className="goal-header-divider" aria-hidden="true" />}
               <p className="goal-kicker">Chapter 02</p>
-              <h1>目标深度分析</h1>
-              <p className="goal-header-meta">
-                {dayjs(dateRange.start).format('MM/DD')} - {dayjs(dateRange.end).format('MM/DD')} · {overviewStats.totalEntries} 条记录
-              </p>
             </div>
+            <h1>目标深度分析</h1>
           </div>
-          <DateRangeSelector
-            selected={selectedRange}
-            onChange={handleRangeChange}
-            customRange={dateRange}
-            onCustomRangeChange={handleCustomRangeChange}
-          />
+          <div className="goal-header-actions">
+            <p className="goal-header-meta">
+              {dayjs(dateRange.start).format('MM/DD')} - {dayjs(dateRange.end).format('MM/DD')} · {overviewStats.totalEntries} 条记录
+            </p>
+            <DateRangeSelector
+              selected={selectedRange}
+              onChange={handleRangeChange}
+              customRange={dateRange}
+              onCustomRangeChange={handleCustomRangeChange}
+            />
+          </div>
         </div>
 
         <section className="goal-chapter-card">

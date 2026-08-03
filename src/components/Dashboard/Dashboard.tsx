@@ -167,7 +167,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="dashboard-shell">
           <div className="dashboard-header dashboard-header-editorial">
             <div className="dashboard-heading-group">
-              <p className="dashboard-kicker">Analysis</p>
               <h1>数据分析</h1>
               <p className="dashboard-header-meta">先选择时间范围，再让这里成为你的分析封面。</p>
             </div>
@@ -194,18 +193,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <div className="dashboard-shell">
         <div className="dashboard-header dashboard-header-editorial">
           <div className="dashboard-heading-group">
-            <p className="dashboard-kicker">Analysis</p>
             <h1>数据分析</h1>
+          </div>
+          <div className="dashboard-header-actions">
             <p className="dashboard-header-meta">
               {dayjs(dateRange.start).format('MM/DD')} - {dayjs(dateRange.end).format('MM/DD')} · {entries.length} 条记录
             </p>
+            <DateRangeSelector
+              selected={selectedRange}
+              onChange={handleRangeChange}
+              customRange={dateRange}
+              onCustomRangeChange={handleCustomRangeChange}
+            />
           </div>
-          <DateRangeSelector
-            selected={selectedRange}
-            onChange={handleRangeChange}
-            customRange={dateRange}
-            onCustomRangeChange={handleCustomRangeChange}
-          />
         </div>
 
         <section className="dashboard-cover-card">
