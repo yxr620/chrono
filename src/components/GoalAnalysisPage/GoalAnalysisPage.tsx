@@ -36,7 +36,6 @@ import {
   getAnalysisClusterSurfaceTint,
   withAlpha,
 } from '../../services/analysis/displayColors';
-import { db } from '../../services/db';
 import { syncDb } from '../../services/syncDb';
 import type { TimeEntry } from '../../services/db';
 import type {
@@ -49,7 +48,11 @@ import type {
   GoalDistributionItem,
 } from '../../types/goalAnalysis';
 import type { DateRange } from '../../types/analysis';
-import { clipTimeEntryToDateRange, splitIntervalByDay } from '../../services/analysis/processor';
+import {
+  clipTimeEntryToDateRange,
+  loadRawData,
+  splitIntervalByDay,
+} from '../../services/analysis/processor';
 import './GoalAnalysisPage.css';
 
 const DATE_RANGES = [
@@ -242,7 +245,7 @@ export const GoalAnalysisPage: React.FC<GoalAnalysisPageProps> = ({
     try {
       const [result, allEntries] = await Promise.all([
         analyzeGoals(dateRange, DEFAULT_CLUSTER_SETTINGS),
-        db.entries.toArray(),
+        loadRawData({ dateRange }).then(data => data.entries),
       ]);
 
       setAnalysisResult(result);

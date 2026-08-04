@@ -3,8 +3,8 @@
  * 负责数据加载、清洗、聚合等逻辑
  */
 import dayjs from 'dayjs';
-import { db } from '../db';
 import type { TimeEntry, Goal, Category } from '../db';
+import { getAnalysisDataSnapshot } from './dataCache';
 import type {
   ProcessedEntry,
   AnalysisMetrics,
@@ -132,9 +132,10 @@ export async function loadRawData(filters: AnalysisFilters): Promise<{
 }> {
   const { dateRange, goalIds, categoryIds } = filters;
 
-  // 获取所有记录，然后在内存中过滤
-  // 因为 startTime 在数据库中可能存储为字符串或 Date 对象
-  let entries = await db.entries.toArray();
+  // IndexedDB 中的旧数据可能以字符串或 Date 存储时间，因此仍在内存中
+  // 做兼容过滤；底层全表读取由共享快照去重，页面切换不会重复扫描。
+  const snapshot = await getAnalysisDataSnapshot();
+  let entries = snapshot.entries;
 
   // 过滤与时间范围相交的已完成记录和软删除记录
   entries = entries.filter(e => !e.deleted && clipTimeEntryToDateRange(e, dateRange) !== null);
@@ -149,8 +150,8 @@ export async function loadRawData(filters: AnalysisFilters): Promise<{
     entries = entries.filter(e => e.categoryId && categoryIds.includes(e.categoryId));
   }
 
-  const goals = (await db.goals.toArray()).filter(g => !g.deleted);
-  const categories = (await db.categories.toArray()).filter(c => !c.deleted);
+  const goals = snapshot.goals.filter(g => !g.deleted);
+  const categories = snapshot.categories.filter(c => !c.deleted);
 
   return { entries, goals, categories };
 }
