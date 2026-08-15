@@ -52,8 +52,9 @@ test('mobile timeline keeps date controls compact and coverage tracks right-alig
   assert.match(component, /className="timeline-date-label-full"/);
   assert.match(component, /className="timeline-date-label-compact"/);
   assert.match(component, /className="today-label-compact"/);
-  assert.match(css, /\.date-display\s*\{[^}]*white-space:\s*nowrap/s);
-  assert.match(css, /\.today-btn\s*\{[^}]*white-space:\s*nowrap/s);
+  assert.match(css, /\.date-display\s*\{[^}]*align-items:\s*baseline[^}]*white-space:\s*nowrap/s);
+  assert.match(css, /\.timeline-date-label\s*\{[^}]*line-height:\s*1[^}]*white-space:\s*nowrap/s);
+  assert.match(css, /\.today-btn\s*\{[^}]*line-height:\s*1[^}]*white-space:\s*nowrap/s);
   assert.match(css, /--timeline-coverage-value-width:\s*35px/);
   assert.match(css, /--timeline-coverage-value-gap:\s*9px/);
   assert.match(css, /\.timeline-week-coverage\s*\{[^}]*gap:\s*var\(--timeline-coverage-value-gap\)/s);
