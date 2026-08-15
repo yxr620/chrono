@@ -178,7 +178,7 @@ BYO `.env` 示例：
 VITE_AI_PROVIDER_ID=qwen
 VITE_AI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 VITE_AI_API_KEY=sk-...
-VITE_AI_MODEL=qwen3.6-max-preview
+VITE_AI_MODEL=deepseek-v4-pro-0813
 ```
 
 Managed 只需要前端设置 `VITE_AUTH_API_URL=https://<stable-api-url>`。这个值会被打进 Web/Android/iOS 包里，所以生产环境应尽量使用长期稳定的自定义域名或保持现有 FC 公网 URL 不变。后端配置 `AI_API_KEY`、`AI_BASE_URL`、`AI_MODEL`、`ALLOWED_AI_EMAILS`，实现位于 `server/src/features/ai.ts`。

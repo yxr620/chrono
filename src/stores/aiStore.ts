@@ -5,7 +5,11 @@
  */
 
 import { create } from 'zustand';
-import { AI_PROVIDERS } from '../services/ai/providers';
+import {
+  AI_PROVIDERS,
+  isRetiredAIProviderModel,
+  resolveAIProviderModel,
+} from '../services/ai/providers';
 import { resolveAIDefaultConfig } from '../services/ai/envDefaults';
 import type { AssistantDebugInfoPayload } from '../services/ai/debugInfo';
 
@@ -85,7 +89,7 @@ function defaultProviderConfig(providerId: string): ProviderConfig {
   const useEnv = providerId === ENV_DEFAULT_CONFIG.providerId;
   return {
     apiKey: useEnv ? ENV_DEFAULT_CONFIG.apiKey : '',
-    model: (useEnv ? ENV_DEFAULT_CONFIG.model : '') || provider?.models[0] || '',
+    model: resolveAIProviderModel(providerId, useEnv ? ENV_DEFAULT_CONFIG.model : ''),
     baseURL: (useEnv ? ENV_DEFAULT_CONFIG.baseURL : '') || provider?.baseURL || '',
   };
 }
@@ -169,15 +173,22 @@ function normalizeStorage(storage: AIConfigStorage): AIConfigStorage {
     const defaults = defaultProviderConfig(p.id);
     providers[p.id] = {
       apiKey: fromStorage?.apiKey ?? defaults.apiKey,
-      model: fromStorage?.model || defaults.model,
+      model: resolveAIProviderModel(p.id, fromStorage?.model || defaults.model),
       baseURL: fromStorage?.baseURL || defaults.baseURL,
     };
   }
 
+  const customModels = Object.fromEntries(
+    Object.entries(migrateCustomModels(storage)).map(([providerId, models]) => [
+      providerId,
+      models.filter(model => !isRetiredAIProviderModel(providerId, model)),
+    ]),
+  );
+
   return {
     activeProviderId,
     providers,
-    customModels: storage.customModels,
+    customModels,
   };
 }
 

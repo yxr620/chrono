@@ -7,7 +7,7 @@ import {
 } from '../src/services/ai/managedAiModelLabel';
 
 test('formatManagedAiModel shows the server model when present', () => {
-  assert.equal(formatManagedAiModel(' qwen3.6-max-preview '), 'qwen3.6-max-preview');
+  assert.equal(formatManagedAiModel(' deepseek-v4-pro-0813 '), 'deepseek-v4-pro-0813');
 });
 
 test('formatManagedAiModel falls back when the server does not expose a model', () => {
@@ -17,7 +17,7 @@ test('formatManagedAiModel falls back when the server does not expose a model', 
 
 test('formatManagedAiUsageLabel includes the managed model in the usage summary', () => {
   assert.equal(
-    formatManagedAiUsageLabel('qwen3.6-max-preview'),
-    '当前使用 Chrono 托管 AI · qwen3.6-max-preview',
+    formatManagedAiUsageLabel('deepseek-v4-pro-0813'),
+    '当前使用 Chrono 托管 AI · deepseek-v4-pro-0813',
   );
 });

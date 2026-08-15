@@ -152,7 +152,7 @@ VITE_OSS_ACCESS_KEY_SECRET=your-access-key-secret
 VITE_AI_PROVIDER_ID=qwen
 VITE_AI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 VITE_AI_API_KEY=your-api-key
-VITE_AI_MODEL=qwen3.6-max-preview
+VITE_AI_MODEL=deepseek-v4-pro-0813
 ```
 
 > **优先级**：应用内配置（localStorage）> .env 环境变量。两项均未配置时，对应功能不可用，但应用正常运行。

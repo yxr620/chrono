@@ -7,13 +7,13 @@ test('feature flags include the managed AI model advertised to clients', () => {
   const flags = featureFlagsForEmail('YXR620@gmail.com', {
     allowedSyncEmails: ['other@example.com'],
     allowedAiEmails: ['yxr620@gmail.com'],
-    aiModel: 'qwen3.6-max-preview',
+    aiModel: 'deepseek-v4-pro-0813',
   });
 
   assert.deepEqual(flags, {
     sync: false,
     ai: true,
-    aiModel: 'qwen3.6-max-preview',
+    aiModel: 'deepseek-v4-pro-0813',
   });
 });
 

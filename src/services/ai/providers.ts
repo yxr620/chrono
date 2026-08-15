@@ -16,7 +16,7 @@ export const AI_PROVIDERS: AIProvider[] = [
     id: 'qwen',
     name: '阿里云百炼',
     baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    models: ['qwen3.6-max-preview', 'qwen3.6-plus', 'qwen3.6-flash'],
+    models: ['deepseek-v4-pro-0813', 'deepseek-v4-flash-0731', 'qwen3.8-2.4t-a95b'],
     placeholder: 'sk-...',
   },
   {
@@ -66,4 +66,18 @@ export const AI_PROVIDERS: AIProvider[] = [
 /** 根据 id 查找 provider */
 export function getProvider(id: string): AIProvider | undefined {
   return AI_PROVIDERS.find(p => p.id === id);
+}
+
+/** 已从阿里云预设中下线的 Qwen 3.5 / 3.6 系列。 */
+export function isRetiredAIProviderModel(providerId: string, model: string): boolean {
+  return providerId === 'qwen' && /^qwen3\.(?:5|6)(?:[.-]|$)/i.test(model.trim());
+}
+
+/** 空模型和已下线模型统一回退到当前 provider 的首选模型。 */
+export function resolveAIProviderModel(providerId: string, model?: string): string {
+  const normalized = model?.trim() || '';
+  if (normalized && !isRetiredAIProviderModel(providerId, normalized)) {
+    return normalized;
+  }
+  return getProvider(providerId)?.models[0] || '';
 }
