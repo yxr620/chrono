@@ -7,7 +7,7 @@ import './MaintenancePage.css';
 type TabId = 'sleep' | 'validation' | 'categories';
 
 export const MaintenancePage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabId>('sleep');
+  const [activeTab, setActiveTab] = useState<TabId>('validation');
 
   return (
     <div className="maintenance-page">

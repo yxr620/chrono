@@ -1,19 +1,26 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import dayjs from 'dayjs';
 import { dataService, type OverlapPair, type Anomaly } from '../../services/dataService';
 import { useEntryStore } from '../../stores/entryStore';
 import { useCategoryStore } from '../../stores/categoryStore';
 
+const canTrimEntryB = (pair: OverlapPair) => (
+  pair.entryA.endTime !== null
+  && pair.entryB.endTime !== null
+  && new Date(pair.entryA.endTime).getTime() < new Date(pair.entryB.endTime).getTime()
+);
+
 export const DataValidationTab: React.FC = () => {
   const [overlaps, setOverlaps] = useState<OverlapPair[]>([]);
   const [anomalies, setAnomalies] = useState<Anomaly[]>([]);
   const [phase, setPhase] = useState<'idle' | 'results'>('idle');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const hasStartedInitialScan = useRef(false);
 
   const { loadEntries } = useEntryStore();
   const { getCategoryName } = useCategoryStore();
 
-  const handleScan = async () => {
+  const handleScan = useCallback(async () => {
     setIsLoading(true);
     try {
       const [o, a] = await Promise.all([
@@ -26,14 +33,27 @@ export const DataValidationTab: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const handleTrimOverlap = async (pair: OverlapPair) => {
-    await dataService.entries.update(pair.entryA.id!, {
-      endTime: pair.entryB.startTime,
-    });
+  useEffect(() => {
+    if (hasStartedInitialScan.current) return;
+    hasStartedInitialScan.current = true;
+    void handleScan();
+  }, [handleScan]);
+
+  const handleTrimOverlap = async (pair: OverlapPair, target: 'A' | 'B') => {
+    if (target === 'A') {
+      await dataService.entries.update(pair.entryA.id!, {
+        endTime: pair.entryB.startTime,
+      });
+    } else {
+      if (!canTrimEntryB(pair)) return;
+      await dataService.entries.update(pair.entryB.id!, {
+        startTime: pair.entryA.endTime!,
+      });
+    }
     await loadEntries();
-    setOverlaps(prev => prev.filter(p => p !== pair));
+    await handleScan();
   };
 
   const handleDeleteEntry = async (id: string) => {
@@ -100,9 +120,17 @@ export const DataValidationTab: React.FC = () => {
               <div className="validation-item-actions">
                 <button
                   className="btn-trim"
-                  onClick={() => handleTrimOverlap(pair)}
+                  onClick={() => handleTrimOverlap(pair, 'A')}
                 >
                   截断A至{dayjs(pair.entryB.startTime).format('HH:mm')}
+                </button>
+                <button
+                  className="btn-trim"
+                  onClick={() => handleTrimOverlap(pair, 'B')}
+                  disabled={!canTrimEntryB(pair)}
+                  title={canTrimEntryB(pair) ? undefined : 'A 已完全覆盖 B，无法截断 B'}
+                >
+                  截断B自{dayjs(pair.entryA.endTime).format('HH:mm')}
                 </button>
                 <button
                   className="btn-delete"

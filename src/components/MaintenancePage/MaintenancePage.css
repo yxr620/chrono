@@ -181,6 +181,7 @@
 
 .validation-item-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
@@ -195,8 +196,13 @@
   transition: all 0.15s;
 }
 
-.validation-item-actions button:hover {
+.validation-item-actions button:hover:not(:disabled) {
   background: hsl(var(--accent));
+}
+
+.validation-item-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .validation-item-actions button.btn-trim {
