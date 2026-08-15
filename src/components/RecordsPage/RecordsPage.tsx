@@ -3,6 +3,8 @@ import { TimeEntryForm } from '../TimeTracker/TimeEntryForm';
 import { TimelineView } from '../TimelineView/TimelineView';
 import { EntryList } from '../EntryList/EntryList';
 import { useDateStore } from '../../stores/dateStore';
+import { useEntryStore } from '../../stores/entryStore';
+import { detectEntryOverlaps } from '../../services/entryOverlaps';
 import dayjs from 'dayjs';
 import './RecordsPage.css';
 
@@ -11,8 +13,24 @@ const NEW_ENTRY_MOTION_LIFETIME_MS = 700;
 export const RecordsPage: React.FC = () => {
   const selectedDateStr = useDateStore(state => state.selectedDate);
   const setSelectedDate = useDateStore(state => state.setSelectedDate);
+  const entries = useEntryStore(state => state.entries);
 
   const selectedDate = useMemo(() => dayjs(selectedDateStr).toDate(), [selectedDateStr]);
+  const dailyOverlapStatus = useMemo(() => {
+    const dayStart = dayjs(selectedDate).startOf('day');
+    const overlaps = detectEntryOverlaps(entries, {
+      start: dayStart.toDate(),
+      end: dayStart.add(1, 'day').toDate(),
+    });
+    const entryIds = new Set<string>();
+
+    for (const pair of overlaps) {
+      if (pair.entryA.id) entryIds.add(pair.entryA.id);
+      if (pair.entryB.id) entryIds.add(pair.entryB.id);
+    }
+
+    return { count: overlaps.length, entryIds };
+  }, [entries, selectedDate]);
 
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
   const [animatedEntryId, setAnimatedEntryId] = useState<string | null>(null);
@@ -51,6 +69,7 @@ export const RecordsPage: React.FC = () => {
             selectedDate={selectedDate}
             onDateChange={(date) => setSelectedDate(date)}
             animatedEntryId={animatedEntryId}
+            overlapCount={dailyOverlapStatus.count}
           />
         </div>
 
@@ -63,7 +82,11 @@ export const RecordsPage: React.FC = () => {
           </div>
           <div className="records-col-right">
             <div className="records-section">
-              <EntryList selectedDate={selectedDate} animatedEntryId={animatedEntryId} />
+              <EntryList
+                selectedDate={selectedDate}
+                animatedEntryId={animatedEntryId}
+                overlappingEntryIds={dailyOverlapStatus.entryIds}
+              />
             </div>
           </div>
         </div>
@@ -84,12 +107,17 @@ export const RecordsPage: React.FC = () => {
           selectedDate={selectedDate}
           onDateChange={(date) => setSelectedDate(date)}
           animatedEntryId={animatedEntryId}
+          overlapCount={dailyOverlapStatus.count}
         />
       </div>
 
       {/* 当日记录列表 */}
       <div className="records-section">
-        <EntryList selectedDate={selectedDate} animatedEntryId={animatedEntryId} />
+        <EntryList
+          selectedDate={selectedDate}
+          animatedEntryId={animatedEntryId}
+          overlappingEntryIds={dailyOverlapStatus.entryIds}
+        />
       </div>
     </div>
   );

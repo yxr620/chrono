@@ -361,12 +361,12 @@ dataService.categories.list()
 
 - **findGaps**：按天遍历，计算相邻记录间的空白（含第一条前、最后一条后、整天无记录）
 - **findSleepGaps**：在 findGaps 基础上筛选与睡眠窗口（默认 22:00-10:00）有交集的 gap
-- **findOverlaps**：按 startTime 升序检查相邻记录是否重叠
+- **findOverlaps**：复用 `entryOverlaps` 的区间扫描，找出全部重叠记录对（包含嵌套和跨日重叠）
 - **findAnomalies**：检测 `reversed_time`（结束早于开始）、`too_long`（超 12h）、`stale_active`（计时超 24h）
 
 ### 数据维护页面（MaintenancePage）
 
-仅桌面端可见。**睡觉补录 Tab**：配置 → 扫描 → 预览/勾选 → 确认补录。**数据校验 Tab**：扫描重叠和异常 → 逐条截断或删除。
+仅桌面端可见。**睡觉补录 Tab**：配置 → 扫描 → 预览/勾选 → 确认补录。**数据校验 Tab（默认）**：进入后自动扫描重叠和异常 → 逐条截断或删除。RecordsPage 复用相同的重叠检测逻辑，在 Timeline 日期和涉及重叠的记录旁显示警示图标。
 
 ## TimeEntryForm 自动时间选择（应用核心机制）
 

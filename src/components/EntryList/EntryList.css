@@ -1,8 +1,13 @@
 .entry-list-container {
+  --entry-overlap-warning: #d97706;
   padding-top: 0;
   background: hsl(var(--card));
   border-radius: 16px;
   overflow: hidden;
+}
+
+.dark .entry-list-container {
+  --entry-overlap-warning: #fbbf24;
 }
 
 .entry-list-empty {
@@ -138,6 +143,18 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   letter-spacing: 0.01em;
+}
+
+.entry-overlap-warning {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  color: var(--entry-overlap-warning);
+  font-size: 15px;
+  line-height: 1;
 }
 
 .entry-item-memo-toggle {

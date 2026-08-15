@@ -5,7 +5,8 @@ import { useCategoryStore } from '../../stores/categoryStore';
 import { useGoalStore } from '../../stores/goalStore';
 import type { TimeEntry } from '../../services/db';
 import dayjs from 'dayjs';
-import { IonDatetime, IonModal } from '@ionic/react';
+import { IonDatetime, IonIcon, IonModal } from '@ionic/react';
+import { alertCircleOutline } from 'ionicons/icons';
 import { WheelMonthYearPicker } from '../common/WheelTimePicker';
 import { useDarkMode } from '../../hooks/useDarkMode';
 import { calculateDailyCoverage, calculateWeeklyCoverage } from '../../services/weeklyCoverage';
@@ -32,6 +33,7 @@ interface TimelineViewProps {
   selectedDate: Date;
   onDateChange: (date: Date) => void;
   animatedEntryId?: string | null;
+  overlapCount?: number;
 }
 
 const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日'];
@@ -58,6 +60,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   selectedDate,
   onDateChange,
   animatedEntryId = null,
+  overlapCount = 0,
 }) => {
   const { entries, loadEntries, setNextStartTime, setTimeRange, getEarliestEntryDate } = useEntryStore();
   const { loadCategories, getCategoryColor } = useCategoryStore();
@@ -388,6 +391,16 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
             onClick={openDatePicker}
           >
             {dayjs(selectedDate).format('YYYY-MM-DD')}
+            {overlapCount > 0 && (
+              <span
+                className="timeline-overlap-warning"
+                title={`当天存在 ${overlapCount} 组时间重叠`}
+                role="img"
+                aria-label={`当天存在 ${overlapCount} 组时间重叠`}
+              >
+                <IonIcon icon={alertCircleOutline} aria-hidden="true" />
+              </span>
+            )}
             {!isToday && (
               <button
                 onClick={(e) => { e.stopPropagation(); goToToday(); }}

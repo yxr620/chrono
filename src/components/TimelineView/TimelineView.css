@@ -1,6 +1,7 @@
 .timeline-view {
   --timeline-week-accent: #718096;
   --timeline-now-marker: #ff4d4f;
+  --timeline-overlap-warning: #d97706;
   --timeline-track-height: 8px;
   padding: 10px 16px 8px;
   background: hsl(var(--card));
@@ -13,6 +14,7 @@
 .dark .timeline-view {
   --timeline-week-accent: #94a3b8;
   --timeline-now-marker: #ff4d4f;
+  --timeline-overlap-warning: #fbbf24;
 }
 
 /* ── Header：日期导航 + 周记录覆盖率 合并一行 ── */
@@ -50,6 +52,18 @@
 
 .date-display-clickable:active {
   background: hsl(var(--accent));
+}
+
+.timeline-overlap-warning {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  color: var(--timeline-overlap-warning);
+  font-size: 15px;
+  line-height: 1;
 }
 
 .date-nav-btn {

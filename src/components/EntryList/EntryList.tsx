@@ -3,7 +3,7 @@ import {
   IonIcon,
   IonList
 } from '@ionic/react';
-import { chatbubbleEllipsesOutline } from 'ionicons/icons';
+import { alertCircleOutline, chatbubbleEllipsesOutline } from 'ionicons/icons';
 import { useEntryStore } from '../../stores/entryStore';
 import { useGoalStore } from '../../stores/goalStore';
 import { useCategoryStore } from '../../stores/categoryStore';
@@ -16,9 +16,14 @@ import './EntryList.css';
 interface EntryListProps {
   selectedDate?: Date;
   animatedEntryId?: string | null;
+  overlappingEntryIds?: ReadonlySet<string>;
 }
 
-export const EntryList: React.FC<EntryListProps> = ({ selectedDate, animatedEntryId = null }) => {
+export const EntryList: React.FC<EntryListProps> = ({
+  selectedDate,
+  animatedEntryId = null,
+  overlappingEntryIds,
+}) => {
   const { entries, loadEntries, deleteEntry, updateEntry, setNextStartTime } = useEntryStore();
   const { goals, loadGoals } = useGoalStore();
   const { loadCategories, getCategoryColor } = useCategoryStore();
@@ -122,6 +127,16 @@ export const EntryList: React.FC<EntryListProps> = ({ selectedDate, animatedEntr
                     <span className="entry-item-title">
                       {entry.activity}
                     </span>
+                    {entry.id && overlappingEntryIds?.has(entry.id) && (
+                      <span
+                        className="entry-overlap-warning"
+                        title="此记录与其他记录时间重叠"
+                        role="img"
+                        aria-label="此记录与其他记录时间重叠"
+                      >
+                        <IonIcon icon={alertCircleOutline} aria-hidden="true" />
+                      </span>
+                    )}
                     {entry.memo && entry.id && (
                       <button
                         type="button"

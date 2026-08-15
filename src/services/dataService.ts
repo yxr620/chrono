@@ -5,6 +5,9 @@ import { tryMergeWithLeftNeighbor } from './autoMerge';
 import dayjs from 'dayjs';
 import { resolveEntryCategoryId } from './entryCategoryAssignment';
 import { invalidatePredictionCache } from './metadataPredictor';
+import { detectEntryOverlaps, type OverlapPair } from './entryOverlaps';
+
+export type { OverlapPair } from './entryOverlaps';
 
 // ============ Types ============
 
@@ -17,12 +20,6 @@ export interface TimeGap {
 export interface SleepCandidate extends TimeGap {
   date: string;  // 归属日期（取 end 所在日期）
   isFullDayEmpty: boolean;
-}
-
-export interface OverlapPair {
-  entryA: TimeEntry;
-  entryB: TimeEntry;
-  overlapMinutes: number;
 }
 
 export interface Anomaly {
@@ -371,32 +368,18 @@ async function findOverlaps(options?: {
   startDate?: string;
   endDate?: string;
 }): Promise<OverlapPair[]> {
-  const entries = await queryEntries({
-    startDate: options?.startDate,
-    endDate: options?.endDate,
-  });
+  const entries = await queryEntries();
+  const rangeStart = options?.startDate
+    ? dayjs(options.startDate).startOf('day').toDate()
+    : undefined;
+  const rangeEnd = options?.endDate
+    ? dayjs(options.endDate).add(1, 'day').startOf('day').toDate()
+    : undefined;
 
-  const completed = entries.filter(e => e.endTime !== null);
-  const overlaps: OverlapPair[] = [];
-
-  for (let i = 0; i < completed.length - 1; i++) {
-    const a = completed[i];
-    const b = completed[i + 1];
-
-    const aEnd = new Date(a.endTime!).getTime();
-    const bStart = new Date(b.startTime).getTime();
-
-    if (aEnd > bStart) {
-      const overlapMs = aEnd - bStart;
-      overlaps.push({
-        entryA: a,
-        entryB: b,
-        overlapMinutes: Math.round(overlapMs / 60000),
-      });
-    }
-  }
-
-  return overlaps;
+  return detectEntryOverlaps(
+    entries,
+    rangeStart || rangeEnd ? { start: rangeStart, end: rangeEnd } : undefined,
+  );
 }
 
 // ============ Maintenance: findAnomalies ============
