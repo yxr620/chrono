@@ -3,6 +3,8 @@
   --timeline-now-marker: #ff4d4f;
   --timeline-overlap-warning: #d97706;
   --timeline-track-height: 8px;
+  --timeline-coverage-value-width: 35px;
+  --timeline-coverage-value-gap: 9px;
   padding: 10px 16px 8px;
   background: hsl(var(--card));
   border-radius: 16px;
@@ -30,6 +32,7 @@
   align-items: center;
   gap: 2px;
   min-width: 0;
+  flex: 0 0 auto;
 }
 
 .date-display {
@@ -40,6 +43,17 @@
   gap: 6px;
   color: hsl(var(--foreground));
   letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.timeline-date-label {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.timeline-date-label-compact,
+.today-label-compact {
+  display: none;
 }
 
 .date-display-clickable {
@@ -128,6 +142,8 @@
   font-size: 11px;
   cursor: pointer;
   font-weight: 500;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .today-btn:active {
@@ -140,7 +156,7 @@
   flex: 0 1 154px;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--timeline-coverage-value-gap);
 }
 
 .timeline-week-coverage-label {
@@ -152,8 +168,8 @@
 }
 
 .timeline-week-coverage-value {
-  min-width: 34px;
-  flex: 0 0 34px;
+  min-width: var(--timeline-coverage-value-width);
+  flex: 0 0 var(--timeline-coverage-value-width);
   color: var(--timeline-week-accent);
   font-family: var(--app-number-family);
   font-size: 12px;
@@ -183,7 +199,7 @@
 .timeline-day-row {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: var(--timeline-coverage-value-gap);
 }
 
 .timeline-container {
@@ -288,8 +304,8 @@
 }
 
 .timeline-day-coverage-value {
-  min-width: 35px;
-  flex: 0 0 35px;
+  min-width: var(--timeline-coverage-value-width);
+  flex: 0 0 var(--timeline-coverage-value-width);
   color: hsl(var(--muted-foreground));
   font-family: var(--app-number-family);
   font-size: 12px;
@@ -400,9 +416,27 @@
     font-size: 14px;
   }
 
+  .timeline-date-label-full {
+    display: none;
+  }
+
+  .timeline-date-label-compact {
+    display: inline;
+  }
+
   .timeline-week-coverage {
     width: 142px;
     flex-basis: 142px;
+  }
+}
+
+@media (max-width: 340px) {
+  .today-label-default {
+    display: none;
+  }
+
+  .today-label-compact {
+    display: inline;
   }
 }
 

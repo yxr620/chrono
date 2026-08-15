@@ -41,6 +41,29 @@ test('timeline uses horizontal weekly coverage and a compact daily percentage ro
   assert.doesNotMatch(css, /--timeline-now-halo/);
 });
 
+test('mobile timeline keeps date controls compact and coverage tracks right-aligned', async () => {
+  const [component, css] = await Promise.all([
+    readProjectFile('src/components/TimelineView/TimelineView.tsx'),
+    readProjectFile('src/components/TimelineView/TimelineView.css'),
+  ]);
+
+  assert.match(component, /format\('YYYY-MM-DD'\)/);
+  assert.match(component, /format\('MM-DD'\)/);
+  assert.match(component, /className="timeline-date-label-full"/);
+  assert.match(component, /className="timeline-date-label-compact"/);
+  assert.match(component, /className="today-label-compact"/);
+  assert.match(css, /\.date-display\s*\{[^}]*white-space:\s*nowrap/s);
+  assert.match(css, /\.today-btn\s*\{[^}]*white-space:\s*nowrap/s);
+  assert.match(css, /--timeline-coverage-value-width:\s*35px/);
+  assert.match(css, /--timeline-coverage-value-gap:\s*9px/);
+  assert.match(css, /\.timeline-week-coverage\s*\{[^}]*gap:\s*var\(--timeline-coverage-value-gap\)/s);
+  assert.match(css, /\.timeline-day-row\s*\{[^}]*gap:\s*var\(--timeline-coverage-value-gap\)/s);
+  assert.match(css, /\.timeline-week-coverage-value\s*\{[^}]*flex:\s*0 0 var\(--timeline-coverage-value-width\)/s);
+  assert.match(css, /\.timeline-day-coverage-value\s*\{[^}]*flex:\s*0 0 var\(--timeline-coverage-value-width\)/s);
+  assert.match(css, /@media \(max-width:\s*768px\)[\s\S]*?\.timeline-date-label-full\s*\{[^}]*display:\s*none/s);
+  assert.match(css, /@media \(max-width:\s*340px\)[\s\S]*?\.today-label-compact\s*\{[^}]*display:\s*inline/s);
+});
+
 test('successful pull events reload the data stores used by the timeline', async () => {
   const app = await readProjectFile('src/App.tsx');
 

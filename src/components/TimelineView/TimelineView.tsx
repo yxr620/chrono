@@ -340,6 +340,8 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     : false;
 
   const isToday = dayjs(selectedDate).isSame(dayjs(), 'day');
+  const selectedDateLabel = dayjs(selectedDate).format('YYYY-MM-DD');
+  const compactSelectedDateLabel = dayjs(selectedDate).format('MM-DD');
 
   const weeklyCoverage = useMemo(
     () => calculateWeeklyCoverage(entries, selectedDate, new Date(nowTick)),
@@ -390,7 +392,18 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
             className="date-display date-display-clickable"
             onClick={openDatePicker}
           >
-            {dayjs(selectedDate).format('YYYY-MM-DD')}
+            <time
+              className="timeline-date-label"
+              dateTime={selectedDateLabel}
+              aria-label={selectedDateLabel}
+            >
+              <span className="timeline-date-label-full" aria-hidden="true">
+                {selectedDateLabel}
+              </span>
+              <span className="timeline-date-label-compact" aria-hidden="true">
+                {compactSelectedDateLabel}
+              </span>
+            </time>
             {overlapCount > 0 && (
               <span
                 className="timeline-overlap-warning"
@@ -405,8 +418,10 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
               <button
                 onClick={(e) => { e.stopPropagation(); goToToday(); }}
                 className="today-btn"
+                aria-label="回到今天"
               >
-                今天
+                <span className="today-label-default" aria-hidden="true">今天</span>
+                <span className="today-label-compact" aria-hidden="true">今</span>
               </button>
             )}
           </div>
