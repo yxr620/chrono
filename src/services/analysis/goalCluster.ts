@@ -216,6 +216,13 @@ function autoCluster(
     parent.set(goal.id!, goal.id!);
     rank.set(goal.id!, 0);
   }
+
+  interface PreparedGoalGroup {
+    goals: Goal[];
+    representativeId: string;
+    normalizedName: string;
+    tokens: Set<string>;
+  }
   
   function find(x: string): string {
     if (parent.get(x) !== x) {
@@ -243,16 +250,53 @@ function autoCluster(
     }
   }
   
-  // 计算相似度并合并
-  for (let i = 0; i < unassignedGoals.length; i++) {
-    for (let j = i + 1; j < unassignedGoals.length; j++) {
-      const goal1 = unassignedGoals[i];
-      const goal2 = unassignedGoals[j];
-      
-      const similarity = goalSimilarity(goal1.name, goal2.name);
-      
+  // 同名目标通常会每天重复创建。先合并同名项，再只对唯一名称做两两
+  // 比较；同时预先分词，避免在 O(n²) 循环里重复构造 token 集合。
+  const groupsByName = new Map<string, PreparedGoalGroup>();
+  for (const goal of unassignedGoals) {
+    const normalizedName = goal.name.toLowerCase().trim();
+    const existingGroup = groupsByName.get(normalizedName);
+    if (existingGroup) {
+      existingGroup.goals.push(goal);
+      union(existingGroup.representativeId, goal.id!);
+      continue;
+    }
+
+    groupsByName.set(normalizedName, {
+      goals: [goal],
+      representativeId: goal.id!,
+      normalizedName,
+      tokens: new Set(tokenize(goal.name)),
+    });
+  }
+
+  const preparedGroups = Array.from(groupsByName.values());
+  const similarityBetween = (left: PreparedGoalGroup, right: PreparedGoalGroup): number => {
+    let intersection = 0;
+    const [smaller, larger] = left.tokens.size <= right.tokens.size
+      ? [left.tokens, right.tokens]
+      : [right.tokens, left.tokens];
+    smaller.forEach(token => {
+      if (larger.has(token)) intersection += 1;
+    });
+
+    const unionSize = left.tokens.size + right.tokens.size - intersection;
+    const jaccard = unionSize > 0 ? intersection / unionSize : 0;
+    const hasContainment = left.normalizedName.includes(right.normalizedName)
+      || right.normalizedName.includes(left.normalizedName);
+
+    return hasContainment ? Math.max(jaccard, 0.6) : jaccard;
+  };
+
+  // 计算唯一名称之间的相似度并合并。
+  for (let i = 0; i < preparedGroups.length; i++) {
+    for (let j = i + 1; j < preparedGroups.length; j++) {
+      const goal1 = preparedGroups[i];
+      const goal2 = preparedGroups[j];
+      const similarity = similarityBetween(goal1, goal2);
+
       if (similarity >= threshold) {
-        union(goal1.id!, goal2.id!);
+        union(goal1.representativeId, goal2.representativeId);
       }
     }
   }

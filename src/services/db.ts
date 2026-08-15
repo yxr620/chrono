@@ -238,6 +238,28 @@ export class TimeTrackerDB extends Dexie {
 
 export const db = new TimeTrackerDB();
 
+// Analysis pages reuse a shared in-memory snapshot of these three tables. Keep a
+// lightweight revision here so every Dexie write path (including import and
+// sync, which do not always go through syncDb) invalidates that snapshot.
+let analysisDataRevision = 0;
+
+const bumpAnalysisDataRevision = () => {
+  analysisDataRevision += 1;
+};
+
+db.entries.hook('creating', bumpAnalysisDataRevision);
+db.entries.hook('updating', bumpAnalysisDataRevision);
+db.entries.hook('deleting', bumpAnalysisDataRevision);
+db.goals.hook('creating', bumpAnalysisDataRevision);
+db.goals.hook('updating', bumpAnalysisDataRevision);
+db.goals.hook('deleting', bumpAnalysisDataRevision);
+db.categories.hook('creating', bumpAnalysisDataRevision);
+db.categories.hook('updating', bumpAnalysisDataRevision);
+db.categories.hook('deleting', bumpAnalysisDataRevision);
+db.on('close', bumpAnalysisDataRevision);
+
+export const getAnalysisDataRevision = (): number => analysisDataRevision;
+
 /**
  * Ensure preset categories exist in the database.
  * Called as a safety net during loadCategories.

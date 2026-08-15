@@ -8,6 +8,7 @@ import {
   selectRecentMemos,
   type DashboardCategorySummaryItem,
 } from '../src/services/analysis/dashboardSummary';
+import { formatDuration } from '../src/services/analysis/processor';
 import type { TimeEntry } from '../src/services/db';
 
 const categoryItem = (index: number, value: number): DashboardCategorySummaryItem => ({
@@ -41,6 +42,11 @@ test('dashboard duration uses a compact hour and minute display', () => {
   assert.equal(formatDashboardDuration(60), '1H');
   assert.equal(formatDashboardDuration((704 * 60) + 32), '704H 32M');
   assert.equal(formatDashboardDuration(119.6), '2H');
+});
+
+test('analysis duration carries rounded minutes into the hour', () => {
+  assert.equal(formatDuration(119.6), '2小时');
+  assert.equal(formatDuration(1439.6), '24小时');
 });
 
 test('category summary displays all categories when there are at most six', () => {

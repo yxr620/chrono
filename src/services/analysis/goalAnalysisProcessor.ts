@@ -4,7 +4,6 @@
  */
 
 import dayjs from 'dayjs';
-import { db } from '../db';
 import type { TimeEntry, Goal } from '../db';
 import { getAnalysisClusterColor } from './displayColors';
 import {
@@ -24,6 +23,7 @@ import type {
 } from '../../types/goalAnalysis';
 import type { DateRange } from '../../types/analysis';
 import { clipTimeEntryToDateRange, splitIntervalByDay } from './processor';
+import { getAnalysisDataSnapshot } from './dataCache';
 
 /**
  * 加载目标分析所需的原始数据
@@ -31,20 +31,32 @@ import { clipTimeEntryToDateRange, splitIntervalByDay } from './processor';
 export async function loadGoalAnalysisData(dateRange: DateRange): Promise<{
   entries: TimeEntry[];
   goals: Goal[];
+  revision: number;
 }> {
+  const snapshot = await getAnalysisDataSnapshot();
+
   // 加载与时间范围相交的所有记录，并裁剪到范围边界
-  const allEntries = await db.entries.toArray();
-  const entries = allEntries
+  const entries = snapshot.entries
     .map(entry => (entry.deleted ? null : clipTimeEntryToDateRange(entry, dateRange)))
     .filter((entry): entry is TimeEntry => entry !== null);
 
   // 加载所有目标（不限制日期范围，因为聚类需要看全局）
   // check 型目标（吃药/早休息等）不参与时长分析
-  let goals = await db.goals.toArray();
-  goals = goals.filter(g => !g.deleted && (g.type ?? 'time') !== 'check');
+  const goals = snapshot.goals.filter(g => !g.deleted && (g.type ?? 'time') !== 'check');
 
-  return { entries, goals };
+  return { entries, goals, revision: snapshot.revision };
 }
+
+let goalAnalysisCacheRevision = -1;
+const goalAnalysisCache = new Map<string, Promise<GoalAnalysisResult>>();
+
+const getGoalAnalysisCacheKey = (dateRange: DateRange, settings: ClusterSettings): string => (
+  JSON.stringify({
+    start: dateRange.start.getTime(),
+    end: dateRange.end.getTime(),
+    settings,
+  })
+);
 
 /**
  * 计算聚类的统计指标
@@ -237,7 +249,39 @@ export async function analyzeGoals(
   settings: ClusterSettings = DEFAULT_CLUSTER_SETTINGS
 ): Promise<GoalAnalysisResult> {
   // 1. 加载数据
-  const { entries, goals } = await loadGoalAnalysisData(dateRange);
+  const { entries, goals, revision } = await loadGoalAnalysisData(dateRange);
+
+  if (goalAnalysisCacheRevision !== revision) {
+    goalAnalysisCache.clear();
+    goalAnalysisCacheRevision = revision;
+  }
+
+  const cacheKey = getGoalAnalysisCacheKey(dateRange, settings);
+  const cached = goalAnalysisCache.get(cacheKey);
+  if (cached) return cached;
+
+  const analysisPromise = Promise.resolve().then(() => analyzeLoadedGoals(
+    entries,
+    goals,
+    dateRange,
+    settings,
+  ));
+  goalAnalysisCache.set(cacheKey, analysisPromise);
+
+  try {
+    return await analysisPromise;
+  } catch (error) {
+    goalAnalysisCache.delete(cacheKey);
+    throw error;
+  }
+}
+
+function analyzeLoadedGoals(
+  entries: TimeEntry[],
+  goals: Goal[],
+  dateRange: DateRange,
+  settings: ClusterSettings,
+): GoalAnalysisResult {
 
   // 2. 执行聚类
   const clusters = clusterGoals(goals, settings);

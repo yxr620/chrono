@@ -5,7 +5,7 @@
 .trend-editorial-page {
   width: 100%;
   min-height: 100%;
-  padding: 32px 36px 44px;
+  padding: 32px clamp(28px, 3vw, 48px) 48px;
   background:
     radial-gradient(circle at top left, rgba(132, 96, 55, 0.06), transparent 24%),
     linear-gradient(180deg, #efe7dc 0%, #f4ede4 100%);
@@ -34,13 +34,27 @@
 
 .trend-heading-group {
   display: flex;
-  align-items: flex-end;
-  gap: 14px;
+  flex-direction: column;
+  align-items: flex-start;
   min-width: 0;
 }
 
+.trend-header-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 24px;
+  margin-bottom: 8px;
+}
+
+.trend-header-divider {
+  width: 1px;
+  height: 12px;
+  background: rgba(67, 51, 35, 0.18);
+}
+
 .trend-kicker {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 11px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -57,39 +71,34 @@
   letter-spacing: -0.04em;
 }
 
-.trend-header-meta {
-  margin: 8px 0 0;
-  font-family: var(--app-number-family);
-  font-variant-numeric: tabular-nums;
-  font-size: 13px;
-  color: #6d6155;
-  line-height: 1.7;
-}
-
 .trend-back-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
-  border: 1px solid rgba(67, 51, 35, 0.08);
-  background: rgba(255, 255, 255, 0.36);
-  border-radius: 12px;
+  gap: 5px;
+  width: auto;
+  height: auto;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  border-radius: 4px;
+  color: #75685c;
   cursor: pointer;
-  transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  transition: color 0.18s ease;
 }
 
 .trend-back-btn:hover,
 .trend-back-btn:focus-visible {
-  transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.52);
-  border-color: rgba(67, 51, 35, 0.14);
+  color: #1d1712;
   outline: none;
 }
 
 .trend-back-btn ion-icon {
-  font-size: 20px;
-  color: #6f6256;
+  font-size: 14px;
+  color: currentColor;
 }
 
 .trend-filters {
@@ -155,11 +164,8 @@
 }
 
 .trend-chapter-card {
-  padding: 24px;
-  background: rgba(255, 255, 255, 0.42);
-  border: 1px solid rgba(67, 51, 35, 0.08);
-  border-radius: 28px;
-  box-shadow: 0 30px 80px -52px rgba(63, 43, 21, 0.34);
+  padding: 26px 0 0;
+  border-top: 1px solid rgba(67, 51, 35, 0.1);
 }
 
 .trend-section-header {
@@ -193,14 +199,32 @@
 }
 
 .trend-chart-card {
-  background: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.2);
   border: 1px solid rgba(67, 51, 35, 0.08);
-  border-radius: 18px;
+  border-radius: 14px;
   padding: 18px;
 }
 
 .trend-area-overview {
-  margin-bottom: 22px;
+  margin-bottom: 24px;
+  padding: 0 0 24px;
+  border: 0;
+  border-bottom: 1px solid rgba(67, 51, 35, 0.1);
+  border-radius: 0;
+  background: transparent;
+}
+
+.trend-editorial-page button:focus {
+  outline: none;
+}
+
+.trend-editorial-page button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(67, 51, 35, 0.2);
+}
+
+.trend-back-btn:focus-visible {
+  box-shadow: 0 2px 0 rgba(67, 51, 35, 0.28);
 }
 
 .trend-editorial-grid {
