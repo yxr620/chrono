@@ -30,6 +30,7 @@ import {
 import { Capacitor } from '@capacitor/core';
 import { Keyboard } from '@capacitor/keyboard';
 import type { PluginListenerHandle } from '@capacitor/core';
+import type { KeyboardInfo } from '@capacitor/keyboard';
 import { useGoalStore } from '../../stores/goalStore';
 import { useEntryStore } from '../../stores/entryStore';
 import { useDateStore } from '../../stores/dateStore';
@@ -41,9 +42,20 @@ import type { Goal } from '../../services/db';
 import { suggestGoals } from '../../services/goalSuggester';
 import { TimeInjectionMatrix } from './TimeInjectionMatrix';
 import { shouldSubmitGoalFromKeyboard } from './keyboardShortcuts';
+import { getGoalModalKeyboardBreakpoint } from './modalLayout';
 import './GoalManager.css';
 
 dayjs.extend(isSameOrBefore);
+
+const getFormHeight = (element: HTMLDivElement | null, fallback: number) => {
+  const measuredHeight = element?.getBoundingClientRect().height ?? 0;
+  return measuredHeight > 0 ? measuredHeight : fallback;
+};
+
+const getSheetBreakpoints = (base: number, keyboard?: number) =>
+  keyboard === undefined || keyboard === base
+    ? [0, base]
+    : [0, base, keyboard];
 
 export const GoalManager: React.FC = () => {
   const { isDark } = useDarkMode();
@@ -78,28 +90,45 @@ export const GoalManager: React.FC = () => {
   const editInputRef = useRef<HTMLIonInputElement>(null);
   const addModalRef = useRef<HTMLIonModalElement>(null);
   const editModalRef = useRef<HTMLIonModalElement>(null);
+  const addFormRef = useRef<HTMLDivElement>(null);
+  const editFormRef = useRef<HTMLDivElement>(null);
 
   // Both platforms have keyboard-overlay behaviour (iOS natively; Android via
   // windowSoftInputMode=adjustNothing in AndroidManifest). iOS at 0.42 fits
   // the content above the native keyboard. Android keyboards vary in height,
-  // so on Android we start at 0.55 and grow to KEYBOARD_UP_BREAKPOINT while
-  // the keyboard is visible (see effect below).
+  // so their keyboard-up breakpoint is calculated from the actual keyboard
+  // and form heights instead of expanding the sheet to a mostly empty 0.9.
   const isIOS = Capacitor.getPlatform() === 'ios';
   const isAndroid = Capacitor.getPlatform() === 'android';
   const modalBreakpoint = isIOS ? 0.42 : 0.55;
-  const KEYBOARD_UP_BREAKPOINT = 0.9;
+  const [keyboardBreakpoints, setKeyboardBreakpoints] = useState<{
+    add: number;
+    edit: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!isAndroid) return;
     const handles: PluginListenerHandle[] = [];
 
-    const liftAll = () => {
-      void addModalRef.current?.setCurrentBreakpoint(KEYBOARD_UP_BREAKPOINT);
-      void editModalRef.current?.setCurrentBreakpoint(KEYBOARD_UP_BREAKPOINT);
+    const liftAll = (info: KeyboardInfo) => {
+      const viewportHeight = window.innerHeight;
+      setKeyboardBreakpoints({
+        add: getGoalModalKeyboardBreakpoint({
+          viewportHeight,
+          keyboardHeight: info.keyboardHeight,
+          contentHeight: getFormHeight(addFormRef.current, 180),
+          baseBreakpoint: modalBreakpoint,
+        }),
+        edit: getGoalModalKeyboardBreakpoint({
+          viewportHeight,
+          keyboardHeight: info.keyboardHeight,
+          contentHeight: getFormHeight(editFormRef.current, 120),
+          baseBreakpoint: modalBreakpoint,
+        }),
+      });
     };
     const restoreAll = () => {
-      void addModalRef.current?.setCurrentBreakpoint(modalBreakpoint);
-      void editModalRef.current?.setCurrentBreakpoint(modalBreakpoint);
+      setKeyboardBreakpoints(null);
     };
 
     Keyboard.addListener('keyboardWillShow', liftAll)
@@ -113,6 +142,27 @@ export const GoalManager: React.FC = () => {
       handles.forEach((h) => { void h.remove(); });
     };
   }, [isAndroid, modalBreakpoint]);
+
+  useEffect(() => {
+    if (!isAndroid) return;
+
+    if (showAddGoal) {
+      void addModalRef.current?.setCurrentBreakpoint(
+        keyboardBreakpoints?.add ?? modalBreakpoint,
+      );
+    }
+    if (showEditGoal) {
+      void editModalRef.current?.setCurrentBreakpoint(
+        keyboardBreakpoints?.edit ?? modalBreakpoint,
+      );
+    }
+  }, [
+    isAndroid,
+    keyboardBreakpoints,
+    modalBreakpoint,
+    showAddGoal,
+    showEditGoal,
+  ]);
 
   const { goals, loadGoals, addGoal, updateGoal, deleteGoal, toggleCompletion } = useGoalStore();
   const { entries, loadEntries, getEarliestEntryDate } = useEntryStore();
@@ -864,10 +914,15 @@ export const GoalManager: React.FC = () => {
       <IonModal
         ref={addModalRef}
         isOpen={showAddGoal}
-        onDidDismiss={() => { setShowAddGoal(false); setNewGoalType('time'); setNewGoalName(''); }}
+        onDidDismiss={() => {
+          setShowAddGoal(false);
+          setNewGoalType('time');
+          setNewGoalName('');
+          setKeyboardBreakpoints(null);
+        }}
         // balanced height to keep button visible above keyboard
         initialBreakpoint={modalBreakpoint}
-        breakpoints={[0, modalBreakpoint, KEYBOARD_UP_BREAKPOINT]}
+        breakpoints={getSheetBreakpoints(modalBreakpoint, keyboardBreakpoints?.add)}
         style={{ '--border-radius': '24px' }}
         onDidPresent={() => {
           setTimeout(() => {
@@ -876,7 +931,7 @@ export const GoalManager: React.FC = () => {
         }}
       >
         <IonContent className="ion-padding" style={{ '--padding-top': '16px', '--padding-bottom': '2px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div ref={addFormRef} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <IonSegment
               value={newGoalType}
               onIonChange={e => setNewGoalType((e.detail.value as 'time' | 'check') || 'time')}
@@ -946,10 +1001,11 @@ export const GoalManager: React.FC = () => {
           setShowEditGoal(false);
           setEditingGoal(null);
           setEditGoalName('');
+          setKeyboardBreakpoints(null);
         }}
         // balanced height to keep button visible above keyboard
         initialBreakpoint={modalBreakpoint}
-        breakpoints={[0, modalBreakpoint, KEYBOARD_UP_BREAKPOINT]}
+        breakpoints={getSheetBreakpoints(modalBreakpoint, keyboardBreakpoints?.edit)}
         style={{ '--border-radius': '24px' }}
         onDidPresent={() => {
           setTimeout(() => {
@@ -958,7 +1014,7 @@ export const GoalManager: React.FC = () => {
         }}
       >
         <IonContent className="ion-padding" style={{ '--padding-top': '16px', '--padding-bottom': '2px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div ref={editFormRef} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <div style={{ position: 'relative' }}>
               <IonInput
                 ref={editInputRef}
