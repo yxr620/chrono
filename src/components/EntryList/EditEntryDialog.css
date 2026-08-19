@@ -332,12 +332,15 @@
 
 .edit-dialog-time-badge-group {
   display: flex;
+  flex: 0 0 auto;
   gap: 6px;
 }
 
 .edit-dialog-time-badge {
+  flex: 0 0 auto;
   font-size: 11px;
   font-weight: 500;
+  white-space: nowrap;
   padding: 4px 10px;
   border: 0;
   border-radius: 12px;
