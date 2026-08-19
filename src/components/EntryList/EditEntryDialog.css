@@ -124,6 +124,12 @@
   --highlight-height: 0;
 }
 
+/* Android WebView 的字形基线略低；保持总 padding 不变，仅轻微上移文字。 */
+html.plt-android .edit-dialog-input {
+  --padding-top: 12.5px;
+  --padding-bottom: 15.5px;
+}
+
 .edit-dialog-input::part(native) {
   line-height: 1.35;
   resize: none;
