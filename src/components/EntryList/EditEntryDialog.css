@@ -330,16 +330,34 @@ html.plt-android .edit-dialog-input {
   line-height: 1;
 }
 
+/* 与上方时间行同构：[flex:1][auto][flex:1]，中间项恒居中，因此时长与箭头精确对齐 */
 .edit-dialog-time-badges {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 16px;
 }
 
 .edit-dialog-time-badge-group {
   display: flex;
-  flex: 0 0 auto;
+  flex: 1 1 0;
+  min-width: 0;
   gap: 6px;
+}
+
+.edit-dialog-time-badge-group.end {
+  justify-content: flex-end;
+}
+
+.edit-dialog-time-duration {
+  flex: 0 0 auto;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  color: hsl(var(--muted-foreground));
+  font-variant-numeric: tabular-nums;
 }
 
 .edit-dialog-time-badge {

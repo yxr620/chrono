@@ -211,6 +211,16 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
     showToast('已设为正在进行', 'success');
   };
 
+  // 时长（与主界面一致：结束时间为空或非正时长时不显示）
+  const durationLabel = (() => {
+    if (!endTime) return null;
+    const diffMinutes = dayjs(endTime).diff(dayjs(startTime), 'minute');
+    if (diffMinutes <= 0) return null;
+    const h = Math.floor(diffMinutes / 60);
+    const m = diffMinutes % 60;
+    return h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
+  })();
+
   if (!entry) return null;
 
   return (
@@ -379,7 +389,9 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
                   <button type="button" className="edit-dialog-time-badge" aria-label="将开始时间设为现在" onClick={() => setToNow(true)}>现在</button>
                   <button type="button" className="edit-dialog-time-badge" aria-label="将开始时间设为上一条记录的结束时间" onClick={setStartTimeToLastEnd}>上次</button>
                 </div>
-                <div className="edit-dialog-time-badge-group">
+                {/* 时长显示 */}
+                <span className="edit-dialog-time-duration">{durationLabel}</span>
+                <div className="edit-dialog-time-badge-group end">
                   <button type="button" className="edit-dialog-time-badge" aria-label="将结束时间设为现在" onClick={() => setToNow(false)}>现在</button>
                   <button type="button" className="edit-dialog-time-badge" aria-label="将结束时间设为下一条记录的开始时间" onClick={setEndTimeToNextStart}>下次</button>
                   <button type="button" className="edit-dialog-time-badge ongoing" aria-label="设为进行中，不设置结束时间" onClick={setEndTimeToOngoing}>进行中</button>
