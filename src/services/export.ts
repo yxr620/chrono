@@ -138,58 +138,6 @@ export const exportIncrementalJSON = async () => {
   await shareOrDownloadJSON(dataStr, filename);
 };
 
-// 时间范围导出 JSON
-export const exportToJSON = async (startDate?: Date, endDate?: Date) => {
-  const allEntries = await db.entries.toArray();
-  const allGoals = await db.goals.toArray();
-  const allCategories = await db.categories.toArray();
-  
-  // 过滤已删除的记录
-  let entries = allEntries.filter(e => !e.deleted);
-  let goals = allGoals.filter(g => !g.deleted);
-  const categories = cleanCategories(allCategories);
-  
-  if (startDate || endDate) {
-    entries = entries.filter(entry => {
-      const time = entry.startTime;
-      if (startDate && time < startDate) return false;
-      if (endDate && time > endDate) return false;
-      return true;
-    });
-    
-    // 如果有日期筛选，也筛选对应日期的目标
-    if (startDate || endDate) {
-      goals = goals.filter(goal => {
-        const goalDate = dayjs(goal.date);
-        if (startDate && goalDate.isBefore(dayjs(startDate), 'day')) return false;
-        if (endDate && goalDate.isAfter(dayjs(endDate), 'day')) return false;
-        return true;
-      });
-    }
-  }
-  
-  const exportData: ExportData = {
-    exportTime: new Date().toISOString(),
-    exportType: 'range',
-    data: {
-      entries,
-      goals,
-      categories
-    },
-    metadata: {
-      totalEntries: entries.length,
-      totalGoals: goals.length,
-      totalCategories: categories.length,
-      version: '1.0'
-    }
-  };
-
-  const dataStr = JSON.stringify(exportData, null, 2);
-  const filename = `time-tracker-${dayjs().format('YYYY-MM-DD')}.json`;
-  
-  await shareOrDownloadJSON(dataStr, filename);
-};
-
 // 共享或下载 JSON 文件的辅助函数
 const shareOrDownloadJSON = async (dataStr: string, filename: string) => {
   // 检测是否在原生应用环境（Capacitor）

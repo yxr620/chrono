@@ -2,21 +2,18 @@
  * LLM Client — Vercel AI SDK adapter
  *
  * One unified abstraction over OpenAI-compatible providers (Qwen / Gemini-openai
- * / GLM / Kimi / MiniMax / OpenAI / custom / Managed). All three exports use the
- * same `LanguageModel` and only differ in streaming vs. one-shot semantics.
- *
- * Replaces the previous hand-rolled `chatStream`/`chatWithTools`/`chatOnce`.
+ * / GLM / Kimi / MiniMax / OpenAI / custom / Managed). `createLanguageModel`
+ * builds the model; `streamChatWithTools` is the single streaming entry point
+ * that both the AI Assistant and QuickCapture drive through `streamingEngine`.
  */
 
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import {
   streamText,
-  generateText,
   stepCountIs,
   type ModelMessage,
   type LanguageModel,
   type StreamTextResult,
-  type GenerateTextResult,
   type Tool,
 } from 'ai';
 
@@ -81,24 +78,6 @@ export function streamChatWithTools(opts: {
         ? { ...toolCall, toolName: match }
         : null;
     },
-  });
-}
-
-/**
- * Non-streaming one-shot — drives quickCapture parse and any future single-call uses.
- * Returns the full assistant response with tool_calls already extracted.
- */
-export async function generateChatOnce(opts: {
-  model: LanguageModel;
-  messages: ModelMessage[];
-  tools?: Record<string, Tool>;
-  abortSignal?: AbortSignal;
-}): Promise<GenerateTextResult<Record<string, Tool>, never>> {
-  return await generateText({
-    model: opts.model,
-    messages: opts.messages,
-    tools: opts.tools,
-    abortSignal: opts.abortSignal,
   });
 }
 

@@ -126,7 +126,7 @@ src/
 │                          # （RecordsPage / GoalManager / Dashboard / TrendPage / GoalAnalysisPage /
 │                          #  AIAssistant / MaintenancePage / Settings / SyncManagementPage / Migration /
 │                          #  Auth / Desktop / TimeTracker / TimelineView / EntryList / QuickCapture /
-│                          #  SyncButton / common / ErrorBoundary）
+│                          #  common / shared / ErrorBoundary）
 │
 ├── config/                # 静态配置（类别预设色等）
 ├── hooks/                 # 共享 React hooks（useAppToast / useDarkMode / useIOSTimePicker / useManagedAiModel）

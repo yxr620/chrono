@@ -25,7 +25,6 @@
 | `src/services/gateway/*` | Paid feature gateway 抽象；在 BYO 与 Managed 之间路由同步凭据 |
 | `src/services/syncEngine.ts` | **同步引擎核心**（Push / Pull / LWW 合并、Snapshot-First、清理） |
 | `src/services/syncToast.ts` | 同步状态 Toast 事件总线 |
-| `src/services/syncDebugTools.ts` | 浏览器控制台调试工具（`window.syncDebug`） |
 | `src/services/autoPush.ts` | 数据变更后自动触发增量 Push |
 | `src/stores/syncStore.ts` | 同步 UI 状态（Zustand） |
 | `src/stores/authStore.ts` | Managed 模式下的登录态、JWT 与当前用户 |

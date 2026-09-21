@@ -467,12 +467,6 @@ export function formatDuration(minutes: number): string {
   return mins > 0 ? `${hours}小时${mins}分钟` : `${hours}小时`;
 }
 
-/** 格式化时长为小时 */
-export function formatHours(minutes: number): string {
-  const hours = Math.round(minutes / 60 * 10) / 10;
-  return `${hours}h`;
-}
-
 /** 按周和类别分组（用于周度对比） */
 export function groupByWeekAndCategory(
   entries: ProcessedEntry[],

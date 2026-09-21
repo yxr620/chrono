@@ -15,7 +15,6 @@ import dayjs from 'dayjs';
 
 const MAX_SUGGESTIONS = 5;
 const FREQUENCY_LOOKBACK_DAYS = 7;
-const CHECK_LOOKBACK_DAYS = 14;
 
 /**
  * 获取某天设定了目标但完全没有投入时间的目标名列表
@@ -120,38 +119,4 @@ export async function suggestGoals(existingNames: string[]): Promise<string[]> {
     }
 
     return result.slice(0, MAX_SUGGESTIONS);
-}
-
-/**
- * 推荐今日打卡目标（check 型）
- * 策略：取最近 N 天内出现频率最高的 check 型目标名，排除当天已存在的同名项。
- */
-export async function suggestCheckGoals(existingNames: string[]): Promise<string[]> {
-    const today = dayjs().format('YYYY-MM-DD');
-    const startDate = dayjs().subtract(CHECK_LOOKBACK_DAYS, 'day').format('YYYY-MM-DD');
-
-    const existingLower = new Set(existingNames.map(n => n.toLowerCase().trim()));
-
-    const allGoals = await db.goals.toArray();
-    const recent = allGoals.filter(g =>
-        !g.deleted &&
-        (g.type ?? 'time') === 'check' &&
-        g.date >= startDate &&
-        g.date < today
-    );
-
-    const nameToDateSet = new Map<string, Set<string>>();
-    for (const g of recent) {
-        const normalized = g.name.trim();
-        if (!normalized || existingLower.has(normalized.toLowerCase())) continue;
-        if (!nameToDateSet.has(normalized)) {
-            nameToDateSet.set(normalized, new Set());
-        }
-        nameToDateSet.get(normalized)!.add(g.date);
-    }
-
-    return [...nameToDateSet.entries()]
-        .sort((a, b) => b[1].size - a[1].size)
-        .slice(0, MAX_SUGGESTIONS)
-        .map(([name]) => name);
 }

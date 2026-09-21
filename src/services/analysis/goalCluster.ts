@@ -130,28 +130,6 @@ export function jaccardSimilarity(tokens1: string[], tokens2: string[]): number 
 }
 
 /**
- * 计算两个目标名称的相似度
- */
-export function goalSimilarity(goal1: string, goal2: string): number {
-  const tokens1 = tokenize(goal1);
-  const tokens2 = tokenize(goal2);
-  
-  // Jaccard 相似度
-  const jaccard = jaccardSimilarity(tokens1, tokens2);
-  
-  // 额外检查：完全包含关系
-  const name1 = goal1.toLowerCase();
-  const name2 = goal2.toLowerCase();
-  
-  if (name1.includes(name2) || name2.includes(name1)) {
-    // 包含关系给予更高的相似度
-    return Math.max(jaccard, 0.6);
-  }
-  
-  return jaccard;
-}
-
-/**
  * 应用用户自定义规则进行聚类
  */
 function applyCustomRules(goals: Goal[], rules: ClusterRule[]): Map<string, GoalCluster> {
@@ -467,25 +445,4 @@ export function matchEventToCluster(
   }
   
   return bestMatch;
-}
-
-/**
- * 生成聚类的显示颜色
- * 基于聚类ID生成稳定的颜色
- */
-export function getClusterColor(_clusterId: string, index: number): string {
-  const colors = [
-    '#3b82f6', // blue
-    '#10b981', // emerald
-    '#f59e0b', // amber
-    '#ef4444', // red
-    '#8b5cf6', // violet
-    '#ec4899', // pink
-    '#06b6d4', // cyan
-    '#84cc16', // lime
-    '#f97316', // orange
-    '#6366f1', // indigo
-  ];
-  
-  return colors[index % colors.length];
 }

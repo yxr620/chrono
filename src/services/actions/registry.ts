@@ -4,7 +4,6 @@
 
 import { jsonSchema, tool, type Tool } from 'ai';
 import type { ActionDefinition, ActionCategory, ConfirmationCard } from './types';
-import type { ToolDefinition } from '../ai/toolDefinitions';
 
 export interface SdkToolsContext {
   onConfirmRequired?: (card: ConfirmationCard) => Promise<boolean>;
@@ -30,22 +29,6 @@ class ActionRegistry {
 
   getByCategory(category: ActionCategory): ActionDefinition[] {
     return this.getAll().filter(a => a.category === category);
-  }
-
-  toToolDefinitions(): ToolDefinition[] {
-    return this.getAll().map(action => ({
-      type: 'function' as const,
-      function: {
-        name: action.name,
-        description: action.description,
-        parameters: action.parameters,
-      },
-    }));
-  }
-
-  toToolDefinitionsFor(names: string[]): ToolDefinition[] {
-    const wanted = new Set(names);
-    return this.toToolDefinitions().filter(t => wanted.has(t.function.name));
   }
 
   /**

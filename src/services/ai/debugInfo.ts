@@ -182,22 +182,6 @@ export function createModelRequestDebug(
   };
 }
 
-export function createModelResponseDebug(
-  response: unknown,
-): Extract<AssistantDebugInfo, { kind: 'modelResponse' }> {
-  const raw = asRecord(response);
-  const toolCalls = Array.isArray(raw.tool_calls)
-    ? raw.tool_calls.map(normalizeToolCall)
-    : undefined;
-
-  return {
-    kind: 'modelResponse',
-    content: stringify(raw.content),
-    thinking: optionalString(raw.thinking),
-    toolCalls: toolCalls && toolCalls.length > 0 ? toolCalls : undefined,
-  };
-}
-
 export function createToolResultDebug(input: {
   tool: string;
   args: unknown;
@@ -221,13 +205,6 @@ export function createTextDebug(title: string, text: string): AssistantDebugInfo
     title,
     text,
   };
-}
-
-export function isAssistantDebugInfo(value: unknown): value is AssistantDebugInfo {
-  return !!value
-    && typeof value === 'object'
-    && 'kind' in value
-    && typeof (value as { kind?: unknown }).kind === 'string';
 }
 
 function formatToolCall(call: DebugToolCall): string {

@@ -48,9 +48,6 @@ export const PRESET_CATEGORIES: Record<string, CategoryConfig> = {
   }
 };
 
-/** @deprecated 使用 PRESET_CATEGORIES */
-export const CATEGORY_COLORS = PRESET_CATEGORIES;
-
 // 自定义类别可选颜色调色板
 export const COLOR_PALETTE = [
   '#1890FF', '#40A9FF', '#FFA940', '#FF7A45', '#9254DE', '#B37FEB',
@@ -71,9 +68,4 @@ export const getCategoryColor = (categoryId: string | null): string => {
 export const getCategoryName = (categoryId: string | null): string | null => {
   if (!categoryId) return null;
   return PRESET_CATEGORIES[categoryId]?.name || null;
-};
-
-// 获取所有预设类别配置（用于初始化）
-export const getAllCategories = (): CategoryConfig[] => {
-  return Object.values(PRESET_CATEGORIES).sort((a, b) => a.order - b.order);
 };
