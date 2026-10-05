@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useEntryStore } from '../../stores/entryStore';
 import { useCategoryStore } from '../../stores/categoryStore';
@@ -356,11 +356,32 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     dayjs(new Date(nowTick)).endOf('day').valueOf() - nowTick
   );
 
+  const refreshNow = useCallback(() => setNowTick(Date.now()), []);
+
+  // 每分钟校准一次。不能用 isCurrentWeek 做开关：它由 nowTick 自身算出，
+  // 周日计时跨夜、周一停止（自动切到今天）时 nowTick 还是旧值，定时器会被永久关掉。
   useEffect(() => {
-    if (!weeklyCoverage.isCurrentWeek) return;
-    const id = setInterval(() => setNowTick(Date.now()), 60_000);
+    const id = setInterval(refreshNow, 60_000);
     return () => clearInterval(id);
-  }, [weeklyCoverage.isCurrentWeek]);
+  }, [refreshNow]);
+
+  // 切换日期（含跨午夜停止计时自动切到今天）时立即校准，避免先画出陈旧位置。
+  useLayoutEffect(() => {
+    refreshNow();
+  }, [selectedDate, refreshNow]);
+
+  // 回到前台（切回 App / 解锁 / 窗口重新聚焦）时立即校准：后台期间定时器和 CSS 动画都可能停摆。
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') refreshNow();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', refreshNow);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', refreshNow);
+    };
+  }, [refreshNow]);
 
   const goToPreviousDay = () => {
     if (isEarliestDay) return;
