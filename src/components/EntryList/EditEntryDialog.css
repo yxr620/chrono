@@ -323,41 +323,43 @@ html.plt-android .edit-dialog-input {
   color: #10b981;
 }
 
+/* 下移 4px：让「时长 + 箭头」整体与时间数字垂直居中，箭头与日期中线对齐 */
 .edit-dialog-time-arrow {
+  position: relative;
+  top: 4px;
   flex: 0 0 auto;
   color: hsl(var(--muted-foreground) / 0.5);
   font-size: 18px;
   line-height: 1;
 }
 
-/* 与上方时间行同构：[flex:1][auto][flex:1]，中间项恒居中，因此时长与箭头精确对齐 */
+/* 时长悬在箭头正上方：绝对定位不占行宽，两侧时间不被挤压；时长有无不影响布局 */
+.edit-dialog-time-duration {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  color: hsl(var(--muted-foreground));
+  font-variant-numeric: tabular-nums;
+}
+
+/* 两组按钮按内容宽度贴两端（右侧三个按钮放不进等分的半行，不能用 flex:1 等分） */
 .edit-dialog-time-badges {
   display: flex;
   align-items: center;
-  gap: 16px;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .edit-dialog-time-badge-group {
   display: flex;
-  flex: 1 1 0;
-  min-width: 0;
-  gap: 6px;
-}
-
-.edit-dialog-time-badge-group.end {
-  justify-content: flex-end;
-}
-
-.edit-dialog-time-duration {
   flex: 0 0 auto;
-  text-align: center;
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.2px;
-  white-space: nowrap;
-  overflow: hidden;
-  color: hsl(var(--muted-foreground));
-  font-variant-numeric: tabular-nums;
+  gap: 6px;
 }
 
 .edit-dialog-time-badge {

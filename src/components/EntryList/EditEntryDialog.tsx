@@ -362,7 +362,11 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
                   <span className="edit-dialog-time-clock">{dayjs(startTime).format('HH:mm')}</span>
                 </button>
 
-                <span className="edit-dialog-time-arrow" aria-hidden="true">→</span>
+                {/* 箭头 + 上方时长 */}
+                <span className="edit-dialog-time-arrow">
+                  {durationLabel && <span className="edit-dialog-time-duration">{durationLabel}</span>}
+                  <span aria-hidden="true">→</span>
+                </span>
 
                 {/* 结束时间 */}
                 <button
@@ -389,8 +393,6 @@ export const EditEntryDialog: React.FC<EditEntryDialogProps> = ({
                   <button type="button" className="edit-dialog-time-badge" aria-label="将开始时间设为现在" onClick={() => setToNow(true)}>现在</button>
                   <button type="button" className="edit-dialog-time-badge" aria-label="将开始时间设为上一条记录的结束时间" onClick={setStartTimeToLastEnd}>上次</button>
                 </div>
-                {/* 时长显示 */}
-                <span className="edit-dialog-time-duration">{durationLabel}</span>
                 <div className="edit-dialog-time-badge-group end">
                   <button type="button" className="edit-dialog-time-badge" aria-label="将结束时间设为现在" onClick={() => setToNow(false)}>现在</button>
                   <button type="button" className="edit-dialog-time-badge" aria-label="将结束时间设为下一条记录的开始时间" onClick={setEndTimeToNextStart}>下次</button>
