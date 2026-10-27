@@ -1,0 +1,217 @@
+.coverage-calendar {
+  --coverage-calendar-accent: hsl(var(--primary));
+  --coverage-calendar-track: hsl(var(--muted-foreground) / 0.2);
+  --coverage-calendar-selected-bg: hsl(var(--primary) / 0.14);
+  --coverage-calendar-day-size: 40px;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  color: hsl(var(--foreground));
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.dark .coverage-calendar {
+  --coverage-calendar-track: hsl(var(--muted-foreground) / 0.3);
+}
+
+/* ── 年月标题 + 上/下月 ── */
+.coverage-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 8px;
+}
+
+.coverage-calendar-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: hsl(var(--foreground));
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.coverage-calendar-title ion-icon {
+  font-size: 14px;
+  color: hsl(var(--muted-foreground));
+}
+
+.coverage-calendar-nav {
+  display: flex;
+  gap: 4px;
+}
+
+.coverage-calendar-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: hsl(var(--foreground));
+  font-size: 20px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.coverage-calendar-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.coverage-calendar-title:active,
+.coverage-calendar-nav-btn:active:not(:disabled) {
+  background: hsl(var(--accent));
+}
+
+@media (hover: hover) {
+  .coverage-calendar-title:hover,
+  .coverage-calendar-nav-btn:hover:not(:disabled) {
+    background: hsl(var(--accent));
+  }
+}
+
+/* ── 星期行 ── */
+.coverage-calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 12px;
+  line-height: 24px;
+  color: hsl(var(--muted-foreground));
+}
+
+/* ── 日期网格：pan-y 让纵向滚动交给浏览器，横向拖动留给切月 ── */
+.coverage-calendar-body {
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.coverage-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  row-gap: 4px;
+  padding: 4px 0;
+}
+
+.coverage-calendar-grid.is-sliding-next {
+  animation: coverage-calendar-slide-next 0.22s ease-out;
+}
+
+.coverage-calendar-grid.is-sliding-prev {
+  animation: coverage-calendar-slide-prev 0.22s ease-out;
+}
+
+@keyframes coverage-calendar-slide-next {
+  from { opacity: 0; transform: translateX(28px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes coverage-calendar-slide-prev {
+  from { opacity: 0; transform: translateX(-28px); }
+  to { opacity: 1; transform: none; }
+}
+
+.coverage-calendar-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: var(--coverage-calendar-day-size);
+}
+
+.coverage-calendar-day {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--coverage-calendar-day-size);
+  height: var(--coverage-calendar-day-size);
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.coverage-calendar-day:disabled {
+  color: hsl(var(--muted-foreground) / 0.45);
+  cursor: default;
+}
+
+.coverage-calendar-day:focus-visible {
+  outline: 2px solid var(--coverage-calendar-accent);
+  outline-offset: 1px;
+}
+
+.coverage-calendar-day.is-today,
+.coverage-calendar-day.is-selected {
+  color: var(--coverage-calendar-accent);
+  font-weight: 700;
+}
+
+/* 选中日期用圆环内侧的浅色底，不盖住圆环 */
+.coverage-calendar-day.is-selected::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: var(--coverage-calendar-selected-bg);
+}
+
+.coverage-calendar-day-number {
+  position: relative;
+}
+
+/* 从 12 点方向顺时针画弧 */
+.coverage-calendar-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.coverage-calendar-ring-track,
+.coverage-calendar-ring-progress {
+  fill: none;
+  stroke-width: 2.5;
+}
+
+.coverage-calendar-ring-track {
+  stroke: var(--coverage-calendar-track);
+}
+
+.coverage-calendar-ring-progress {
+  stroke: var(--coverage-calendar-accent);
+  stroke-linecap: round;
+}
+
+@media (min-width: 1024px) {
+  .coverage-calendar {
+    --coverage-calendar-day-size: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coverage-calendar-grid.is-sliding-next,
+  .coverage-calendar-grid.is-sliding-prev {
+    animation: none;
+  }
+}

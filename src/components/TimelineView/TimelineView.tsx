@@ -5,11 +5,16 @@ import { useCategoryStore } from '../../stores/categoryStore';
 import { useGoalStore } from '../../stores/goalStore';
 import type { TimeEntry } from '../../services/db';
 import dayjs from 'dayjs';
-import { IonDatetime, IonIcon, IonModal } from '@ionic/react';
+import { IonIcon, IonModal } from '@ionic/react';
 import { alertCircleOutline } from 'ionicons/icons';
 import { WheelMonthYearPicker } from '../common/WheelTimePicker';
 import { useDarkMode } from '../../hooks/useDarkMode';
-import { calculateDailyCoverage, calculateWeeklyCoverage } from '../../services/weeklyCoverage';
+import {
+  calculateDailyCoverage,
+  calculateMonthlyDailyCoverage,
+  calculateWeeklyCoverage,
+} from '../../services/weeklyCoverage';
+import { CoverageCalendar } from './CoverageCalendar';
 import './TimelineView.css';
 
 interface TimeBlock {
@@ -36,8 +41,6 @@ interface TimelineViewProps {
   overlapCount?: number;
 }
 
-const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日'];
-
 const getDatePickerModalStyle = (isIOS: boolean): React.CSSProperties => ({
   '--height': 'auto',
   '--width': '100%',
@@ -51,6 +54,7 @@ const getDatePickerContentStyle = (): React.CSSProperties => ({
   display: 'flex',
   flexDirection: 'column',
   padding: '16px',
+  paddingBottom: 'calc(16px + var(--ion-safe-area-bottom, 0px))',
   background: 'hsl(var(--card))',
   color: 'hsl(var(--foreground))',
 });
@@ -71,13 +75,11 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   const [gapBlocks, setGapBlocks] = useState<GapBlock[]>([]);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [showMonthWheel, setShowMonthWheel] = useState(false);
-  const [calendarDate, setCalendarDate] = useState(() => dayjs(selectedDate).format('YYYY-MM-DD'));
   const [viewYear, setViewYear] = useState(() => dayjs(selectedDate).year());
   const [viewMonth, setViewMonth] = useState(() => dayjs(selectedDate).month() + 1);
   const [tooltip, setTooltip] = useState<{ block: TimeBlock; positionPercent: number } | null>(null);
   const [nowTick, setNowTick] = useState(() => Date.now());
   const containerRef = useRef<HTMLDivElement>(null);
-  const datetimeRef = useRef<HTMLIonDatetimeElement>(null);
   const { isDark } = useDarkMode();
   const currentMonthDate = useMemo(
     () => dayjs(`${viewYear}-${String(viewMonth).padStart(2, '0')}-01`),
@@ -87,32 +89,15 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     () => (earliestDate ? dayjs(earliestDate) : null),
     [earliestDate]
   );
-  const calendarDays = useMemo(() => {
-    const daysInMonth = currentMonthDate.daysInMonth();
-    const firstDayOfWeek = (currentMonthDate.day() + 6) % 7;
-    const days: (string | null)[] = [];
-
-    for (let i = 0; i < firstDayOfWeek; i++) {
-      days.push(null);
-    }
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      days.push(currentMonthDate.date(day).format('YYYY-MM-DD'));
-    }
-
-    return days;
-  }, [currentMonthDate]);
   const canGoPrevMonth = useMemo(() => {
     if (!earliestSelectableDate) return true;
     return currentMonthDate.isAfter(earliestSelectableDate, 'month');
   }, [currentMonthDate, earliestSelectableDate]);
   const canGoNextMonth = currentMonthDate.isBefore(dayjs(), 'month');
-  const monthTitle = currentMonthDate.format('YYYY年M月');
 
   // Initialize all picker state from selectedDate when opening
   const openDatePicker = () => {
     const d = dayjs(selectedDate);
-    setCalendarDate(d.format('YYYY-MM-DD'));
     setViewYear(d.year());
     setViewMonth(d.month() + 1);
     setShowMonthWheel(false);
@@ -128,18 +113,10 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     const parsed = dayjs(value);
     if (!parsed.isValid()) return;
 
-    setCalendarDate(parsed.format('YYYY-MM-DD'));
     setViewYear(parsed.year());
     setViewMonth(parsed.month() + 1);
     onDateChange(parsed.toDate());
     closeDatePicker();
-  };
-
-  const handleCalendarChange = (value: string | string[] | null | undefined) => {
-    if (!value) return;
-
-    const dateStr = Array.isArray(value) ? value[0] : value;
-    handleDateSelect(dateStr);
   };
 
   const goToPreviousMonth = () => {
@@ -155,39 +132,6 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     setViewYear(nextMonth.year());
     setViewMonth(nextMonth.month() + 1);
   };
-
-  // Intercept Ionic's built-in month-year-button click (shadow DOM)
-  // and replace it with our custom wheel picker
-  useEffect(() => {
-    if (isIOS || !datePickerVisible || showMonthWheel) return;
-
-    let cleanup: (() => void) | undefined;
-
-    const attach = () => {
-      const shadow = datetimeRef.current?.shadowRoot;
-      if (!shadow) return false;
-      const btn = shadow.querySelector('[part="month-year-button"]') as HTMLElement | null;
-      if (!btn) return false;
-
-      const onBtnClick = (e: Event) => {
-        e.stopImmediatePropagation(); // prevent Ionic's internal month-year picker
-        const d = dayjs(calendarDate);
-        setViewYear(d.year());
-        setViewMonth(d.month() + 1);
-        setShowMonthWheel(true);
-      };
-
-      btn.addEventListener('click', onBtnClick, { capture: true });
-      cleanup = () => btn.removeEventListener('click', onBtnClick, { capture: true });
-      return true;
-    };
-
-    if (!attach()) {
-      const timer = setTimeout(attach, 250);
-      return () => { clearTimeout(timer); cleanup?.(); };
-    }
-    return () => cleanup?.();
-  }, [isIOS, datePickerVisible, showMonthWheel, calendarDate]);
 
   useEffect(() => {
     loadEntries();
@@ -351,6 +295,13 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     () => calculateDailyCoverage(entries, selectedDate, new Date(nowTick)),
     [entries, selectedDate, nowTick]
   );
+  // 日历每天的圆环与上面的当日覆盖率同一口径；只在日历打开时计算
+  const monthlyCoverage = useMemo(
+    () => (datePickerVisible
+      ? calculateMonthlyDailyCoverage(entries, currentMonthDate.toDate(), new Date(nowTick))
+      : new Map<string, number>()),
+    [datePickerVisible, entries, currentMonthDate, nowTick]
+  );
   const currentTimeAnimationDuration = Math.max(
     1_000,
     dayjs(new Date(nowTick)).endOf('day').valueOf() - nowTick
@@ -487,164 +438,54 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
         style={getDatePickerModalStyle(isIOS)}
       >
         <div style={getDatePickerContentStyle()}>
-          {isIOS ? (
-            <div style={{ maxWidth: '380px', margin: '0 auto', paddingBottom: '8px' }}>
-              <div
+          {/* iOS 保留原有的「取消 / 今天」操作行 */}
+          {isIOS && (
+            <div
+              style={{
+                width: '100%',
+                maxWidth: '400px',
+                margin: '0 auto 8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}
+            >
+              <button
+                onClick={closeDatePicker}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: '12px'
+                  background: 'transparent',
+                  border: 'none',
+                  color: isDark ? '#94a3b8' : '#64748b',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  padding: 0
                 }}
               >
-                <button
-                  onClick={closeDatePicker}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: isDark ? '#94a3b8' : '#64748b',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    padding: 0
-                  }}
-                >
-                  取消
-                </button>
-                <button
-                  onClick={goToToday}
-                  disabled={isToday}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: isToday ? (isDark ? '#475569' : '#cbd5e1') : '#3b82f6',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    padding: 0,
-                    opacity: isToday ? 0.55 : 1
-                  }}
-                >
-                  今天
-                </button>
-              </div>
-
-              <div
+                取消
+              </button>
+              <button
+                onClick={goToToday}
+                disabled={isToday}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: '10px'
+                  background: 'transparent',
+                  border: 'none',
+                  color: isToday ? (isDark ? '#475569' : '#cbd5e1') : '#3b82f6',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  padding: 0,
+                  opacity: isToday ? 0.55 : 1
                 }}
               >
-                <button
-                  onClick={goToPreviousMonth}
-                  disabled={!canGoPrevMonth}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: isDark ? '#94a3b8' : '#64748b',
-                    fontSize: '18px',
-                    padding: '4px 6px',
-                    opacity: canGoPrevMonth ? 1 : 0.25
-                  }}
-                  aria-label="上个月"
-                >
-                  ‹
-                </button>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: isDark ? '#e2e8f0' : '#334155' }}>
-                  {monthTitle}
-                </span>
-                <button
-                  onClick={goToNextMonth}
-                  disabled={!canGoNextMonth}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: isDark ? '#94a3b8' : '#64748b',
-                    fontSize: '18px',
-                    padding: '4px 6px',
-                    opacity: canGoNextMonth ? 1 : 0.25
-                  }}
-                  aria-label="下个月"
-                >
-                  ›
-                </button>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', marginBottom: '6px' }}>
-                {WEEKDAYS.map((weekday) => (
-                  <div
-                    key={weekday}
-                    style={{
-                      textAlign: 'center',
-                      fontSize: '10px',
-                      fontWeight: 600,
-                      color: isDark ? '#64748b' : '#94a3b8',
-                      lineHeight: '16px'
-                    }}
-                  >
-                    {weekday}
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
-                {calendarDays.map((date, index) => {
-                  if (!date) {
-                    return <div key={`empty-${index}`} />;
-                  }
-
-                  const dateValue = dayjs(date);
-                  const isTodayCell = dateValue.isSame(dayjs(), 'day');
-                  const isSelected = dateValue.isSame(dayjs(selectedDate), 'day');
-                  const isBeforeEarliest = earliestSelectableDate ? dateValue.isBefore(earliestSelectableDate, 'day') : false;
-                  const isFuture = dateValue.isAfter(dayjs(), 'day');
-                  const isDisabled = isBeforeEarliest || isFuture;
-
-                  return (
-                    <button
-                      key={date}
-                      type="button"
-                      disabled={isDisabled}
-                      onClick={() => handleDateSelect(date)}
-                      style={{
-                        aspectRatio: '1',
-                        borderRadius: '6px',
-                        border: isSelected
-                          ? '1px solid #3b82f6'
-                          : `1px solid ${isDark ? 'rgba(71, 85, 105, 0.32)' : 'rgba(203, 213, 225, 0.9)'}`,
-                        background: isSelected
-                          ? (isDark ? 'rgba(59, 130, 246, 0.16)' : 'rgba(59, 130, 246, 0.1)')
-                          : (isDark ? 'rgba(30, 41, 59, 0.55)' : '#ffffff'),
-                        color: isSelected
-                          ? '#3b82f6'
-                          : isDisabled
-                            ? (isDark ? '#334155' : '#cbd5e1')
-                            : (isDark ? '#e2e8f0' : '#334155'),
-                        fontSize: '12px',
-                        fontWeight: isSelected || isTodayCell ? 700 : 500,
-                        opacity: isDisabled ? 0.45 : 1,
-                        outline: isTodayCell && !isSelected ? `1px solid ${isDark ? '#60a5fa' : '#93c5fd'}` : 'none',
-                        outlineOffset: '-2px',
-                        padding: 0,
-                        minHeight: '36px'
-                      }}
-                    >
-                      {dateValue.date()}
-                    </button>
-                  );
-                })}
-              </div>
+                今天
+              </button>
             </div>
-          ) : showMonthWheel ? (
+          )}
+          {showMonthWheel ? (
             /* ── Year / Month wheel view ── */
-            <div style={{ minHeight: '344px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ width: '100%', maxWidth: '400px', margin: '0 auto', minHeight: '344px', display: 'flex', flexDirection: 'column' }}>
               {/* Back → calendar button */}
               <button
-                onClick={() => {
-                  const d = `${viewYear}-${String(viewMonth).padStart(2, '0')}-01`;
-                  setCalendarDate(d);
-                  setShowMonthWheel(false);
-                }}
+                onClick={() => setShowMonthWheel(false)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -670,17 +511,17 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
               />
             </div>
           ) : (
-            /* ── Calendar view (original IonDatetime) ── */
-            <IonDatetime
-              ref={datetimeRef}
-              presentation="date"
-              value={calendarDate}
-              min={earliestDate || undefined}
-              max={dayjs().format('YYYY-MM-DD')}
-              locale="zh-CN"
-              firstDayOfWeek={1}
-              onIonChange={(e) => handleCalendarChange(e.detail.value)}
-              style={{ width: '100%', margin: '0 auto' }}
+            /* ── Calendar view：每天外圈按记录覆盖率画弧 ── */
+            <CoverageCalendar
+              month={currentMonthDate.toDate()}
+              selectedDate={selectedDate}
+              coverageByDate={monthlyCoverage}
+              minDate={earliestDate}
+              canGoPrevMonth={canGoPrevMonth}
+              canGoNextMonth={canGoNextMonth}
+              onMonthStep={(delta) => (delta === 1 ? goToNextMonth() : goToPreviousMonth())}
+              onSelectDate={handleDateSelect}
+              onTitleClick={() => setShowMonthWheel(true)}
             />
           )}
         </div>

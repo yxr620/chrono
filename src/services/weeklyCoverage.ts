@@ -140,3 +140,36 @@ export const calculateDailyCoverage = (
     coverageEnd: coverageEnd.toDate(),
   };
 };
+
+/** 指定月份每天（截至今天）的记录覆盖率，key 为 YYYY-MM-DD；未来日期不出现在结果里 */
+export const calculateMonthlyDailyCoverage = (
+  entries: TimeEntry[],
+  month: Date,
+  now: Date = new Date(),
+): Map<string, number> => {
+  const monthStart = dayjs(month).startOf('month');
+  const monthEnd = monthStart.add(1, 'month');
+  const monthStartMs = monthStart.valueOf();
+  const rangeEndMs = Math.min(monthEnd.valueOf(), now.getTime());
+
+  // 先筛出与本月有交集的记录，避免每天都扫一遍全部历史
+  const monthEntries = entries.filter(entry => {
+    const entryStartMs = dayjs(entry.startTime).valueOf();
+    const entryEndMs = dayjs(entry.endTime ?? now).valueOf();
+    return entryStartMs < rangeEndMs && entryEndMs > monthStartMs;
+  });
+
+  const result = new Map<string, number>();
+  for (
+    let day = monthStart;
+    day.isBefore(monthEnd) && !day.isAfter(now, 'day');
+    day = day.add(1, 'day')
+  ) {
+    result.set(
+      day.format('YYYY-MM-DD'),
+      calculateDailyCoverage(monthEntries, day.toDate(), now).percentage,
+    );
+  }
+
+  return result;
+};
