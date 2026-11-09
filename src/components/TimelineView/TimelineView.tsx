@@ -34,6 +34,11 @@ interface GapBlock {
   endTime: Date;
 }
 
+interface TooltipState {
+  block: TimeBlock;
+  positionPercent: number;
+}
+
 interface TimelineViewProps {
   selectedDate: Date;
   onDateChange: (date: Date) => void;
@@ -77,7 +82,10 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   const [showMonthWheel, setShowMonthWheel] = useState(false);
   const [viewYear, setViewYear] = useState(() => dayjs(selectedDate).year());
   const [viewMonth, setViewMonth] = useState(() => dayjs(selectedDate).month() + 1);
-  const [tooltip, setTooltip] = useState<{ block: TimeBlock; positionPercent: number } | null>(null);
+  // pinnedTooltip：点击固定（移动端/桌面端都可用）；hoverTooltip：桌面端鼠标悬停时临时显示，优先级更高
+  const [pinnedTooltip, setPinnedTooltip] = useState<TooltipState | null>(null);
+  const [hoverTooltip, setHoverTooltip] = useState<TooltipState | null>(null);
+  const tooltip = hoverTooltip ?? pinnedTooltip;
   const [nowTick, setNowTick] = useState(() => Date.now());
   const containerRef = useRef<HTMLDivElement>(null);
   const { isDark } = useDarkMode();
@@ -142,16 +150,16 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   // 点击外部关闭 tooltip
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (tooltip && containerRef.current) {
+      if (pinnedTooltip && containerRef.current) {
         const target = e.target as HTMLElement;
         if (!containerRef.current.contains(target)) {
-          setTooltip(null);
+          setPinnedTooltip(null);
         }
       }
     };
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
-  }, [tooltip]);
+  }, [pinnedTooltip]);
 
   const getTimePercent = (time: Date, dayStart: Date): number => {
     const diff = dayjs(time).diff(dayjs(dayStart), 'millisecond');
@@ -534,7 +542,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
           className="timeline-container"
           onClick={(e) => {
             if (!(e.target as HTMLElement).closest('.timeline-block')) {
-              setTooltip(null);
+              setPinnedTooltip(null);
             }
           }}
         >
@@ -559,10 +567,19 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                   width: `${block.widthPercent}%`,
                   backgroundColor: block.color
                 }}
-                title={block.label}
+                aria-label={block.label}
+                onPointerEnter={(e) => {
+                  // 仅鼠标悬停触发；触屏点击也会派发 pointerenter，需排除，避免移动端行为变化
+                  if (e.pointerType !== 'mouse') return;
+                  setHoverTooltip({ block, positionPercent: block.startPercent + block.widthPercent / 2 });
+                }}
+                onPointerLeave={(e) => {
+                  if (e.pointerType !== 'mouse') return;
+                  setHoverTooltip(null);
+                }}
                 onClick={() => {
                   const centerPercent = block.startPercent + block.widthPercent / 2;
-                  setTooltip({ block, positionPercent: centerPercent });
+                  setPinnedTooltip({ block, positionPercent: centerPercent });
                   if (block.entry.endTime) {
                     setNextStartTime(block.entry.endTime);
                   }
